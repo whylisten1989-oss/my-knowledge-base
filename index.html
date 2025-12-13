@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (Global)</title>
+    <title>MindForge OS (Ultimate)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
-    
     <script src="https://unpkg.com/marked@5.1.0/marked.min.js"></script>
-    
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-    
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <script>
@@ -32,52 +28,76 @@
     <style>
         body { background-color: #050505; color: #e4e4e7; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
         
-        /* 1. 登录页：磨砂玻璃 + 全屏居中 */
+        /* 1. 登录页特效 */
         .glass-panel {
             background: rgba(20, 20, 20, 0.65);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
         }
-        
-        /* 2. 极光背景 */
         .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; }
         .aurora-blob { position: absolute; filter: blur(100px); opacity: 0.35; animation: float 12s infinite ease-in-out alternate; }
         .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #172554; animation-duration: 15s; }
         .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #312e81; animation-duration: 20s; }
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
 
-        /* 3. Logo 光效 */
+        /* 2. Logo 光效 */
         .cyber-text {
-            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
+            background: linear-gradient(90deg, #fff, #666, #fff);
             background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             animation: shine 4s linear infinite alternate;
-            font-weight: 900;
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 4. 黑白按钮 */
-        .btn-black {
-            background: #000; border: 1px solid #333; color: white; transition: all 0.2s;
+        /* 3. 导航栏交互特效 (回归！) */
+        .nav-item { 
+            transition: all 0.3s ease; 
+            border-left: 3px solid transparent; 
+            color: #666; 
+            opacity: 0.7;
         }
-        .btn-black:hover { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.15); }
+        .nav-item:hover { 
+            color: white; 
+            background: rgba(255,255,255,0.03); 
+            padding-left: 20px; /* 增加位移感 */
+            opacity: 1;
+        }
+        .nav-item.active { 
+            color: white; 
+            border-left-color: #fff; 
+            background: linear-gradient(90deg, rgba(255,255,255,0.05), transparent); 
+            padding-left: 20px; 
+            opacity: 1;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
 
-        /* 5. 侧边栏选中态 */
-        .nav-item { transition: all 0.2s; border-left: 2px solid transparent; color: #888; font-size: 14px; font-weight: 500; }
-        .nav-item:hover { color: white; background: rgba(255,255,255,0.03); padding-left: 12px; }
-        .nav-item.active { color: white; border-left-color: #fff; background: rgba(255,255,255,0.05); padding-left: 12px; font-weight: bold; }
+        /* 4. 个人主页卡片 */
+        .profile-card {
+            background: #0f0f0f;
+            border: 1px solid #222;
+            position: relative;
+            overflow: hidden;
+        }
+        .profile-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, #fff, transparent);
+            opacity: 0.2;
+        }
 
-        /* 6. Quill 暗黑适配 */
-        .ql-toolbar { background: #0a0a0a; border-color: #222 !important; }
-        .ql-container { background: #000; border-color: #222 !important; color: #ccc; font-size: 15px !important; font-family: "Microsoft YaHei" !important; }
-        .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
+        /* 5. 按钮与开关 */
+        .btn-black { background: #000; border: 1px solid #333; color: white; transition: all 0.2s; }
+        .btn-black:hover { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.1); }
 
-        /* 开关 */
         .toggle-checkbox { display: none; }
         .toggle-label { width: 36px; height: 20px; background: #333; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; }
         .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #888; border-radius: 50%; transition: 0.3s; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; }
         .toggle-checkbox:checked + .toggle-label::after { transform: translateX(16px); background: #000; }
+
+        /* 6. Quill 暗黑 */
+        .ql-toolbar { background: #0a0a0a; border-color: #222 !important; }
+        .ql-container { background: #000; border-color: #222 !important; color: #ccc; font-size: 15px !important; font-family: "Microsoft YaHei" !important; }
+        .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
         [v-cloak] { display: none !important; }
         .note-card { transition: all 0.3s ease; border: 1px solid #222; }
@@ -103,15 +123,8 @@
             </div>
 
             <div class="space-y-5">
-                <div>
-                    <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Access ID</label>
-                    <input v-model="email" type="email" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition font-mono">
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Passkey</label>
-                    <input v-model="password" type="password" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition font-mono">
-                </div>
-                
+                <input v-model="email" type="email" placeholder="Access ID" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/30 transition font-mono">
+                <input v-model="password" type="password" placeholder="Passkey" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/30 transition font-mono">
                 <div class="flex gap-3 pt-3">
                     <button @click="handleLogin" class="flex-1 btn-black py-2.5 rounded text-xs font-bold uppercase tracking-widest">Login</button>
                     <button @click="handleRegister" class="flex-1 border border-white/10 text-gray-400 py-2.5 rounded text-xs font-bold uppercase tracking-widest hover:border-white hover:text-white transition">Sign Up</button>
@@ -129,25 +142,25 @@
                 
                 <nav class="p-6 space-y-6">
                     <div>
-                        <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Core</div>
-                        <button @click="switchL1('profile')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'profile' ? 'active' : 'nav-item']">
-                            Overview 系统概览
+                        <div class="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-3 pl-1">System Core</div>
+                        <button @click="switchL1('profile')" :class="['nav-item w-full text-left py-2 px-4 rounded-r-lg text-sm font-medium', currentL1 === 'profile' ? 'active' : '']">
+                            User Profile 个人主页
                         </button>
                     </div>
                     
                     <div>
-                        <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Modules</div>
-                        <div class="space-y-3">
-                            <button @click="switchL1('wiki')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'wiki' ? 'active' : 'nav-item']">
+                        <div class="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-3 pl-1">Modules</div>
+                        <div class="space-y-1">
+                            <button @click="switchL1('wiki')" :class="['nav-item w-full text-left py-2 px-4 rounded-r-lg text-sm', currentL1 === 'wiki' ? 'active' : '']">
                                 Wiki 知识库
                             </button>
-                            <button @click="switchL1('idea')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'idea' ? 'active' : 'nav-item']">
+                            <button @click="switchL1('idea')" :class="['nav-item w-full text-left py-2 px-4 rounded-r-lg text-sm', currentL1 === 'idea' ? 'active' : '']">
                                 Ideas 灵感
                             </button>
-                            <button @click="switchL1('blog')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'blog' ? 'active' : 'nav-item']">
+                            <button @click="switchL1('blog')" :class="['nav-item w-full text-left py-2 px-4 rounded-r-lg text-sm', currentL1 === 'blog' ? 'active' : '']">
                                 Blog 博客
                             </button>
-                            <button @click="switchL1('file')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'file' ? 'active' : 'nav-item']">
+                            <button @click="switchL1('file')" :class="['nav-item w-full text-left py-2 px-4 rounded-r-lg text-sm', currentL1 === 'file' ? 'active' : '']">
                                 Files 文件
                             </button>
                         </div>
@@ -156,10 +169,12 @@
             </div>
             
             <div class="p-6 border-t border-dim">
-                <div class="text-xs text-gray-600 mb-2 font-mono truncate">{{ user.email }}</div>
-                <button @click="handleLogout" class="text-xs font-bold text-red-600 hover:text-red-400 hover:underline transition">
-                    Logout 退出登录
-                </button>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-600 font-mono truncate w-24">{{ user.email }}</div>
+                    <button @click="handleLogout" class="text-[10px] font-bold text-red-600 hover:text-red-400 hover:bg-red-900/10 px-2 py-1 rounded transition border border-transparent hover:border-red-900/20">
+                        [ 退出系统 ]
+                    </button>
+                </div>
             </div>
         </aside>
 
@@ -178,30 +193,53 @@
             </header>
 
             <div class="flex-1 overflow-y-auto p-8">
-                <div v-if="currentCategory === 'profile'" class="max-w-4xl mx-auto space-y-6 animate-fade-in">
-                    <div class="border border-dim bg-sidebar p-8 rounded-xl relative overflow-hidden">
-                        <div class="relative z-10 flex flex-col md:flex-row gap-6 items-start">
-                            <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl">🧠</div>
-                            <div>
-                                <h1 class="text-2xl font-bold text-white mb-2">MindForge OS</h1>
-                                <div class="text-gray-400 text-sm leading-relaxed whitespace-pre-line border-l-2 border-white/20 pl-4 font-serif italic">{{ systemConfig.bio }}</div>
+                
+                <div v-if="currentCategory === 'profile'" class="max-w-4xl mx-auto space-y-8 animate-fade-in">
+                    <div class="profile-card p-10 rounded-2xl flex flex-col md:flex-row gap-10 items-center md:items-start">
+                        <div class="relative group">
+                            <img :src="profile.avatar" class="w-32 h-32 rounded-full object-cover border-4 border-[#111] shadow-2xl">
+                            <div v-if="isEditingProfile" class="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full">
+                                <span class="text-xs text-gray-300">编辑模式</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-1 w-full">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <div v-if="isEditingProfile" class="space-y-2">
+                                        <input v-model="tempProfile.name" class="bg-black/50 border border-white/20 p-2 text-xl font-bold text-white w-full rounded" placeholder="输入 ID">
+                                        <input v-model="tempProfile.avatar" class="bg-black/50 border border-white/20 p-2 text-xs text-gray-500 w-full rounded font-mono" placeholder="头像 URL">
+                                    </div>
+                                    <h1 v-else class="text-4xl font-black text-white tracking-tighter mb-2">{{ profile.name }}</h1>
+                                    
+                                    <p class="text-xs text-blue-500 font-mono tracking-widest uppercase border border-blue-900/30 bg-blue-900/10 px-2 py-1 inline-block rounded">System Administrator</p>
+                                </div>
+                                <button @click="toggleProfileEdit" class="text-xs border border-white/10 px-3 py-1 text-gray-400 hover:text-white hover:border-white transition rounded">
+                                    {{ isEditingProfile ? '保存资料' : '编辑资料' }}
+                                </button>
+                            </div>
+                            
+                            <div class="mt-6">
+                                <textarea v-if="isEditingProfile" v-model="tempProfile.bio" class="w-full bg-black/50 border border-white/20 p-3 text-gray-300 text-sm rounded h-24 font-serif"></textarea>
+                                <div v-else class="text-gray-400 text-sm leading-loose font-serif italic border-l-2 border-white/10 pl-6">
+                                    {{ profile.bio }}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="border border-dim bg-sidebar p-6 rounded-xl">
-                            <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-4">Hardware</h3>
-                            <ul class="space-y-2 text-sm text-gray-300">
-                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-dim pb-2 last:border-0">
-                                    <span>{{ item.name }}</span><span class="text-[10px] text-green-500 font-mono">{{ item.status }}</span>
-                                </li>
-                            </ul>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-[#0f0f0f] border border-[#222] p-6 rounded-xl">
+                            <h3 class="text-[10px] font-bold text-gray-600 uppercase mb-2">Total Entries</h3>
+                            <p class="text-3xl font-bold text-white">{{ notes.length }}</p>
                         </div>
-                        <div class="border border-dim bg-sidebar p-6 rounded-xl">
-                            <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">Stack</h3>
-                            <div class="flex flex-wrap gap-2">
-                                <span v-for="skill in systemConfig.skills" :key="skill" class="px-2 py-1 border border-dim text-[10px] text-gray-400 hover:text-white transition">{{ skill }}</span>
-                            </div>
+                        <div class="bg-[#0f0f0f] border border-[#222] p-6 rounded-xl">
+                            <h3 class="text-[10px] font-bold text-gray-600 uppercase mb-2">System Status</h3>
+                            <p class="text-xs font-mono text-green-500">● ONLINE (VPN)</p>
+                        </div>
+                        <div class="bg-[#0f0f0f] border border-[#222] p-6 rounded-xl">
+                            <h3 class="text-[10px] font-bold text-gray-600 uppercase mb-2">Version</h3>
+                            <p class="text-xs font-mono text-gray-400">v18.0.0-stable</p>
                         </div>
                     </div>
                 </div>
@@ -210,17 +248,14 @@
                     <div v-if="filteredNotes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         <div v-for="note in filteredNotes" :key="note.id" @click="viewNote(note)" 
                              class="note-card bg-sidebar p-6 rounded-xl relative h-60 flex flex-col cursor-pointer group">
-                            
                             <div class="flex justify-between items-start mb-4">
                                 <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
                                 <span v-if="!note.is_public" class="text-[10px] text-gray-500 border border-gray-800 px-1.5 py-0.5 rounded">私密</span>
                             </div>
-                            
                             <div class="flex-1 overflow-hidden">
                                 <div v-if="note.category === 'link'" class="text-blue-500 underline text-xs break-all">{{ note.link_url }}</div>
                                 <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">{{ stripHtml(note.content) || '暂无内容...' }}</p>
                             </div>
-                            
                             <div class="mt-4 pt-3 border-t border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
                                 <span>🕒 {{ formatTime(note.created_at) }}</span>
                                 <span class="opacity-0 group-hover:opacity-100 transition text-white">查看 -></span>
@@ -287,49 +322,25 @@
     // 🔴 最终填空：Key 
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    
-    // 👇 填入你的 eyJ... Key
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
-    
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入 eyJ... Key
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 初始化客户端 (带强制 fetch 修复)
+    // 初始化客户端
     let _supabase = null
     function initSupabase() {
-        // 网络检测
         if (typeof createClient !== 'function' || typeof Vue === 'undefined') {
             document.getElementById('error-bar').style.display = 'block';
-            document.getElementById('error-bar').innerText = '⚠️ 核心库未加载，请确保VPN已开启并刷新页面。';
+            document.getElementById('error-bar').innerText = '⚠️ 核心库未加载，请刷新页面重试。';
             return null;
         }
         try {
             return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                 auth: { persistSession: true },
-                // ⚠️ 关键补丁：解决 VPN 环境下的 Fetch 兼容性
                 global: { fetch: (...args) => fetch(...args) }
             });
-        } catch (e) {
-            console.error("Key Error", e);
-        }
+        } catch (e) { console.error("Key Error", e); }
     }
     _supabase = initSupabase();
-
-    // 文案配置
-    const systemConfig = {
-        bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
-        inventory: [
-            { name: "主控: MacBook Pro M2", status: "运行中" },
-            { name: "输入: HHKB Hybrid Type-S", status: "已连接" },
-            { name: "视觉: LG 4K Ultrafine", status: "在线" },
-            { name: "音频: Sony WH-1000XM4", status: "待机" }
-        ],
-        skills: ["Vue.js", "Supabase", "Python", "Node.js", "Docker", "CyberSecurity"],
-        logs: [
-            { date: "2025-12-13", event: "MindForge OS Beta 发布" },
-            { date: "2025-12-10", event: "数据库核心初始化完成" },
-            { date: "2025-12-01", event: "系统概念设计确立" }
-        ]
-    }
 
     createApp({
         setup() {
@@ -339,14 +350,42 @@
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            const currentL1 = ref('profile') // 默认首页
+            const currentL1 = ref('profile') // 默认进 Profile
             const currentL2 = ref('全部')
             const showModal = ref(false)
             const isEditing = ref(false)
             const currentNote = ref({})
             const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
-            // 本地分类配置
+            // 个人资料 (本地存储)
+            const profile = reactive({
+                name: 'MindForge OS',
+                avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=MindForge', // 默认头像
+                bio: '我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白'
+            })
+            const isEditingProfile = ref(false)
+            const tempProfile = reactive({})
+
+            // 加载本地资料
+            const loadProfile = () => {
+                const saved = localStorage.getItem('mf_profile')
+                if(saved) Object.assign(profile, JSON.parse(saved))
+            }
+            
+            // 切换资料编辑
+            const toggleProfileEdit = () => {
+                if(isEditingProfile.value) {
+                    // 保存
+                    Object.assign(profile, tempProfile)
+                    localStorage.setItem('mf_profile', JSON.stringify(profile))
+                    isEditingProfile.value = false
+                } else {
+                    // 开始编辑
+                    Object.assign(tempProfile, profile)
+                    isEditingProfile.value = true
+                }
+            }
+
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
                 'idea': ['全部', '待办事项', '突发奇想'],
@@ -354,13 +393,12 @@
                 'file': ['全部', '素材', '归档']
             })
 
-            const categoryNames = { 'wiki': 'Wiki', 'idea': 'Ideas', 'blog': 'Blog', 'file': 'Files' }
-            let quill = null
-
-            // 修复漏掉的定义
             const currentSubCategories = computed(() => categories[currentL1.value] || ['全部'])
             const currentCategory = computed(() => currentL1.value)
+            
+            let quill = null
 
+            // 🟢 修复：编辑器内容重置逻辑
             const initQuill = (initialContent = '') => {
                 nextTick(() => {
                     const container = document.getElementById('editor-container');
@@ -380,12 +418,14 @@
                                 }
                             });
                         }
+                        // 强制覆盖内容，防止丢失
                         quill.root.innerHTML = initialContent;
                     }
                 })
             }
 
             onMounted(async () => {
+                loadProfile();
                 const { data: { session } } = await _supabase.auth.getSession()
                 if(session) { user.value = session.user; fetchNotes(); }
                 _supabase.auth.onAuthStateChange((_, session) => {
@@ -437,6 +477,7 @@
             const startEdit = () => {
                 Object.assign(form, currentNote.value)
                 isEditing.value = true
+                // 修复：确保传入当前内容
                 initQuill(currentNote.value.content)
             }
 
@@ -482,12 +523,10 @@
             const stripHtml = (html) => { const tmp = document.createElement("DIV"); tmp.innerHTML = html; return tmp.textContent || tmp.innerText || ""; }
             const formatTime = (ts) => new Date(ts).toLocaleDateString() + ' ' + new Date(ts).toLocaleTimeString()
 
-            const l1Class = (k) => currentL1.value === k ? 'text-white font-bold bg-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'
-
             return { 
                 user, email, password, notes, currentL1, currentL2, categories, showModal, isEditing, currentNote, form, 
-                currentSubCategories, currentCategory, filteredNotes, systemConfig,
-                handleLogin, handleRegister, handleLogout, l1Class, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
+                currentSubCategories, currentCategory, filteredNotes, profile, isEditingProfile, tempProfile,
+                handleLogin, handleRegister, handleLogout, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime, toggleProfileEdit
             }
         }
     }).mount('#app')
