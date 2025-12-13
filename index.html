@@ -3,239 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS Beta</title>
+    <title>MindForge OS (V9.0 Fixed)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.staticfile.org/vue/3.3.4/vue.global.prod.min.js"></script>
-    <script src="https://cdn.staticfile.org/marked/5.1.0/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { 'void': '#050505', 'sidebar': '#0f0f11', 'accent': '#3b82f6' },
-                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Consolas', 'monospace'] }
+                    colors: { 'void': '#050505', 'sidebar': '#0a0a0a', 'border-dim': '#222' },
+                    fontFamily: { sans: ['"Microsoft YaHei"', 'sans-serif'] }
                 }
             }
         }
     </script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { background-color: #050505; color: #e4e4e7; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
         
-        body { background-color: #050505; color: #e4e4e7; font-family: 'Inter', sans-serif; overflow: hidden; }
-        
-        /* 1. 登录页代码雨特效画布 */
-        #matrix-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.3; }
-        
-        /* 2. 橙蓝光效动画 (MindForge Logo) */
-        .cyber-gradient-text {
-            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6); /* 蓝 -> 橙 -> 蓝 */
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: gradientMove 3s linear infinite;
-        }
-        @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+        /* === 1. 极光背景 (保留你觉得不错的) === */
+        .aurora-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; overflow: hidden; z-index: 0; }
+        .aurora-blob { position: absolute; filter: blur(90px); opacity: 0.3; animation: float 15s infinite ease-in-out alternate; }
+        .blob-1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #222; animation-duration: 20s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: #1a1a1a; animation-duration: 25s; }
+        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(40px, -40px) scale(1.1); } }
 
-        /* 3. 玻璃拟态登录框 */
-        .glass-panel {
-            background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+        /* === 2. 丝滑光效文字 === */
+        .cyber-text {
+            background: linear-gradient(90deg, #fff, #666, #fff);
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 6s linear infinite alternate;
         }
+        @keyframes shine { to { background-position: 200% center; } }
 
-        /* 隐藏滚动条 */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #333; }
+        /* === 3. 高级机械开关 (重绘) === */
+        .toggle-checkbox { display: none; }
+        .toggle-label {
+            width: 40px; height: 20px; background-color: #222; border: 1px solid #333;
+            border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s ease;
+        }
+        .toggle-label::after {
+            content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+            background-color: #666; border-radius: 50%; transition: 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .toggle-checkbox:checked + .toggle-label { background-color: #fff; border-color: #fff; }
+        .toggle-checkbox:checked + .toggle-label::after { transform: translateX(20px); background-color: #000; }
+
+        /* === 4. 黑白风格按钮 === */
+        .btn-black {
+            background: black; border: 1px solid #333; color: white; transition: all 0.2s;
+        }
+        .btn-black:hover { border-color: white; box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+
+        /* === 5. Quill 编辑器深度定制 === */
+        .ql-toolbar { background: #0a0a0a; border-color: #222 !important; }
+        .ql-container { background: #000; border-color: #222 !important; color: #ccc; font-size: 15px !important; }
+        .ql-stroke { stroke: #666 !important; } 
+        .ql-fill { fill: #666 !important; }
+        .ql-picker { color: #666 !important; }
+
         [v-cloak] { display: none !important; }
-        .md-content h1 { color: white; font-weight: bold; font-size: 1.2em; margin-top: 10px; }
-        .md-content a { color: #3b82f6; text-decoration: underline; }
+        
+        /* 列表卡片悬停效果 */
+        .note-card { transition: all 0.3s ease; border: 1px solid #222; }
+        .note-card:hover { border-color: #555; transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body class="bg-void h-screen flex flex-col">
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
-    <div v-if="!user" class="absolute inset-0 z-50 flex items-center justify-center bg-black overflow-hidden">
-        <canvas id="matrix-canvas"></canvas>
-        
-        <div class="glass-panel w-full max-w-sm p-8 rounded-none relative z-10 animate-fade-in border-t-2 border-blue-600">
-            <div class="text-center mb-8">
-                <div class="w-12 h-12 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-xl mb-4">K</div>
-                <h1 class="text-2xl font-black tracking-tighter cyber-gradient-text uppercase">MindForge OS</h1>
-                <p class="text-gray-500 text-xs mt-2 tracking-widest">SYSTEM IDENTITY VERIFICATION</p>
-            </div>
-
-            <div class="space-y-5">
-                <div class="group">
-                    <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Access ID</label>
-                    <input v-model="email" type="email" class="w-full bg-black/50 border border-white/10 p-3 text-white text-sm outline-none focus:border-blue-500 transition font-mono">
-                </div>
-                <div class="group">
-                    <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Passkey</label>
-                    <input v-model="password" type="password" class="w-full bg-black/50 border border-white/10 p-3 text-white text-sm outline-none focus:border-orange-500 transition font-mono">
-                </div>
-                
-                <div class="flex gap-3 pt-2">
-                    <button @click="handleLogin" class="flex-1 bg-white text-black font-bold py-2.5 text-xs hover:bg-gray-200 transition uppercase tracking-widest">
-                        Login
-                    </button>
-                    <button @click="handleRegister" class="flex-1 border border-white/20 text-gray-400 font-bold py-2.5 text-xs hover:text-white hover:border-white transition uppercase tracking-widest">
-                        Register
-                    </button>
-                </div>
-            </div>
+    <div v-if="!user" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="aurora-bg"><div class="aurora-blob blob-1"></div><div class="aurora-blob blob-2"></div></div>
+        <div class="relative z-10 w-full max-w-sm p-8 bg-black/40 backdrop-blur-2xl border border-white/5 rounded-none shadow-2xl animate-fade-in text-center">
+            <div class="w-12 h-12 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-xl mb-6">K</div>
+            <h1 class="text-2xl font-bold text-white tracking-widest uppercase mb-8">MindForge OS</h1>
+            <button @click="mockLogin" class="w-full btn-black py-3 text-sm font-bold uppercase tracking-widest rounded-none">
+                Enter System
+            </button>
         </div>
     </div>
 
     <template v-else>
-        <aside class="w-64 bg-sidebar border-r border-white/5 flex flex-col justify-between shrink-0 z-20">
+        <aside class="w-64 bg-sidebar border-r border-border-dim flex flex-col justify-between shrink-0 z-20">
             <div>
-                <div class="h-20 flex items-center px-6 border-b border-white/5">
-                    <span class="text-xl font-black tracking-tight cyber-gradient-text">MindForge OS Beta</span>
+                <div class="h-20 flex items-center px-6">
+                    <span class="text-lg font-bold tracking-tight cyber-text">MindForge OS Beta</span>
                 </div>
                 
-                <nav class="p-6 space-y-4">
-                    <div>
-                        <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-3 pl-1">Core</div>
-                        <button @click="currentCategory = 'profile'" :class="navClass('profile')" class="w-full text-left px-0 py-1 transition text-sm font-medium hover:pl-2">
-                            Overview 系统概览
-                        </button>
-                    </div>
-                    
-                    <div>
-                        <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-3 pl-1 mt-6">Modules</div>
-                        <div class="space-y-3">
-                            <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
-                                Wiki 知识库
-                            </button>
-                            <button @click="currentCategory = 'snippet'" :class="navClass('snippet')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
-                                Ideas 灵感
-                            </button>
-                            <button @click="currentCategory = 'link'" :class="navClass('link')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
-                                Blog 博客
-                            </button>
-                            <button @click="currentCategory = 'file'" :class="navClass('file')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
-                                Files 文件
-                            </button>
-                        </div>
-                    </div>
+                <nav class="p-4 space-y-1">
+                    <div class="px-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Core Modules</div>
+                    <button @click="switchL1('wiki')" :class="l1Class('wiki')" class="w-full text-left px-3 py-2 rounded transition text-sm">Wiki 知识库</button>
+                    <button @click="switchL1('idea')" :class="l1Class('idea')" class="w-full text-left px-3 py-2 rounded transition text-sm">Ideas 灵感</button>
+                    <button @click="switchL1('blog')" :class="l1Class('blog')" class="w-full text-left px-3 py-2 rounded transition text-sm">Blog 博客</button>
+                    <button @click="switchL1('file')" :class="l1Class('file')" class="w-full text-left px-3 py-2 rounded transition text-sm">Files 文件</button>
                 </nav>
             </div>
             
-            <div class="p-6 border-t border-white/5">
-                <div class="text-xs text-gray-500 mb-2 truncate font-mono">{{ user.email }}</div>
+            <div class="p-6 border-t border-border-dim">
+                <div class="text-xs text-gray-500 mb-2 font-mono">ADMIN_USER</div>
                 <button @click="handleLogout" class="text-xs text-red-500 hover:text-red-400 hover:underline transition">
-                    Logout 退出登录
+                    [ 退出系统 ]
                 </button>
             </div>
         </aside>
-<main class="flex-1 flex flex-col bg-void relative overflow-hidden">
-            <header class="h-16 flex justify-between items-center px-8 border-b border-white/5 bg-void/50 backdrop-blur shrink-0 z-20">
-                <h2 class="text-lg font-bold text-white tracking-wide">{{ currentCategory === 'profile' ? 'System Overview' : categoryNames[currentCategory] }}</h2>
-                <button v-if="isAdmin && currentCategory !== 'profile'" @click="openEditor" class="bg-white text-black px-4 py-1.5 text-xs font-bold hover:bg-gray-200 transition">
-                    + NEW ENTRY
+
+        <main class="flex-1 flex flex-col bg-void relative overflow-hidden">
+            <header class="h-20 flex items-center justify-between px-8 border-b border-border-dim bg-void/80 backdrop-blur shrink-0 z-10">
+                <div class="flex items-center gap-3 overflow-x-auto no-scrollbar">
+                    <button v-for="sub in currentSubCategories" :key="sub" @click="currentL2 = sub"
+                        :class="['px-4 py-1.5 rounded-full text-xs font-bold transition border', currentL2 === sub ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-500']">
+                        {{ sub }}
+                    </button>
+                    <button @click="addCategory" class="w-7 h-7 rounded-full border border-dashed border-gray-700 text-gray-500 hover:text-white hover:border-white flex items-center justify-center transition">+</button>
+                </div>
+
+                <button @click="createNote" class="btn-black px-5 py-2 rounded text-xs font-bold flex items-center gap-2">
+                    <span>+</span> 新建文档
                 </button>
             </header>
 
-            <div class="flex-1 overflow-y-auto p-8 relative">
-                
-                <div v-if="currentCategory === 'profile'" class="max-w-5xl mx-auto space-y-8 animate-fade-in">
-                    <div class="border border-white/10 p-8 bg-sidebar relative overflow-hidden">
-                        <div class="flex flex-col md:flex-row gap-8 items-start relative z-10">
-                            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center text-4xl">🧠</div>
-                            <div class="flex-1">
-                                <h1 class="text-3xl font-bold text-white mb-4 cyber-gradient-text">MindForge OS</h1>
-                                <div class="text-gray-400 leading-relaxed whitespace-pre-line text-sm border-l border-white/20 pl-4 font-serif italic">
-                                    {{ systemConfig.bio }}
-                                </div>
-                            </div>
+            <div class="flex-1 overflow-y-auto p-8">
+                <div v-if="filteredNotes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div v-for="note in filteredNotes" :key="note.id" @click="viewNote(note)" 
+                         class="note-card bg-[#0a0a0a] p-6 rounded-lg relative h-60 flex flex-col cursor-pointer group">
+                        
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
+                            <span v-if="!note.isPublic" class="text-[10px] text-gray-500 border border-gray-800 px-1.5 py-0.5 rounded">私密</span>
                         </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="border border-white/10 p-6 bg-sidebar">
-                            <h3 class="text-blue-500 font-bold text-[10px] uppercase tracking-widest mb-4">Hardware</h3>
-                            <ul class="space-y-3">
-                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                                    <span class="text-gray-300">{{ item.name }}</span>
-                                    <span class="text-[10px] text-green-500 font-mono">{{ item.status }}</span>
-                                </li>
-                            </ul>
+                        
+                        <div class="flex-1 overflow-hidden">
+                            <p class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">
+                                {{ stripHtml(note.content) || '暂无内容...' }}
+                            </p>
                         </div>
-                        <div class="border border-white/10 p-6 bg-sidebar">
-                            <h3 class="text-orange-500 font-bold text-[10px] uppercase tracking-widest mb-4">Stack</h3>
-                            <div class="flex flex-wrap gap-2">
-                                <span v-for="skill in systemConfig.skills" :key="skill" class="px-3 py-1 border border-white/10 text-gray-400 text-xs hover:text-white hover:border-white/30 transition cursor-default">
-                                    {{ skill }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border border-white/10 p-6 bg-sidebar">
-                        <h3 class="text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-4">Changelog</h3>
-                        <div class="space-y-4">
-                            <div v-for="log in systemConfig.logs" :key="log.date" class="flex gap-4 text-sm items-start">
-                                <span class="text-gray-600 font-mono text-xs mt-0.5">{{ log.date }}</span>
-                                <span class="text-gray-300">{{ log.event }}</span>
-                            </div>
+                        
+                        <div class="mt-4 pt-3 border-t border-border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
+                            <span>🕒 {{ formatTime(note.updatedAt || note.date) }}</span>
+                            <span class="opacity-0 group-hover:opacity-100 transition text-white">查看 -></span>
                         </div>
                     </div>
                 </div>
-
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div v-for="note in filteredNotes" :key="note.id" @click="isAdmin && editNote(note)" 
-                         class="border border-white/10 bg-sidebar p-6 hover:border-blue-500/50 transition cursor-pointer relative h-56 flex flex-col group">
-                        
-                        <div class="flex justify-between items-start mb-3">
-                            <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
-                            <span v-if="!note.is_public" class="text-[10px] text-yellow-600 border border-yellow-900/50 px-1">LOCK</span>
-                        </div>
-                        
-                        <div v-if="currentCategory === 'link'" class="flex-1 flex items-center gap-2 text-blue-400 break-all text-sm underline">
-                            <a :href="note.link_url" target="_blank" @click.stop>{{ note.link_url }}</a>
-                        </div>
-                        <div v-else class="flex-1 overflow-hidden text-sm text-gray-500 md-content relative">
-                            <div v-html="renderMarkdown(note.content)"></div>
-                            <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-sidebar to-transparent"></div>
-                        </div>
-                        
-                        <div class="mt-4 pt-3 border-t border-white/5 flex justify-between items-center text-[10px] text-gray-600 font-mono">
-                            <span>{{ new Date(note.created_at).toLocaleDateString() }}</span>
-                            <span class="opacity-0 group-hover:opacity-100 transition text-blue-400">EDIT</span>
-                        </div>
-                    </div>
+                
+                <div v-else class="flex flex-col items-center justify-center h-full text-gray-700">
+                    <p class="text-sm tracking-widest uppercase">No Data Found</p>
                 </div>
             </div>
         </main>
     </template>
+<div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6 backdrop-blur-sm animate-fade-in">
+        <div class="bg-black border border-border-dim w-full max-w-5xl h-full rounded-lg flex flex-col shadow-2xl overflow-hidden">
+            
+            <div class="h-16 border-b border-border-dim flex justify-between items-center px-6 bg-[#0a0a0a] shrink-0">
+                <div v-if="isEditing" class="flex-1 mr-6">
+                    <input v-model="form.title" placeholder="输入标题..." class="w-full bg-transparent text-lg font-bold text-white outline-none placeholder-gray-700 font-mono">
+                </div>
+                <h2 v-else class="text-lg font-bold text-white truncate flex-1 pr-6">{{ currentNote.title }}</h2>
 
-    <div v-if="showEditor" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm">
-        <div class="bg-[#0a0a0a] border border-white/10 w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl">
-            <div class="p-4 border-b border-white/5 flex justify-between items-center bg-sidebar">
-                <span class="text-xs font-bold text-gray-500 uppercase">Editor</span>
-                <button @click="showEditor = false" class="text-gray-500 hover:text-white">✕</button>
-            </div>
-            <div class="p-6 border-b border-white/5 flex flex-col gap-4">
-                <div class="flex gap-4">
-                    <input v-model="form.title" placeholder="输入标题..." class="bg-black border border-white/10 text-white p-2 flex-1 outline-none focus:border-blue-500 transition font-mono text-sm">
-                    <select v-model="form.category" class="bg-black border border-white/10 text-gray-300 p-2 outline-none text-sm"><option value="wiki">Wiki</option><option value="snippet">Idea</option><option value="link">Blog</option><option value="file">File</option></select>
+                <div class="flex items-center gap-6">
+                    <div v-if="isEditing" class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500 font-bold uppercase">{{ form.isPublic ? 'Public' : 'Private' }}</span>
+                        <input type="checkbox" id="toggle" class="toggle-checkbox" v-model="form.isPublic">
+                        <label for="toggle" class="toggle-label"></label>
+                    </div>
+
+                    <template v-if="isEditing">
+                        <button @click="saveNote" class="bg-white text-black px-6 py-1.5 rounded text-xs font-bold hover:bg-gray-200 transition">保存</button>
+                        <button @click="cancelEdit" class="text-gray-500 hover:text-white px-2 text-xs">取消</button>
+                    </template>
+                    <template v-else>
+                        <button @click="startEdit" class="border border-white/20 hover:border-white text-white px-4 py-1.5 rounded text-xs font-bold transition">✏️ 编辑</button>
+                        <button @click="closeModal" class="text-gray-500 hover:text-white px-2 text-lg">✕</button>
+                    </template>
                 </div>
-                <div class="flex justify-between items-center">
-                    <label class="flex items-center gap-2 text-gray-400 text-xs cursor-pointer select-none"><input type="checkbox" v-model="form.is_public"> Public</label>
-                    <button @click="saveNote" class="bg-white text-black px-6 py-1.5 text-xs font-bold hover:bg-gray-200 transition">SAVE</button>
-                </div>
             </div>
-            <div class="flex-1 p-0">
-                <textarea v-model="form.content" placeholder="Type Markdown..." class="w-full h-full bg-black text-gray-300 p-6 font-mono text-sm leading-relaxed outline-none resize-none"></textarea>
+
+            <div v-show="!isEditing" class="flex-1 overflow-y-auto p-10 bg-[#050505]">
+                <div class="prose prose-invert max-w-none text-gray-300 leading-loose" v-html="currentNote.content"></div>
             </div>
-            <div v-if="form.id" class="p-3 bg-red-900/10 border-t border-red-900/20 text-right px-6">
-                <button @click="deleteNote" class="text-xs text-red-500 hover:underline">DELETE</button>
+
+            <div v-show="isEditing" class="flex-1 bg-black flex flex-col relative">
+                <div id="editor-container" class="h-full"></div>
+            </div>
+            
+            <div v-if="!isEditing" class="h-10 border-t border-border-dim bg-[#0a0a0a] flex justify-between items-center px-6 text-[10px] text-gray-600 font-mono">
+                <span>ID: {{ currentNote.id }}</span>
+                <button @click="deleteNote" class="text-red-900 hover:text-red-500 transition">DELETE_ENTRY</button>
             </div>
         </div>
     </div>
@@ -243,172 +202,157 @@
 </div>
 
 <script>
-    const { createApp, ref, computed, onMounted, reactive, watch, nextTick } = Vue
-    const { createClient } = supabase
-
-    // ==========================================
-    // 🔴 必填区 (请填入你的信息)
-    // ==========================================
-    const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入你的 eyJ... Key
-    const ADMIN_EMAIL = '1493694948@qq.com' 
-
-    // 初始化客户端
-    let _supabase = null
-    try {
-        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: { persistSession: true },
-            global: { fetch: (...args) => fetch(...args) }
-        })
-    } catch (e) { console.error(e) }
-
-    // 文案配置
-    const systemConfig = {
-        bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
-        inventory: [
-            { name: "主控: MacBook Pro M2", status: "运行中" },
-            { name: "输入: HHKB Hybrid Type-S", status: "已连接" },
-            { name: "视觉: LG 4K Ultrafine", status: "在线" },
-            { name: "音频: Sony WH-1000XM4", status: "待机" }
-        ],
-        skills: ["Vue.js", "Supabase", "Python", "Node.js", "Docker", "CyberSecurity", "UI/UX Design"],
-        logs: [
-            { date: "2025-12-13", event: "MindForge OS Beta 发布" },
-            { date: "2025-12-10", event: "数据库核心初始化完成" },
-            { date: "2025-12-01", event: "系统概念设计确立" }
-        ]
-    }
+    const { createApp, ref, computed, onMounted, reactive, nextTick } = Vue
 
     createApp({
         setup() {
-            if (!_supabase) return {};
-
+            // --- 状态数据 ---
             const user = ref(null)
-            const showAuthModal = ref(false)
-            const showEditor = ref(false)
-            const isRegisterMode = ref(false)
-            const email = ref('')
-            const password = ref('')
             const notes = ref([])
-            const currentCategory = ref('profile') 
+            const currentL1 = ref('wiki')
+            const currentL2 = ref('全部')
+            const showModal = ref(false)
+            const isEditing = ref(false)
+            const currentNote = ref({})
+            const form = reactive({ id: null, title: '', content: '', isPublic: false })
             
-            // 菜单映射
-            const categoryNames = { 
-                'wiki': 'Knowledge Base', 
-                'snippet': 'Neural Sparks', 
-                'link': 'Personal Blog', 
-                'file': 'Data Archives' 
-            }
-            
-            const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '' })
-            const isAdmin = computed(() => user.value && user.value.email === ADMIN_EMAIL)
-            const filteredNotes = computed(() => notes.value.filter(n => n.category === currentCategory.value))
-            
-            const navClass = (cat) => currentCategory.value === cat 
-                ? 'text-white font-bold' 
-                : 'text-gray-500 hover:text-white'
-
-            // --- 登录页特效逻辑 ---
-            const initMatrixRain = () => {
-                const canvas = document.getElementById('matrix-canvas');
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-
-                const chars = '01';
-                const fontSize = 14;
-                const columns = canvas.width / fontSize;
-                const drops = Array(Math.floor(columns)).fill(1);
-                
-                // 模拟堆叠高度
-                let pileHeight = 0; 
-
-                const draw = () => {
-                    // 半透明遮罩，形成拖尾
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                    ctx.fillStyle = '#22c55e'; // 绿色代码
-                    ctx.font = fontSize + 'px monospace';
-
-                    // 绘制堆叠层 (绿色液体上涨)
-                    pileHeight += 0.05; // 缓慢上涨
-                    if(pileHeight > canvas.height * 0.3) pileHeight = canvas.height * 0.3; // 限制最高堆叠30%
-                    
-                    ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
-                    ctx.fillRect(0, canvas.height - pileHeight, canvas.width, pileHeight);
-
-                    // 绘制下落代码
-                    ctx.fillStyle = '#15803d'; // 深绿色代码
-                    for (let i = 0; i < drops.length; i++) {
-                        const text = chars.charAt(Math.floor(Math.random() * chars.length));
-                        const x = i * fontSize;
-                        const y = drops[i] * fontSize;
-                        
-                        // 如果触底或碰到堆叠层，重置
-                        if (y > canvas.height - pileHeight && Math.random() > 0.975) {
-                            drops[i] = 0;
-                        }
-                        
-                        // 只在堆叠层上方绘制文字
-                        if (y < canvas.height - pileHeight) {
-                            ctx.fillText(text, x, y);
-                        }
-                        drops[i]++;
-                    }
-                };
-                setInterval(draw, 33);
-            };
-
-            // 监听 user 变化，如果是未登录状态，启动特效
-            watch(user, (newVal) => {
-                if (!newVal) {
-                    nextTick(() => initMatrixRain());
-                }
-            }, { immediate: true });
-
-            onMounted(async () => {
-                const { data: { session } } = await _supabase.auth.getSession()
-                if (session) { user.value = session.user; fetchNotes(); }
-                _supabase.auth.onAuthStateChange((_, session) => {
-                    user.value = session?.user || null
-                    if(user.value) fetchNotes()
-                })
+            // 目录配置
+            const categories = reactive({
+                'wiki': ['全部', '工作文档', '技术沉淀'],
+                'idea': ['全部', '待办事项', '突发奇想'],
+                'blog': ['全部', '随笔', '发布文章'],
+                'file': ['全部', '素材', '归档']
             })
 
-            const fetchNotes = async () => {
-                const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
-                if (!error) notes.value = data
+            // Quill 实例缓存
+            let quill = null
+
+            // --- 核心修复：Quill 初始化逻辑 ---
+            const initQuill = (initialContent = '') => {
+                nextTick(() => {
+                    const container = document.getElementById('editor-container');
+                    if (container) {
+                        // 如果实例不存在，创建它
+                        if (!quill) {
+                            quill = new Quill('#editor-container', {
+                                theme: 'snow',
+                                placeholder: '开始输入内容...',
+                                modules: {
+                                    toolbar: [
+                                        [{ 'header': [1, 2, false] }],
+                                        ['bold', 'italic', 'underline', 'code-block'],
+                                        [{ 'color': [] }, { 'background': [] }],
+                                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                        ['link', 'clean']
+                                    ]
+                                }
+                            });
+                        }
+                        // 🟢 关键修复：每次打开编辑器，必须重新赋值内容
+                        // 即使 Quill 实例还在，内容也可能因为切换笔记而变了
+                        quill.root.innerHTML = initialContent;
+                    }
+                })
             }
 
-            const handleLogin = async () => {
-                const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value })
-                if (error) alert(error.message)
+            // --- 业务逻辑 ---
+            onMounted(() => {
+                const saved = localStorage.getItem('mf_notes_v9')
+                if(saved) notes.value = JSON.parse(saved)
+                else notes.value = [
+                    { id: 1, l1: 'wiki', l2: '全部', title: '欢迎使用 MindForge', content: '<h1>Hello World</h1><p>这是一个<strong>本地测试版</strong>。</p>', isPublic: false, date: Date.now(), updatedAt: Date.now() }
+                ]
+            })
+
+            const mockLogin = () => user.value = { email: 'admin@local' }
+            const handleLogout = () => user.value = null
+            
+            const l1Class = (k) => currentL1.value === k ? 'text-white font-bold bg-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'
+            const switchL1 = (k) => { currentL1.value = k; currentL2.value = '全部'; }
+            const addCategory = () => { const n = prompt("新分类名称:"); if(n) categories[currentL1.value].push(n); }
+
+            // 过滤逻辑
+            const filteredNotes = computed(() => notes.value.filter(n => 
+                n.l1 === currentL1.value && (currentL2.value === '全部' || n.l2 === currentL2.value)
+            ))
+
+            // 新建笔记
+            const createNote = () => {
+                currentNote.value = {} // 清空当前查看对象
+                Object.assign(form, { id: null, title: '', content: '', isPublic: false })
+                isEditing.value = true
+                showModal.value = true
+                initQuill('') // 初始化空编辑器
             }
-            const handleRegister = async () => {
-                const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value })
-                if (error) alert(error.message)
-                else alert('注册成功')
+
+            // 查看笔记
+            const viewNote = (note) => {
+                currentNote.value = note
+                isEditing.value = false
+                showModal.value = true
             }
-            const handleLogout = async () => { await _supabase.auth.signOut(); user.value = null; notes.value = []; }
-            const openEditor = () => { Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value === 'profile' ? 'wiki' : currentCategory.value, link_url: '' }); showEditor.value = true; }
-            const editNote = (note) => { Object.assign(form, note); showEditor.value = true; }
-            const saveNote = async () => {
-                if (!form.title) return alert('输入标题')
-                const payload = { ...form, user_id: user.value.id }; delete payload.id
-                const { error } = form.id ? await _supabase.from('notes').update(payload).eq('id', form.id) : await _supabase.from('notes').insert(payload)
-                if (error) alert(error.message)
-                else { showEditor.value = false; fetchNotes(); }
+
+            // 开始编辑 (从查看切换到编辑)
+            const startEdit = () => {
+                Object.assign(form, currentNote.value)
+                isEditing.value = true
+                // 🟢 把当前查看的内容塞进编辑器
+                initQuill(currentNote.value.content)
             }
-            const deleteNote = async () => {
-                if(confirm('删除?')) { await _supabase.from('notes').delete().eq('id', form.id); showEditor.value = false; fetchNotes(); }
+
+            // 取消编辑
+            const cancelEdit = () => {
+                if(!form.id) closeModal(); // 如果是新建还没保存，直接关掉
+                else isEditing.value = false; // 如果是修改，回到查看模式
             }
-            const renderMarkdown = (text) => text ? marked.parse(text) : ''
+
+            const closeModal = () => { showModal.value = false; isEditing.value = false; }
+
+            // 保存笔记
+            const saveNote = () => {
+                if(!form.title) return alert('请输入标题')
+                const content = quill.root.innerHTML
+                const now = Date.now()
+
+                if(form.id) {
+                    const idx = notes.value.findIndex(n => n.id === form.id)
+                    if(idx !== -1) {
+                        notes.value[idx] = { ...notes.value[idx], ...form, content, updatedAt: now }
+                        currentNote.value = notes.value[idx] // 更新查看视图
+                    }
+                } else {
+                    const newNote = {
+                        id: now,
+                        l1: currentL1.value,
+                        l2: currentL2.value,
+                        title: form.title,
+                        content,
+                        isPublic: form.isPublic,
+                        date: now,
+                        updatedAt: now
+                    }
+                    notes.value.unshift(newNote)
+                    currentNote.value = newNote
+                }
+                localStorage.setItem('mf_notes_v9', JSON.stringify(notes.value))
+                isEditing.value = false // 保存后自动回到阅读模式
+            }
+
+            const deleteNote = () => {
+                if(confirm('Delete?')) {
+                    notes.value = notes.value.filter(n => n.id !== currentNote.value.id)
+                    localStorage.setItem('mf_notes_v9', JSON.stringify(notes.value))
+                    closeModal()
+                }
+            }
+
+            // 工具函数
+            const stripHtml = (html) => { const tmp = document.createElement("DIV"); tmp.innerHTML = html; return tmp.textContent || tmp.innerText || ""; }
+            const formatTime = (ts) => new Date(ts).toLocaleString()
 
             return { 
-                user, email, password, notes, currentCategory, showAuthModal, showEditor, form, isAdmin, filteredNotes, navClass, categoryNames, systemConfig, isRegisterMode,
-                handleLogin, handleRegister, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown 
+                user, notes, currentL1, currentL2, categories, showModal, isEditing, currentNote, form, currentSubCategories, filteredNotes,
+                mockLogin, handleLogout, l1Class, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
             }
         }
     }).mount('#app')
