@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="zh-CN" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (Ultimate)</title>
+    <title>MindForge OS (V19 Final)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,129 +18,113 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { 'void': '#050505', 'sidebar': '#0a0a0a', 'border-dim': '#222' },
-                    fontFamily: { sans: ['"Microsoft YaHei"', 'Inter', 'sans-serif'] }
+                    colors: { 'void': '#050505', 'sidebar': '#0a0a0a', 'card': '#111' },
                 }
             }
         }
     </script>
 
     <style>
-        body { background-color: #050505; color: #e4e4e7; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
+        /* 1. 强制微软雅黑 */
+        body, button, input, textarea, .ql-container { 
+            background-color: #050505; 
+            color: #e4e4e7; 
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif !important; 
+            overflow: hidden; 
+        }
         
-        /* 1. 登录页特效 */
+        /* 2. 边框极简处理 (去丑线) */
+        *, ::before, ::after { border-color: rgba(255, 255, 255, 0.05); }
+
+        /* 3. 登录页磨砂 */
         .glass-panel {
-            background: rgba(20, 20, 20, 0.65);
+            background: rgba(20, 20, 20, 0.7);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.9);
         }
-        .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; }
-        .aurora-blob { position: absolute; filter: blur(100px); opacity: 0.35; animation: float 12s infinite ease-in-out alternate; }
-        .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #172554; animation-duration: 15s; }
-        .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #312e81; animation-duration: 20s; }
+        
+        /* 4. 极光背景 */
+        .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; pointer-events: none; }
+        .aurora-blob { position: absolute; filter: blur(90px); opacity: 0.3; animation: float 15s infinite ease-in-out alternate; }
+        .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #1e3a8a; animation-duration: 20s; }
+        .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #4c1d95; animation-duration: 25s; }
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
 
-        /* 2. Logo 光效 */
+        /* 5. 蓝橙流光 Logo (回归！) */
         .cyber-text {
-            background: linear-gradient(90deg, #fff, #666, #fff);
+            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
             background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             animation: shine 4s linear infinite alternate;
+            font-weight: 900; letter-spacing: -0.5px;
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 3. 导航栏交互特效 (回归！) */
-        .nav-item { 
-            transition: all 0.3s ease; 
-            border-left: 3px solid transparent; 
-            color: #666; 
-            opacity: 0.7;
-        }
-        .nav-item:hover { 
-            color: white; 
-            background: rgba(255,255,255,0.03); 
-            padding-left: 20px; /* 增加位移感 */
-            opacity: 1;
-        }
+        /* 6. 导航栏交互特效 */
+        .nav-item { transition: all 0.3s ease; border-left: 2px solid transparent; color: #666; opacity: 0.8; }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.03); padding-left: 20px; opacity: 1; }
         .nav-item.active { 
-            color: white; 
-            border-left-color: #fff; 
-            background: linear-gradient(90deg, rgba(255,255,255,0.05), transparent); 
-            padding-left: 20px; 
-            opacity: 1;
-            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+            color: white; border-left-color: #fff; 
+            background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); 
+            padding-left: 20px; opacity: 1; font-weight: bold;
         }
 
-        /* 4. 个人主页卡片 */
-        .profile-card {
-            background: #0f0f0f;
-            border: 1px solid #222;
-            position: relative;
-            overflow: hidden;
-        }
-        .profile-card::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-            background: linear-gradient(90deg, transparent, #fff, transparent);
-            opacity: 0.2;
-        }
-
-        /* 5. 按钮与开关 */
+        /* 7. 黑白按钮 */
         .btn-black { background: #000; border: 1px solid #333; color: white; transition: all 0.2s; }
-        .btn-black:hover { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+        .btn-black:hover { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.1); transform: translateY(-1px); }
 
+        /* 8. 开关样式 */
         .toggle-checkbox { display: none; }
-        .toggle-label { width: 36px; height: 20px; background: #333; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; }
-        .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #888; border-radius: 50%; transition: 0.3s; }
-        .toggle-checkbox:checked + .toggle-label { background: #fff; }
-        .toggle-checkbox:checked + .toggle-label::after { transform: translateX(16px); background: #000; }
+        .toggle-label { width: 40px; height: 22px; background: #222; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; border: 1px solid #333; }
+        .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #666; border-radius: 50%; transition: 0.3s; }
+        .toggle-checkbox:checked + .toggle-label { background: #fff; border-color: #fff; }
+        .toggle-checkbox:checked + .toggle-label::after { transform: translateX(18px); background: #000; }
 
-        /* 6. Quill 暗黑 */
-        .ql-toolbar { background: #0a0a0a; border-color: #222 !important; }
-        .ql-container { background: #000; border-color: #222 !important; color: #ccc; font-size: 15px !important; font-family: "Microsoft YaHei" !important; }
+        /* 9. Quill 暗黑 */
+        .ql-toolbar { background: #0a0a0a; border-bottom: 1px solid #222 !important; border-top: none !important; border-left: none !important; border-right: none !important; }
+        .ql-container { background: #000; border: none !important; color: #ccc; font-size: 16px !important; }
         .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
+        /* 卡片悬停 */
+        .note-card { transition: all 0.3s ease; border: 1px solid #222; background: #0f0f0f; }
+        .note-card:hover { border-color: #444; transform: translateY(-3px); box-shadow: 0 15px 40px -10px rgba(0,0,0,0.8); background: #141414; }
+
         [v-cloak] { display: none !important; }
-        .note-card { transition: all 0.3s ease; border: 1px solid #222; }
-        .note-card:hover { border-color: #555; transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8); }
-        
-        #error-bar { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #991b1b; color: white; text-align: center; padding: 8px; z-index: 99999; font-size: 12px; }
     </style>
 </head>
 <body class="bg-void h-screen flex flex-col">
-
-<div id="error-bar"></div>
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
     <div v-if="!user" class="absolute inset-0 z-50 flex items-center justify-center">
         <div class="aurora-bg"><div class="aurora-blob blob-1"></div><div class="aurora-blob blob-2"></div></div>
         
-        <div class="glass-panel w-full max-w-sm p-10 rounded-xl relative z-10 animate-fade-in shadow-2xl">
+        <div class="glass-panel w-full max-w-sm p-10 rounded-2xl relative z-10 animate-fade-in">
             <div class="text-center mb-10">
-                <div class="w-14 h-14 bg-white rounded-xl mx-auto flex items-center justify-center text-black font-bold text-2xl mb-4 shadow-lg shadow-white/10">K</div>
-                <h1 class="text-2xl font-bold text-white tracking-tighter mb-1">MindForge OS</h1>
-                <p class="text-gray-400 text-xs font-mono tracking-widest uppercase">Identity Verification</p>
+                <div class="w-14 h-14 bg-white rounded-2xl mx-auto flex items-center justify-center text-black font-bold text-2xl mb-5 shadow-2xl">K</div>
+                <h1 class="text-3xl font-bold text-white tracking-tighter mb-2">MindForge OS</h1>
+                <p class="text-gray-500 text-xs font-bold tracking-[0.3em] uppercase">Identity Verification</p>
             </div>
 
             <div class="space-y-5">
-                <input v-model="email" type="email" placeholder="Access ID" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/30 transition font-mono">
-                <input v-model="password" type="password" placeholder="Passkey" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/30 transition font-mono">
-                <div class="flex gap-3 pt-3">
-                    <button @click="handleLogin" class="flex-1 btn-black py-2.5 rounded text-xs font-bold uppercase tracking-widest">Login</button>
-                    <button @click="handleRegister" class="flex-1 border border-white/10 text-gray-400 py-2.5 rounded text-xs font-bold uppercase tracking-widest hover:border-white hover:text-white transition">Sign Up</button>
+                <input v-model="email" type="email" placeholder="Access ID" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition">
+                <input v-model="password" type="password" placeholder="Passkey" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition">
+                <div class="flex gap-3 pt-2">
+                    <button @click="handleLogin" class="flex-1 btn-black py-3 rounded-lg text-xs font-bold uppercase tracking-widest">Login</button>
+                    <button @click="handleRegister" class="flex-1 border border-white/10 text-gray-400 py-3 rounded-lg text-xs font-bold uppercase tracking-widest hover:border-white hover:text-white transition">Sign Up</button>
                 </div>
             </div>
         </div>
     </div>
 
     <template v-else>
-        <aside class="w-64 bg-sidebar border-r border-dim flex flex-col justify-between shrink-0 z-20">
+        <aside class="w-64 bg-sidebar border-r border-white/5 flex flex-col justify-between shrink-0 z-20">
             <div>
-                <div class="h-20 flex items-center px-6 border-b border-dim">
-                    <span class="text-lg font-black tracking-tight cyber-text">MindForge OS Beta</span>
+                <div class="h-20 flex items-center px-6 border-b border-white/5">
+                    <span class="text-xl italic cyber-text">MindForge OS</span>
                 </div>
                 
-                <nav class="p-6 space-y-6">
+                <nav class="p-6 space-y-8">
                     <div>
                         <div class="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-3 pl-1">System Core</div>
                         <button @click="switchL1('profile')" :class="['nav-item w-full text-left py-2 px-4 rounded-r-lg text-sm font-medium', currentL1 === 'profile' ? 'active' : '']">
@@ -168,102 +152,104 @@
                 </nav>
             </div>
             
-            <div class="p-6 border-t border-dim">
-                <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-600 font-mono truncate w-24">{{ user.email }}</div>
-                    <button @click="handleLogout" class="text-[10px] font-bold text-red-600 hover:text-red-400 hover:bg-red-900/10 px-2 py-1 rounded transition border border-transparent hover:border-red-900/20">
-                        [ 退出系统 ]
+            <div class="p-6 border-t border-white/5">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-600 font-mono">ADMIN</span>
+                    <button @click="handleLogout" class="text-xs font-bold text-red-600 hover:text-red-400 hover:underline transition">
+                        退出登录
                     </button>
                 </div>
             </div>
         </aside>
 
         <main class="flex-1 flex flex-col bg-void relative overflow-hidden">
-            <header class="h-20 flex items-center justify-between px-8 border-b border-dim bg-void/80 backdrop-blur shrink-0 z-10">
+            <header class="h-20 flex items-center justify-between px-8 border-b border-white/5 bg-void/80 backdrop-blur shrink-0 z-10">
                 <div class="flex items-center gap-3 overflow-x-auto no-scrollbar">
                     <button v-for="sub in currentSubCategories" :key="sub" @click="currentL2 = sub"
-                        :class="['px-4 py-1.5 rounded-full text-xs font-bold transition border', currentL2 === sub ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-dim hover:border-gray-500 hover:text-white']">
+                        :class="['px-4 py-1.5 rounded-full text-xs font-bold transition border', currentL2 === sub ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-500 hover:text-white']">
                         {{ sub }}
                     </button>
                     <button @click="addCategory" class="w-7 h-7 rounded-full border border-dashed border-gray-700 text-gray-500 hover:text-white hover:border-white flex items-center justify-center transition">+</button>
                 </div>
+
                 <button v-if="currentCategory !== 'profile'" @click="createNote" class="btn-black px-5 py-2 rounded text-xs font-bold flex items-center gap-2">
-                    + 新建文档
+                    <span>+</span> 新建文档
                 </button>
             </header>
 
             <div class="flex-1 overflow-y-auto p-8">
                 
                 <div v-if="currentCategory === 'profile'" class="max-w-4xl mx-auto space-y-8 animate-fade-in">
-                    <div class="profile-card p-10 rounded-2xl flex flex-col md:flex-row gap-10 items-center md:items-start">
-                        <div class="relative group">
-                            <img :src="profile.avatar" class="w-32 h-32 rounded-full object-cover border-4 border-[#111] shadow-2xl">
-                            <div v-if="isEditingProfile" class="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full">
-                                <span class="text-xs text-gray-300">编辑模式</span>
-                            </div>
+                    <div class="border border-white/10 bg-[#0f0f0f] p-10 rounded-2xl flex flex-col md:flex-row gap-10 items-center md:items-start relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-blue-900/20 blur-[80px] rounded-full pointer-events-none"></div>
+
+                        <div class="relative">
+                            <img :src="profile.avatar" class="w-28 h-28 rounded-full border-4 border-[#1a1a1a] shadow-2xl">
                         </div>
                         
-                        <div class="flex-1 w-full">
+                        <div class="flex-1 w-full relative z-10">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
-                                    <div v-if="isEditingProfile" class="space-y-2">
-                                        <input v-model="tempProfile.name" class="bg-black/50 border border-white/20 p-2 text-xl font-bold text-white w-full rounded" placeholder="输入 ID">
-                                        <input v-model="tempProfile.avatar" class="bg-black/50 border border-white/20 p-2 text-xs text-gray-500 w-full rounded font-mono" placeholder="头像 URL">
+                                    <div v-if="isEditingProfile" class="space-y-3 mb-4">
+                                        <input v-model="tempProfile.name" class="bg-black border border-white/20 p-2 text-xl font-bold text-white w-full rounded outline-none" placeholder="输入 ID">
+                                        <input v-model="tempProfile.avatar" class="bg-black border border-white/20 p-2 text-xs text-gray-500 w-full rounded outline-none" placeholder="头像 URL">
                                     </div>
                                     <h1 v-else class="text-4xl font-black text-white tracking-tighter mb-2">{{ profile.name }}</h1>
-                                    
-                                    <p class="text-xs text-blue-500 font-mono tracking-widest uppercase border border-blue-900/30 bg-blue-900/10 px-2 py-1 inline-block rounded">System Administrator</p>
+                                    <span class="text-[10px] bg-white/10 text-white px-2 py-1 rounded font-bold tracking-widest uppercase">Admin</span>
                                 </div>
-                                <button @click="toggleProfileEdit" class="text-xs border border-white/10 px-3 py-1 text-gray-400 hover:text-white hover:border-white transition rounded">
+                                <button @click="toggleProfileEdit" class="text-xs border border-white/10 px-4 py-1.5 text-gray-400 hover:text-white hover:border-white transition rounded-full">
                                     {{ isEditingProfile ? '保存资料' : '编辑资料' }}
                                 </button>
                             </div>
                             
-                            <div class="mt-6">
-                                <textarea v-if="isEditingProfile" v-model="tempProfile.bio" class="w-full bg-black/50 border border-white/20 p-3 text-gray-300 text-sm rounded h-24 font-serif"></textarea>
-                                <div v-else class="text-gray-400 text-sm leading-loose font-serif italic border-l-2 border-white/10 pl-6">
-                                    {{ profile.bio }}
-                                </div>
+                            <textarea v-if="isEditingProfile" v-model="tempProfile.bio" class="w-full bg-black border border-white/20 p-4 text-gray-300 text-sm rounded h-32 outline-none leading-relaxed"></textarea>
+                            <div v-else class="text-gray-400 text-sm leading-loose font-serif italic border-l-2 border-white/10 pl-6">
+                                {{ profile.bio }}
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="bg-[#0f0f0f] border border-[#222] p-6 rounded-xl">
-                            <h3 class="text-[10px] font-bold text-gray-600 uppercase mb-2">Total Entries</h3>
-                            <p class="text-3xl font-bold text-white">{{ notes.length }}</p>
+                    <div class="grid grid-cols-3 gap-6">
+                        <div class="bg-[#0f0f0f] border border-white/5 p-6 rounded-xl text-center">
+                            <div class="text-[10px] text-gray-600 font-bold uppercase mb-2">Total Notes</div>
+                            <div class="text-3xl font-bold text-white">{{ notes.length }}</div>
                         </div>
-                        <div class="bg-[#0f0f0f] border border-[#222] p-6 rounded-xl">
-                            <h3 class="text-[10px] font-bold text-gray-600 uppercase mb-2">System Status</h3>
-                            <p class="text-xs font-mono text-green-500">● ONLINE (VPN)</p>
+                        <div class="bg-[#0f0f0f] border border-white/5 p-6 rounded-xl text-center">
+                            <div class="text-[10px] text-gray-600 font-bold uppercase mb-2">System Status</div>
+                            <div class="text-xs font-bold text-green-500">● ONLINE</div>
                         </div>
-                        <div class="bg-[#0f0f0f] border border-[#222] p-6 rounded-xl">
-                            <h3 class="text-[10px] font-bold text-gray-600 uppercase mb-2">Version</h3>
-                            <p class="text-xs font-mono text-gray-400">v18.0.0-stable</p>
+                        <div class="bg-[#0f0f0f] border border-white/5 p-6 rounded-xl text-center">
+                            <div class="text-[10px] text-gray-600 font-bold uppercase mb-2">Version</div>
+                            <div class="text-xs font-bold text-gray-400">V19.0.0</div>
                         </div>
                     </div>
                 </div>
 
                 <div v-else>
-                    <div v-if="filteredNotes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div v-if="filteredNotes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div v-for="note in filteredNotes" :key="note.id" @click="viewNote(note)" 
-                             class="note-card bg-sidebar p-6 rounded-xl relative h-60 flex flex-col cursor-pointer group">
+                             class="note-card p-7 rounded-xl relative h-64 flex flex-col cursor-pointer group">
+                            
                             <div class="flex justify-between items-start mb-4">
-                                <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
+                                <h3 class="text-base font-bold text-gray-100 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
                                 <span v-if="!note.is_public" class="text-[10px] text-gray-500 border border-gray-800 px-1.5 py-0.5 rounded">私密</span>
                             </div>
+                            
                             <div class="flex-1 overflow-hidden">
                                 <div v-if="note.category === 'link'" class="text-blue-500 underline text-xs break-all">{{ note.link_url }}</div>
-                                <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">{{ stripHtml(note.content) || '暂无内容...' }}</p>
+                                <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-5 opacity-70">
+                                    {{ stripHtml(note.content) || '暂无内容...' }}
+                                </p>
                             </div>
-                            <div class="mt-4 pt-3 border-t border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
+                            
+                            <div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-[10px] text-gray-600">
                                 <span>🕒 {{ formatTime(note.created_at) }}</span>
-                                <span class="opacity-0 group-hover:opacity-100 transition text-white">查看 -></span>
+                                <span class="opacity-0 group-hover:opacity-100 transition text-white">Open -></span>
                             </div>
                         </div>
                     </div>
-                    <div v-else class="flex flex-col items-center justify-center h-64 text-gray-700">
-                        <p class="text-sm tracking-widest uppercase">No Data Found</p>
+                    <div v-else class="flex flex-col items-center justify-center h-64 text-gray-700 opacity-50">
+                        <p class="text-sm tracking-widest uppercase">Empty Folder</p>
                     </div>
                 </div>
             </div>
@@ -271,10 +257,10 @@
     </template>
 
     <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6 backdrop-blur-sm animate-fade-in">
-        <div class="bg-black border border-dim w-full max-w-5xl h-full rounded-lg flex flex-col shadow-2xl overflow-hidden">
-            <div class="h-16 border-b border-dim flex justify-between items-center px-6 bg-sidebar shrink-0">
+        <div class="bg-black border border-white/10 w-full max-w-5xl h-full rounded-xl flex flex-col shadow-2xl overflow-hidden">
+            <div class="h-16 border-b border-white/10 flex justify-between items-center px-6 bg-[#0a0a0a] shrink-0">
                 <div v-if="isEditing" class="flex-1 mr-6">
-                    <input v-model="form.title" placeholder="输入标题..." class="w-full bg-transparent text-lg font-bold text-white outline-none placeholder-gray-700 font-mono">
+                    <input v-model="form.title" placeholder="输入标题..." class="w-full bg-transparent text-lg font-bold text-white outline-none placeholder-gray-700">
                 </div>
                 <h2 v-else class="text-lg font-bold text-white truncate flex-1 pr-6">{{ currentNote.title }}</h2>
                 <div class="flex items-center gap-6">
@@ -293,19 +279,22 @@
                     </template>
                 </div>
             </div>
-            <div v-show="!isEditing" class="flex-1 overflow-y-auto p-10 bg-void">
+            
+            <div v-show="!isEditing" class="flex-1 overflow-y-auto p-10 bg-[#050505]">
                 <div v-if="currentNote.category === 'link'" class="mb-6 p-4 border border-blue-900/30 bg-blue-900/10 rounded text-blue-400 break-all">
                     🔗 链接: <a :href="currentNote.link_url" target="_blank" class="underline">{{ currentNote.link_url }}</a>
                 </div>
                 <div class="prose prose-invert max-w-none text-gray-300 leading-loose" v-html="currentNote.content"></div>
             </div>
+
             <div v-show="isEditing" class="flex-1 bg-black flex flex-col relative">
-                <div v-if="form.category === 'link'" class="p-4 border-b border-dim">
-                    <input v-model="form.link_url" placeholder="在此输入 URL 链接..." class="w-full bg-sidebar border border-gray-800 text-blue-400 p-2 rounded outline-none">
+                <div v-if="form.category === 'link'" class="p-4 border-b border-white/10">
+                    <input v-model="form.link_url" placeholder="在此输入 URL 链接..." class="w-full bg-[#111] border border-gray-800 text-blue-400 p-2 rounded outline-none">
                 </div>
                 <div id="editor-container" class="h-full"></div>
             </div>
-            <div v-if="!isEditing" class="h-10 border-t border-dim bg-sidebar flex justify-between items-center px-6 text-[10px] text-gray-600 font-mono">
+            
+            <div v-if="!isEditing" class="h-10 border-t border-white/10 bg-[#0a0a0a] flex justify-between items-center px-6 text-[10px] text-gray-600">
                 <span>ID: {{ currentNote.id }}</span>
                 <button @click="deleteNote" class="text-red-900 hover:text-red-500 transition">DELETE_ENTRY</button>
             </div>
@@ -319,28 +308,19 @@
     const { createClient } = window.supabase || {}
 
     // ==========================================
-    // 🔴 最终填空：Key 
+    // 🔴 必填区 (填你的 eyJ... Key)
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入 eyJ... Key
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 初始化客户端
     let _supabase = null
-    function initSupabase() {
-        if (typeof createClient !== 'function' || typeof Vue === 'undefined') {
-            document.getElementById('error-bar').style.display = 'block';
-            document.getElementById('error-bar').innerText = '⚠️ 核心库未加载，请刷新页面重试。';
-            return null;
-        }
-        try {
-            return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                auth: { persistSession: true },
-                global: { fetch: (...args) => fetch(...args) }
-            });
-        } catch (e) { console.error("Key Error", e); }
-    }
-    _supabase = initSupabase();
+    try {
+        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: true },
+            global: { fetch: (...args) => fetch(...args) }
+        });
+    } catch (e) { console.error("Key Error", e); }
 
     createApp({
         setup() {
@@ -350,41 +330,21 @@
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            const currentL1 = ref('profile') // 默认进 Profile
+            const currentL1 = ref('profile') // 默认进入个人主页
             const currentL2 = ref('全部')
             const showModal = ref(false)
             const isEditing = ref(false)
             const currentNote = ref({})
             const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
-            // 个人资料 (本地存储)
+            // 个人资料 (存本地)
             const profile = reactive({
                 name: 'MindForge OS',
-                avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=MindForge', // 默认头像
+                avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=MindForge',
                 bio: '我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白'
             })
             const isEditingProfile = ref(false)
             const tempProfile = reactive({})
-
-            // 加载本地资料
-            const loadProfile = () => {
-                const saved = localStorage.getItem('mf_profile')
-                if(saved) Object.assign(profile, JSON.parse(saved))
-            }
-            
-            // 切换资料编辑
-            const toggleProfileEdit = () => {
-                if(isEditingProfile.value) {
-                    // 保存
-                    Object.assign(profile, tempProfile)
-                    localStorage.setItem('mf_profile', JSON.stringify(profile))
-                    isEditingProfile.value = false
-                } else {
-                    // 开始编辑
-                    Object.assign(tempProfile, profile)
-                    isEditingProfile.value = true
-                }
-            }
 
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
@@ -398,7 +358,7 @@
             
             let quill = null
 
-            // 🟢 修复：编辑器内容重置逻辑
+            // 🟢 编辑器修复：每次都重新注入内容
             const initQuill = (initialContent = '') => {
                 nextTick(() => {
                     const container = document.getElementById('editor-container');
@@ -418,14 +378,17 @@
                                 }
                             });
                         }
-                        // 强制覆盖内容，防止丢失
+                        // 强制覆盖内容
                         quill.root.innerHTML = initialContent;
                     }
                 })
             }
 
             onMounted(async () => {
-                loadProfile();
+                // 加载本地资料
+                const savedProfile = localStorage.getItem('mf_profile')
+                if(savedProfile) Object.assign(profile, JSON.parse(savedProfile))
+
                 const { data: { session } } = await _supabase.auth.getSession()
                 if(session) { user.value = session.user; fetchNotes(); }
                 _supabase.auth.onAuthStateChange((_, session) => {
@@ -437,8 +400,8 @@
 
             const fetchNotes = async () => {
                 if (!user.value) return 
-                const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
-                if (!error) notes.value = data
+                const { data } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
+                if (data) notes.value = data
             }
 
             const handleLogin = async () => {
@@ -448,7 +411,7 @@
             const handleRegister = async () => {
                 const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value })
                 if (error) alert(error.message)
-                else alert('注册成功，请登录')
+                else alert('注册成功')
             }
             const handleLogout = async () => { await _supabase.auth.signOut(); user.value = null; notes.value = []; }
 
@@ -477,7 +440,6 @@
             const startEdit = () => {
                 Object.assign(form, currentNote.value)
                 isEditing.value = true
-                // 修复：确保传入当前内容
                 initQuill(currentNote.value.content)
             }
 
@@ -517,6 +479,17 @@
                 if(confirm('Delete?')) {
                     await _supabase.from('notes').delete().eq('id', form.id)
                     closeModal(); fetchNotes();
+                }
+            }
+
+            const toggleProfileEdit = () => {
+                if(isEditingProfile.value) {
+                    Object.assign(profile, tempProfile)
+                    localStorage.setItem('mf_profile', JSON.stringify(profile))
+                    isEditingProfile.value = false
+                } else {
+                    Object.assign(tempProfile, profile)
+                    isEditingProfile.value = true
                 }
             }
 
