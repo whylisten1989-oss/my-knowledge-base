@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge OS (V26 Perfect)</title>
+    <title>MindForge OS (V27 Final)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,31 +18,25 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { 'void': '#000000', 'sidebar': '#050505', 'card': '#0a0a0a', 'border-dim': 'rgba(255,255,255,0.15)' },
-                    fontFamily: { sans: ['"Microsoft YaHei"', '"PingFang SC"', 'sans-serif'] }, // 强制微软雅黑
-                    animation: {
-                        'pulse-bar': 'pulse-bar 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                    },
-                    keyframes: {
-                        'pulse-bar': { '0%, 100%': { opacity: 0.3 }, '50%': { opacity: 1 } }
-                    }
+                    colors: { 'void': '#000000', 'sidebar': '#050505', 'card': '#0a0a0a', 'border-dim': 'rgba(255,255,255,0.08)' },
+                    fontFamily: { sans: ['"Microsoft YaHei"', '"PingFang SC"', 'sans-serif'] },
                 }
             }
         }
     </script>
 
     <style>
-        /* 1. 强制全局字体 */
+        /* 1. 全局强制微软雅黑 */
         * { font-family: "Microsoft YaHei", "PingFang SC", sans-serif !important; letter-spacing: 0.5px; }
         body { background-color: #000; color: #e0e0e0; overflow: hidden; position: relative; }
         
-        /* 2. 定制高级滚动条 (Scrollbar) */
+        /* 2. 高级滚动条 (编辑器修复) */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; border: 1px solid #000; }
-        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; border: 1px solid #000; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
         
-        /* 3. 按钮样式 (保持 V25 的高级感) */
+        /* 3. 按钮与光效 */
         .btn-cyber {
             border: 1px solid rgba(255,255,255,0.2); background: #000; color: #fff;
             text-transform: uppercase; font-size: 12px; font-weight: 700;
@@ -58,19 +52,53 @@
         .btn-danger { border: 1px solid rgba(255, 50, 50, 0.3); color: #ff4444; background: transparent; padding: 8px 16px; font-size: 12px; font-weight: 700; transition: all 0.2s; }
         .btn-danger:hover { background: #ff4444; color: #000; border-color: #ff4444; box-shadow: 0 0 15px rgba(255, 68, 68, 0.4); }
 
-        /* 4. 导航栏交互 (字体加大) */
-        .nav-item { 
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
-            border-left: 2px solid transparent; color: #666; padding-left: 12px;
-            font-size: 14px; /* 字体加大 */
-        }
-        .nav-item:hover { color: #fff; padding-left: 16px; background: rgba(255,255,255,0.03); }
-        .nav-item.active { 
-            color: #000; background: #fff; padding-left: 20px; font-weight: 900;
-            border-left: none; box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        /* 退出按钮特效 */
+        .btn-logout { transition: all 0.2s; border: 1px solid transparent; }
+        .btn-logout:hover { 
+            background: rgba(153, 27, 27, 0.15); 
+            color: #f87171; 
+            border-color: rgba(153, 27, 27, 0.3);
+            box-shadow: 0 0 15px rgba(220, 38, 38, 0.2);
         }
 
-        /* 5. 呼吸光幕 */
+        /* 4. 导航栏交互 */
+        .nav-item { 
+            transition: all 0.2s ease; border-radius: 6px; color: #888; margin-bottom: 4px; 
+            font-size: 14px; /* 字体加大 */
+        }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+        .nav-item.active { 
+            background-color: #ffffff; color: #000000; font-weight: 900;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2); transform: scale(1.01);
+        }
+
+        /* 5. 蓝橙流光 (斜体修复) */
+        .cyber-text {
+            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite alternate;
+            font-weight: 900; font-style: italic; /* 斜体 */
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        /* 6. Neural Monitor 动画 (跳动效果) */
+        .monitor-bar { height: 100%; width: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; position: relative; overflow: hidden; }
+        .monitor-fill { 
+            position: absolute; bottom: 0; left: 0; width: 100%; background: #10b981; 
+            animation: equalizer 1s ease-in-out infinite alternate;
+        }
+        @keyframes equalizer { 
+            0% { height: 10%; opacity: 0.3; } 
+            100% { height: 90%; opacity: 1; filter: drop-shadow(0 0 5px #10b981); } 
+        }
+
+        /* 7. Quill 编辑器滚动修复 */
+        .ql-toolbar { background: #0a0a0a; border-bottom: 1px solid #333 !important; border-top:none!important; border-left:none!important; border-right:none!important; z-index: 10; }
+        .ql-container { background: #000; border: none !important; color: #ccc; font-size: 16px !important; height: calc(100% - 42px); } /* 减去 toolbar 高度 */
+        .ql-editor { height: 100%; overflow-y: auto; padding: 20px; } /* 启用内部滚动 */
+        .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
+
+        /* 呼吸光幕 */
         .edge-glow-top, .edge-glow-bottom {
             position: fixed; left: 0; right: 0; height: 1px; z-index: 9999; pointer-events: none;
             background: linear-gradient(90deg, transparent, #3b82f6, #f97316, transparent);
@@ -81,34 +109,23 @@
         .edge-glow-bottom { bottom: 0; }
         @keyframes pulse-width { 0%, 100% { opacity: 0.3; transform: scaleX(0.8); } 50% { opacity: 1; transform: scaleX(1); } }
 
-        /* 6. Logo 回归 (渐变流光) */
-        .cyber-text {
-            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
-            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            animation: shine 4s linear infinite alternate; font-weight: 900;
-        }
-        @keyframes shine { to { background-position: 200% center; } }
-
-        /* 7. Quill 编辑器修正 */
-        .ql-toolbar { background: #0a0a0a; border-bottom: 1px solid #333 !important; border-top:none!important; border-left:none!important; border-right:none!important; }
-        .ql-container { background: #000; border: none !important; color: #ccc; font-size: 16px !important; }
-        /* 关键：允许编辑器滚动 */
-        .ql-editor { height: 100%; overflow-y: auto; }
-        
-        /* 8. 监控条动画 (替代 Activity Canvas) */
-        .monitor-bar { height: 100%; width: 4px; background: #333; border-radius: 2px; position: relative; overflow: hidden; }
-        .monitor-fill { position: absolute; bottom: 0; left: 0; width: 100%; background: #10b981; animation: pulse-bar 2s infinite ease-in-out; }
-
+        /* 基础组件 */
         .toggle-checkbox { display: none; }
-        .toggle-label { width: 40px; height: 20px; background: #222; border: 1px solid #444; position: relative; cursor: pointer; transition: 0.3s; border-radius: 99px; }
-        .toggle-label::after { content: ''; position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; background: #666; transition: 0.3s; border-radius: 50%; }
+        .toggle-label { width: 36px; height: 18px; background: #222; border-radius: 99px; position: relative; cursor: pointer; border: 1px solid #333; transition: 0.3s; }
+        .toggle-label::after { content: ''; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: #666; transition: 0.3s; border-radius: 50%; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; border-color: #fff; }
-        .toggle-checkbox:checked + .toggle-label::after { transform: translateX(20px); background: #000; }
+        .toggle-checkbox:checked + .toggle-label::after { transform: translateX(16px); background: #000; }
 
         .glass-panel { background: rgba(10,10,10,0.85); backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,0.1); }
         .note-card { transition: all 0.3s ease; border: 1px solid #222; background: #050505; }
         .note-card:hover { border-color: #666; transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255,255,255,0.05); }
         
+        .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; pointer-events: none; }
+        .aurora-blob { position: absolute; filter: blur(90px); opacity: 0.3; animation: float 15s infinite ease-in-out alternate; }
+        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: #172554; animation-duration: 20s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 70vw; height: 70vw; background: #4c1d95; animation-duration: 25s; }
+        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
+
         [v-cloak] { display: none !important; }
     </style>
 </head>
@@ -120,10 +137,10 @@
 <div id="app" v-cloak class="h-full w-full flex relative">
 
     <div v-if="!user" class="absolute inset-0 z-50 flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-        <div class="glass-panel w-full max-w-sm p-12 rounded-none border border-white/20 relative z-10 animate-fade-in">
+        <div class="aurora-bg"><div class="aurora-blob blob-1"></div><div class="aurora-blob blob-2"></div></div>
+        <div class="glass-panel w-full max-w-sm p-12 rounded-none border border-white/20 relative z-10 animate-fade-in shadow-2xl">
             <div class="mb-12 text-center">
-                <h1 class="text-4xl font-black mb-2 cyber-text tracking-tighter">MINDFORGE OS</h1>
+                <h1 class="text-3xl font-black mb-2 cyber-text tracking-tighter">MindForge OS Beta</h1>
                 <p class="text-gray-500 text-[10px] font-bold tracking-[0.4em] uppercase">System Access Control</p>
             </div>
             <div class="space-y-6">
@@ -149,7 +166,7 @@
         <aside :class="['fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-border-dim flex flex-col justify-between z-40 transition-transform duration-300 md:relative md:translate-x-0', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full']">
             <div>
                 <div class="h-20 flex items-center px-8 border-b border-border-dim">
-                    <span class="text-xl font-black tracking-tighter cyber-text">MINDFORGE <span class="text-white text-[10px] align-top font-normal opacity-50">BETA</span></span>
+                    <span class="text-lg cyber-text tracking-tighter">MindForge OS Beta</span>
                 </div>
                 
                 <nav class="p-6 space-y-8">
@@ -187,10 +204,10 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="text-sm font-bold text-white truncate">{{ profile.name }}</div>
-                        <div class="text-[10px] text-gray-500 truncate font-mono">STATUS: ACTIVE</div>
+                        <div class="text-[10px] text-green-500 truncate font-mono">STATUS: ACTIVE</div>
                     </div>
                 </div>
-                <button @click="handleLogout" class="w-full text-left text-[10px] font-bold text-red-600 hover:text-red-400 tracking-widest uppercase transition pl-1">
+                <button @click="handleLogout" class="w-full text-left text-[10px] font-bold text-red-600 tracking-widest uppercase py-2 px-1 rounded btn-logout">
                     Logout Terminate
                 </button>
             </div>
@@ -218,40 +235,41 @@
             <div class="flex-1 overflow-y-auto p-6 md:p-10 relative z-10">
                 
                 <div v-if="currentView === 'home'" class="w-full max-w-[98%] mx-auto space-y-6 animate-fade-in">
-                    <div class="border border-border-dim bg-sidebar p-10 relative overflow-hidden">
+                    <div class="border border-border-dim bg-sidebar p-10 relative overflow-hidden shadow-2xl">
                         <div class="relative z-10 flex flex-col md:flex-row gap-10 items-start">
-                            <div class="w-24 h-24 bg-white flex items-center justify-center text-5xl shadow-2xl shrink-0 text-black">🧠</div>
+                            <div class="w-24 h-24 bg-white flex items-center justify-center text-5xl shadow-2xl shrink-0 text-black rounded-lg">🧠</div>
                             <div class="flex-1">
-                                <h1 class="text-4xl font-black mb-4 cyber-text tracking-tighter">MIND_FORGE_OS</h1>
+                                <h1 class="text-4xl font-black mb-4 cyber-text tracking-tighter">MindForge OS Beta</h1>
                                 <div class="text-gray-400 text-sm leading-loose border-l-4 border-white pl-6 font-serif italic max-w-2xl">{{ systemConfig.bio }}</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="lg:col-span-2 border border-border-dim bg-sidebar relative h-[350px] overflow-hidden flex flex-col p-8">
-                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-8">System Neural Monitor</h3>
-                            
-                            <div class="flex-1 flex items-end justify-between gap-2 px-4 pb-4">
-                                <div v-for="i in 30" :key="i" class="monitor-bar flex-1">
-                                    <div class="monitor-fill" :style="{ height: Math.random() * 60 + 20 + '%', animationDelay: i * 0.1 + 's', animationDuration: (1 + Math.random()) + 's' }"></div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-96">
+                        <div class="lg:col-span-2 border border-border-dim bg-sidebar relative h-96 lg:h-full overflow-hidden flex flex-col p-8">
+                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-8 flex justify-between">
+                                <span>System Neural Monitor</span> <span class="text-green-500 animate-pulse">● LIVE</span>
+                            </h3>
+                            <div class="flex-1 flex items-end justify-between gap-1 px-2 pb-4">
+                                <div v-for="i in 40" :key="i" class="monitor-bar flex-1">
+                                    <div class="monitor-fill" :style="{ animationDuration: (0.5 + Math.random()) + 's', animationDelay: i * 0.05 + 's' }"></div>
                                 </div>
                             </div>
-                            <div class="text-center text-[10px] text-green-500 font-mono tracking-widest mt-4">CORE STABILITY: 99.8%</div>
+                            <div class="text-center text-[10px] text-gray-600 font-mono tracking-widest mt-2 border-t border-white/5 pt-2">CORE ACTIVITY LEVEL</div>
                         </div>
 
-                        <div class="flex flex-col gap-6">
-                            <div class="border border-border-dim bg-sidebar p-6 flex-1">
-                                <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-6">Inventory</h3>
-                                <ul class="space-y-4 text-xs text-gray-400 font-mono">
-                                    <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-white/5 pb-2">
+                        <div class="flex flex-col gap-6 h-full">
+                            <div class="border border-border-dim bg-sidebar p-6 rounded-none flex-1 flex flex-col justify-center">
+                                <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-4">Hardware Specs</h3>
+                                <ul class="space-y-2 text-xs text-gray-400 font-mono">
+                                    <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-white/5 pb-1">
                                         <span>{{ item.name }}</span><span class="text-white">{{ item.status }}</span>
                                     </li>
                                 </ul>
                             </div>
-                            <div class="border border-border-dim bg-sidebar p-6 flex-1">
-                                <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-6">Logs</h3>
-                                <div class="space-y-3 text-[10px] text-gray-500 font-mono">
+                            <div class="border border-border-dim bg-sidebar p-6 rounded-none flex-1 flex flex-col justify-center">
+                                <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">System Log</h3>
+                                <div class="space-y-2 text-[10px] text-gray-500 font-mono">
                                     <div v-for="log in systemConfig.logs" :key="log.date" class="flex gap-4">
                                         <span class="text-white">{{ log.date }}</span><span>{{ log.event }}</span>
                                     </div>
@@ -266,9 +284,11 @@
                         <div v-for="note in filteredNotes" :key="note.id" @click="viewNote(note)" 
                              class="note-card p-8 relative h-72 flex flex-col cursor-pointer group hover:bg-[#080808]">
                             
-                            <div class="flex justify-between items-start mb-6">
-                                <h3 class="text-lg font-bold text-white line-clamp-1 group-hover:underline decoration-1 underline-offset-4">{{ note.title }}</h3>
-                                <span v-if="!note.is_public" class="text-[9px] font-bold text-black bg-white px-2 py-0.5 uppercase tracking-wider">Private 私密</span>
+                            <div class="flex items-start justify-between mb-6 gap-4">
+                                <h3 class="text-lg font-bold text-white line-clamp-1 group-hover:underline decoration-1 underline-offset-4 flex-1 min-w-0">{{ note.title }}</h3>
+                                <span v-if="!note.is_public" class="text-[9px] font-bold text-black bg-white px-2 py-0.5 uppercase tracking-wider shrink-0">
+                                    🔒 Private
+                                </span>
                             </div>
                             
                             <div class="flex-1 overflow-hidden">
@@ -294,9 +314,7 @@
 
     <div v-if="isProfileOpen" class="fixed inset-0 z-[100] bg-void flex flex-col animate-fade-in">
         <div class="h-20 flex items-center justify-between px-10 border-b border-border-dim">
-            <button @click="isProfileOpen = false" class="btn-cyber text-[10px]">
-                Back Return 返回
-            </button>
+            <button @click="isProfileOpen = false" class="btn-cyber text-[10px]">Back Return 返回</button>
             <span class="text-xs font-bold text-gray-500 uppercase tracking-[0.3em]">User Profile Configuration</span>
         </div>
         <div class="flex-1 flex items-center justify-center p-6 relative overflow-hidden">
@@ -305,7 +323,6 @@
                     <img :src="profile.avatar" class="w-40 h-40 border border-white/20 shadow-2xl object-cover grayscale group-hover:grayscale-0 transition duration-500">
                     <button v-if="!isEditingProfile" @click="isEditingProfile = true" class="absolute -bottom-4 -right-4 bg-white text-black w-10 h-10 flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 transition border border-black">E</button>
                 </div>
-
                 <div v-if="isEditingProfile" class="w-full space-y-6 animate-fade-in">
                     <input v-model="tempProfile.name" class="w-full bg-black border border-white/20 p-4 text-center font-bold text-2xl text-white outline-none focus:border-white" placeholder="ID Name">
                     <input v-model="tempProfile.avatar" class="w-full bg-black border border-white/20 p-4 text-xs text-center text-gray-400 outline-none focus:border-white font-mono" placeholder="Image URL">
@@ -315,13 +332,10 @@
                         <button @click="isEditingProfile = false" class="text-gray-500 text-xs px-4 hover:text-white uppercase font-bold tracking-wider">Cancel</button>
                     </div>
                 </div>
-
                 <div v-else class="animate-fade-in">
                     <h1 class="text-5xl font-black text-white tracking-tighter mb-4">{{ profile.name }}</h1>
                     <span class="text-[10px] border border-white/30 text-white px-4 py-1 uppercase tracking-[0.2em] font-bold">Admin Level 1</span>
-                    <div class="mt-10 text-gray-400 text-base leading-loose max-w-xl mx-auto font-serif italic border-t border-white/10 pt-8">
-                        "{{ profile.bio }}"
-                    </div>
+                    <div class="mt-10 text-gray-400 text-base leading-loose max-w-xl mx-auto font-serif italic border-t border-white/10 pt-8">"{{ profile.bio }}"</div>
                 </div>
             </div>
         </div>
@@ -341,7 +355,6 @@
                         <input type="checkbox" id="toggle" class="toggle-checkbox" v-model="form.is_public">
                         <label for="toggle" class="toggle-label"></label>
                     </div>
-                    
                     <template v-if="isEditing">
                         <button @click="saveNote" class="btn-cyber">Save Cloud 保存</button>
                         <button @click="cancelEdit" class="text-gray-500 hover:text-white px-2 text-xs font-bold uppercase tracking-wider">Cancel</button>
@@ -369,8 +382,8 @@
             
             <div v-if="!isEditing" class="h-16 border-t border-border-dim bg-[#0a0a0a] flex justify-between items-center px-8">
                 <span class="text-[10px] text-gray-600 font-mono">UUID: {{ currentNote.id }}</span>
-                <button @click="deleteNote(currentNote.id)" class="btn-danger">
-                    DELETE ENTRY
+                <button @click="deleteNote(currentNote.id)" class="btn-danger flex items-center gap-2">
+                    <span>🗑️</span> DELETE ENTRY 删除
                 </button>
             </div>
         </div>
@@ -438,12 +451,11 @@
 
             let quill = null
 
-            // 🟢 Quill 重置逻辑 (修复重影)
             const initQuill = (content = '') => {
                 nextTick(() => {
                     const container = document.getElementById('editor-container');
                     if (container) {
-                        container.innerHTML = ''; // 暴力清空
+                        container.innerHTML = ''; 
                         const editorDiv = document.createElement('div');
                         container.appendChild(editorDiv);
                         
@@ -560,10 +572,10 @@
                     await _supabase.from('notes').insert(payload)
                 }
                 
-                // 🟢 保存成功反馈
-                alert('System Notification: Data Synced Successfully.');
+                // 🟢 修复：保存后提示并自动关闭
+                alert('System Notification: Data Saved Successfully.');
                 isEditing.value = false;
-                closeModal(); // 自动关闭
+                closeModal();
                 fetchNotes(); 
             }
 
