@@ -216,17 +216,17 @@
 
 <script>
     const { createApp, ref, computed, onMounted, reactive, watch } = Vue
-    const { createClient } = supabase
+    const { createClient } = supabase // 👈 这里是解构库
 
     // ==========================================
-    // 🔴 配置区
+    // 🔴 检查这里！一定要有引号！
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
     const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
+    // 👇 这里的变量名不要动
     const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-
     createApp({
         setup() {
             // 状态
@@ -327,4 +327,5 @@
 </script>
 </body>
 </html>
+
 
