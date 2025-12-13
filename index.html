@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (Stable)</title>
+    <title>MindForge OS Beta</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
     <script src="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
     
     <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
     
-    <script src="https://cdn.bootcdn.net/ajax/libs/marked/9.1.2/marked.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/marked/5.1.0/marked.min.js"></script>
     
     <link href="https://cdn.bootcdn.net/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
     <script src="https://cdn.bootcdn.net/ajax/libs/quill/1.3.7/quill.min.js"></script>
@@ -32,51 +32,57 @@
     <style>
         body { background-color: #050505; color: #e4e4e7; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
         
-        /* 1. 登录页：磨砂玻璃 */
+        /* 1. 登录页：全屏居中修复 + 磨砂玻璃 */
+        .login-container { display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; z-index: 50; }
         .glass-panel {
-            background: rgba(20, 20, 20, 0.6);
-            backdrop-filter: blur(20px);
+            background: rgba(20, 20, 20, 0.65);
+            backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
         }
         
         /* 2. 极光背景 */
-        .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
-        .aurora-blob { position: absolute; filter: blur(80px); opacity: 0.4; animation: float 10s infinite ease-in-out alternate; }
-        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: #1e1b4b; animation-duration: 12s; }
-        .blob-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: #312e81; animation-duration: 15s; }
-        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(20px, -20px); } }
+        .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; }
+        .aurora-blob { position: absolute; filter: blur(100px); opacity: 0.35; animation: float 12s infinite ease-in-out alternate; }
+        .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #172554; animation-duration: 15s; } /* 蓝 */
+        .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #312e81; animation-duration: 20s; } /* 紫 */
+        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
 
-        /* 3. 橙蓝光效 Logo */
-        .cyber-text {
-            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
-            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            animation: shine 4s linear infinite alternate;
+        /* 3. Logo 橙蓝流光动画 */
+        .logo-glow {
+            background: linear-gradient(to right, #3b82f6, #f97316, #3b82f6);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 5s linear infinite;
+            font-weight: 900; letter-spacing: -0.05em;
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 4. 黑白按钮 */
+        /* 4. 黑白按钮 (去蓝) */
         .btn-black {
             background: #000; border: 1px solid #333; color: white; transition: all 0.2s;
         }
-        .btn-black:hover { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.1); }
+        .btn-black:hover { border-color: #fff; box-shadow: 0 0 12px rgba(255,255,255,0.15); transform: translateY(-1px); }
 
-        /* 5. 胶囊开关 */
+        /* 5. 侧边栏菜单项 */
+        .nav-item { transition: all 0.2s; border-left: 2px solid transparent; color: #888; font-size: 14px; font-weight: 500; }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.03); padding-left: 12px; }
+        .nav-item.active { color: white; border-left-color: #fff; background: rgba(255,255,255,0.05); padding-left: 12px; font-weight: bold; }
+
+        /* 开关样式 */
         .toggle-checkbox { display: none; }
         .toggle-label { width: 36px; height: 20px; background: #333; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; }
         .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #888; border-radius: 50%; transition: 0.3s; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; }
         .toggle-checkbox:checked + .toggle-label::after { transform: translateX(16px); background: #000; }
 
-        /* Quill 暗黑适配 */
+        /* Quill 暗黑化 */
         .ql-toolbar { background: #0a0a0a; border-color: #222 !important; }
         .ql-container { background: #000; border-color: #222 !important; color: #ccc; font-size: 15px !important; }
         .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
         [v-cloak] { display: none !important; }
-        .note-card { transition: all 0.3s ease; border: 1px solid #222; }
-        .note-card:hover { border-color: #555; transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8); }
-        
         #error-bar { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #991b1b; color: white; text-align: center; padding: 8px; z-index: 99999; font-size: 12px; }
     </style>
 </head>
@@ -86,64 +92,62 @@
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
-    <div v-if="!user" class="absolute inset-0 z-50 flex items-center justify-center">
+    <div v-if="!user" class="login-container">
         <div class="aurora-bg"><div class="aurora-blob blob-1"></div><div class="aurora-blob blob-2"></div></div>
         
-        <div class="glass-panel w-full max-w-sm p-10 rounded-2xl relative z-10 animate-fade-in shadow-2xl">
-            <div class="text-center mb-8">
-                <div class="w-14 h-14 bg-white rounded-xl mx-auto flex items-center justify-center text-black font-bold text-2xl mb-4 shadow-lg shadow-white/10">K</div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">MindForge OS</h1>
-                <p class="text-gray-400 text-xs mt-2 font-mono">IDENTITY VERIFICATION</p>
+        <div class="glass-panel w-full max-w-sm p-10 rounded-xl relative z-10 animate-fade-in shadow-2xl">
+            <div class="text-center mb-10">
+                <div class="w-14 h-14 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-2xl mb-5 shadow-lg shadow-white/10">K</div>
+                <h1 class="text-3xl font-bold text-white tracking-tighter mb-1">MindForge OS</h1>
+                <p class="text-gray-500 text-xs font-mono tracking-widest uppercase">Identity Verification</p>
             </div>
 
-            <div class="space-y-4">
-                <input v-model="email" type="email" placeholder="Access ID (Email)" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/30 transition font-mono">
-                <input v-model="password" type="password" placeholder="Passkey" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/30 transition font-mono">
-                
-                <div class="flex gap-2 pt-2">
-                    <button @click="handleLogin" class="flex-1 bg-white text-black font-bold py-2.5 rounded-lg text-sm hover:bg-gray-200 transition shadow-lg shadow-white/5">
-                        登录 Login
-                    </button>
-                    <button @click="handleRegister" class="flex-1 bg-white/5 border border-white/10 text-gray-300 font-bold py-2.5 rounded-lg text-sm hover:bg-white/10 transition">
-                        注册 Sign Up
-                    </button>
+            <div class="space-y-5">
+                <div>
+                    <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Access ID</label>
+                    <input v-model="email" type="email" class="w-full bg-black/40 border border-white/10 p-3 rounded text-white text-sm outline-none focus:border-white/40 transition font-mono">
                 </div>
-            </div>
-            
-            <div class="mt-6 text-center">
-                <p class="text-[10px] text-gray-600 font-mono">SECURE CONNECTION ESTABLISHED</p>
+                <div>
+                    <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Passkey</label>
+                    <input v-model="password" type="password" class="w-full bg-black/40 border border-white/10 p-3 rounded text-white text-sm outline-none focus:border-white/40 transition font-mono">
+                </div>
+                
+                <div class="flex gap-3 pt-3">
+                    <button @click="handleLogin" class="flex-1 btn-black py-2.5 rounded text-xs font-bold uppercase tracking-widest">Login</button>
+                    <button @click="handleRegister" class="flex-1 border border-white/10 text-gray-400 py-2.5 rounded text-xs font-bold uppercase tracking-widest hover:border-white hover:text-white transition">Sign Up</button>
+                </div>
             </div>
         </div>
     </div>
 
     <template v-else>
-        <aside class="w-64 bg-sidebar border-r border-border-dim flex flex-col justify-between shrink-0 z-20">
+        <aside class="w-60 bg-sidebar border-r border-border-dim flex flex-col justify-between shrink-0 z-20">
             <div>
                 <div class="h-20 flex items-center px-6 border-b border-border-dim/50">
-                    <span class="text-lg font-black tracking-tight cyber-text">MindForge OS Beta</span>
+                    <span class="text-lg logo-glow">MindForge OS Beta</span>
                 </div>
                 
-                <nav class="p-5 space-y-5">
+                <nav class="p-6 space-y-6">
                     <div>
-                        <div class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2 pl-1">Core</div>
-                        <button @click="switchL1('profile')" :class="l1Class('profile')" class="w-full text-left px-0 py-1 transition text-sm font-medium hover:pl-2">
+                        <div class="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-3">Core</div>
+                        <button @click="switchL1('profile')" :class="['nav-item w-full text-left py-1', currentL1 === 'profile' ? 'active' : '']">
                             Overview 系统概览
                         </button>
                     </div>
                     
                     <div>
-                        <div class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-2 pl-1">Modules</div>
-                        <div class="space-y-2">
-                            <button @click="switchL1('wiki')" :class="l1Class('wiki')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
+                        <div class="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-3">Modules</div>
+                        <div class="space-y-3">
+                            <button @click="switchL1('wiki')" :class="['nav-item w-full text-left py-1', currentL1 === 'wiki' ? 'active' : '']">
                                 Wiki 知识库
                             </button>
-                            <button @click="switchL1('idea')" :class="l1Class('idea')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
+                            <button @click="switchL1('idea')" :class="['nav-item w-full text-left py-1', currentL1 === 'idea' ? 'active' : '']">
                                 Ideas 灵感
                             </button>
-                            <button @click="switchL1('blog')" :class="l1Class('blog')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
+                            <button @click="switchL1('blog')" :class="['nav-item w-full text-left py-1', currentL1 === 'blog' ? 'active' : '']">
                                 Blog 博客
                             </button>
-                            <button @click="switchL1('file')" :class="l1Class('file')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
+                            <button @click="switchL1('file')" :class="['nav-item w-full text-left py-1', currentL1 === 'file' ? 'active' : '']">
                                 Files 文件
                             </button>
                         </div>
@@ -152,7 +156,7 @@
             </div>
             
             <div class="p-6 border-t border-border-dim/50">
-                <div class="text-xs text-gray-600 mb-1 font-mono truncate">{{ user.email }}</div>
+                <div class="text-xs text-gray-600 mb-2 font-mono truncate">{{ user.email }}</div>
                 <button @click="handleLogout" class="text-xs font-bold text-red-600 hover:text-red-400 hover:underline transition">
                     Logout 退出登录
                 </button>
@@ -207,15 +211,20 @@
                 <div v-else>
                     <div v-if="filteredNotes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         <div v-for="note in filteredNotes" :key="note.id" @click="viewNote(note)" 
-                             class="note-card bg-[#0a0a0a] p-6 rounded-lg relative h-60 flex flex-col cursor-pointer group">
+                             class="group bg-sidebar border border-white/10 p-6 rounded-xl hover:border-white/30 hover:bg-white/[0.02] transition cursor-pointer relative h-60 flex flex-col shadow-lg">
+                            
                             <div class="flex justify-between items-start mb-4">
                                 <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
                                 <span v-if="!note.is_public" class="text-[10px] text-gray-500 border border-gray-800 px-1.5 py-0.5 rounded">私密</span>
                             </div>
+                            
                             <div class="flex-1 overflow-hidden">
                                 <div v-if="note.category === 'link'" class="text-blue-500 underline text-xs break-all">{{ note.link_url }}</div>
-                                <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">{{ stripHtml(note.content) || '暂无内容...' }}</p>
+                                <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">
+                                    {{ stripHtml(note.content) || '暂无内容...' }}
+                                </p>
                             </div>
+                            
                             <div class="mt-4 pt-3 border-t border-border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
                                 <span>🕒 {{ formatTime(note.created_at) }}</span>
                                 <span class="opacity-0 group-hover:opacity-100 transition text-white">查看 -></span>
@@ -282,18 +291,15 @@
     // 🔴 最终填空：Key 
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    
-    // 👇 务必填入你的 Legacy Anon Key (eyJ...)
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
-    
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入你的 eyJ... Key
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 初始化客户端
+    // 初始化客户端 (检测库是否加载)
     let _supabase = null
     function initSupabase() {
-        if (typeof createClient !== 'function') {
+        if (typeof createClient !== 'function' || typeof Vue === 'undefined') {
             document.getElementById('error-bar').style.display = 'block';
-            document.getElementById('error-bar').innerText = '⚠️ 网络错误：核心库加载失败，请刷新页面。';
+            document.getElementById('error-bar').innerText = '⚠️ 核心库未加载，可能是网络问题。请刷新页面重试。';
             return null;
         }
         try {
@@ -301,9 +307,7 @@
                 auth: { persistSession: true },
                 global: { fetch: (...args) => fetch(...args) }
             });
-        } catch (e) {
-            console.error("Key Error", e);
-        }
+        } catch (e) { console.error("Key Error", e); }
     }
     _supabase = initSupabase();
 
@@ -332,13 +336,14 @@
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            const currentL1 = ref('wiki') // 修正：进入后默认显示 Wiki
+            const currentL1 = ref('profile') // 默认首页
             const currentL2 = ref('全部')
             const showModal = ref(false)
             const isEditing = ref(false)
             const currentNote = ref({})
             const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
+            // 本地分类配置
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
                 'idea': ['全部', '待办事项', '突发奇想'],
@@ -400,7 +405,6 @@
             }
             const handleLogout = async () => { await _supabase.auth.signOut(); user.value = null; notes.value = []; }
 
-            const l1Class = (k) => currentL1.value === k ? 'text-white font-bold bg-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'
             const switchL1 = (k) => { currentL1.value = k; currentL2.value = '全部'; }
             const addCategory = () => { const n = prompt("添加标签:"); if(n) categories[currentL1.value].push(n); }
 
@@ -473,7 +477,7 @@
 
             return { 
                 user, email, password, notes, currentL1, currentL2, categories, showModal, isEditing, currentNote, form, currentSubCategories, filteredNotes, systemConfig,
-                handleLogin, handleRegister, handleLogout, l1Class, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
+                handleLogin, handleRegister, handleLogout, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
             }
         }
     }).mount('#app')
