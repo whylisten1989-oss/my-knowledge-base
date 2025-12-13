@@ -3,8 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Personal OS</title>
+    <title>My Personal OS (CN Speed)</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.staticfile.org/vue/3.3.4/vue.global.prod.min.js"></script>
+    <script src="https://cdn.staticfile.org/marked/5.1.0/marked.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            var box = document.getElementById('debug-box');
+            if (box) {
+                box.style.display = 'block';
+                box.innerHTML += '🔴 ERROR: ' + msg + '<br>Line: ' + line + '<br><hr>';
+            }
+        };
+    </script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -17,26 +34,36 @@
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #000; color: #d4d4d8; }
+        body { font-family: sans-serif; background-color: #000; color: #d4d4d8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .gradient-text { background: linear-gradient(to right, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .md-content a { color: #3b82f6; text-decoration: underline; }
         .md-content h1, h2 { color: white; font-weight: bold; margin-top: 10px; }
-        .md-content pre { background: #1f1f1f; padding: 10px; border-radius: 6px; overflow-x: auto; }
-        /* 加载时的遮罩 */
-        [v-cloak] { display: none; }
+        
+        /* 调试框样式 */
+        #debug-box {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 9999;
+            background: #450a0a; color: #fecaca; padding: 20px;
+            font-family: monospace; border-bottom: 2px solid red;
+        }
     </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col">
 
-<div id="app" v-cloak class="h-full w-full flex relative">
+<div id="debug-box">
+    <h3 style="font-weight:bold; font-size:1.2em">⚠️ 程序崩溃了</h3>
+    <p>请把下面的报错信息截图发给开发人员：</p>
+    <hr style="margin:10px 0; border-color:#7f1d1d">
+</div>
+
+<div id="app" class="h-full w-full flex relative">
 
     <div v-if="!user" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 text-center">
         <div class="relative z-10 space-y-8">
             <div class="w-16 h-16 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-2xl mb-6">K</div>
             <h1 class="text-5xl md:text-7xl font-bold tracking-tighter gradient-text">Private<br>Workspace.</h1>
-            <p class="text-gray-500 max-w-md mx-auto text-lg">私人数字大脑。<br>Personal Digital Brain.</p>
+            <p class="text-gray-500 max-w-md mx-auto text-lg">私人数字大脑 (CN Ver)</p>
             <button @click="showAuthModal = true" class="px-8 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition cursor-pointer">
                 Enter System ->
             </button>
@@ -126,24 +153,29 @@
     </div>
 </div>
 
-<script type="module">
-    // 使用 ES Module 导入，这是最稳的方法，绝不会出现 undefined
-    import { createApp, ref, computed, onMounted, reactive } from 'https://esm.sh/vue@3.3.4'
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
-    import { marked } from 'https://esm.sh/marked@11.1.1'
+<script>
+    const { createApp, ref, computed, onMounted, reactive } = Vue
+    // 兼容 CDN 不同的导出格式
+    const { createClient } = window.supabase || supabase
 
     // ==========================================
-    // 🔴 填这里！
+    // 🔴 最终填空：保留引号，填入你的信息
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    // 你的 Key，我还是先帮你填之前那个，如果这个不行，你再换回 ey 开头的
+    
+    // 还是用你那个 sb_ Key (既然你坚持它是对的，我们就用它，但如果报错，上面的红色框会告诉你)
     const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'
+    
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 初始化客户端
+    // 自检逻辑
+    if (typeof createClient !== 'function') {
+        throw new Error('Supabase 库加载失败，请检查网络或 CDN');
+    }
+
     const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    const app = createApp({
+    createApp({
         setup() {
             const user = ref(null)
             const showAuthModal = ref(false)
@@ -161,14 +193,22 @@
             const navClass = (cat) => currentCategory.value === cat ? 'bg-white text-black font-bold' : 'text-gray-400 hover:text-white hover:bg-white/5'
 
             onMounted(async () => {
-                const { data: { session } } = await _supabase.auth.getSession()
-                user.value = session?.user || null
-                if(user.value) fetchNotes()
-                _supabase.auth.onAuthStateChange((_, session) => {
+                // 增加 Try-Catch 防止 key 错误导致白屏
+                try {
+                    const { data: { session }, error } = await _supabase.auth.getSession()
+                    if (error) throw error
                     user.value = session?.user || null
-                    if (user.value) fetchNotes()
-                    else notes.value = []
-                })
+                    if(user.value) fetchNotes()
+                    _supabase.auth.onAuthStateChange((_, session) => {
+                        user.value = session?.user || null
+                        if (user.value) fetchNotes()
+                        else notes.value = []
+                    })
+                } catch (e) {
+                    console.error("Supabase Error:", e)
+                    // 如果是 Key 的问题，会在控制台或红框里显示
+                    throw e 
+                }
             })
 
             const fetchNotes = async () => {
@@ -180,7 +220,7 @@
             const handleAuth = async () => {
                 const action = isRegisterMode.value ? _supabase.auth.signUp : _supabase.auth.signInWithPassword
                 const { error } = await action({ email: email.value, password: password.value })
-                if (error) alert(error.message)
+                if (error) alert('验证失败: ' + error.message)
                 else showAuthModal.value = false
             }
 
@@ -188,23 +228,7 @@
 
             const openEditor = () => { Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value, link_url: '' }); showEditor.value = true; }
             const editNote = (note) => { Object.assign(form, note); showEditor.value = true; }
-            
             const saveNote = async () => {
                 if (!form.title) return alert('标题必填')
                 const payload = { ...form, user_id: user.value.id }; delete payload.id
-                const { error } = form.id ? await _supabase.from('notes').update(payload).eq('id', form.id) : await _supabase.from('notes').insert(payload)
-                if (error) alert(error.message)
-                else { showEditor.value = false; fetchNotes(); }
-            }
-            
-            const deleteNote = async () => { if(confirm('删除?')) { await _supabase.from('notes').delete().eq('id', form.id); showEditor.value = false; fetchNotes(); } }
-            const renderMarkdown = (text) => text ? marked.parse(text) : ''
-
-            return { user, isAdmin, showAuthModal, showEditor, isRegisterMode, email, password, currentCategory, categoryNames, filteredNotes, navClass, form, handleAuth, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown }
-        }
-    })
-    
-    app.mount('#app')
-</script>
-</body>
-</html>
+                const { error } = form.id ? await _supabase.from('notes').update(payload).eq('id', form.id) : await _supabase
