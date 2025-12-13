@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge OS (V21 Sync)</title>
+    <title>MindForge OS (V22 Fixed)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -25,7 +25,7 @@
     </script>
 
     <style>
-        /* 1. 暴力强制微软雅黑 */
+        /* 1. 强制微软雅黑 */
         * { font-family: "Microsoft YaHei", "PingFang SC", sans-serif !important; }
         body { background-color: #050505; color: #e4e4e7; overflow: hidden; }
         
@@ -34,30 +34,15 @@
         .btn-hover:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(255,255,255,0.15); }
         .btn-hover:active { transform: translateY(0); }
 
-        /* 3. 导航栏高光 (选中变白底黑字) */
-        .nav-item { 
-            transition: all 0.3s ease; 
-            border-radius: 8px;
-            color: #888; 
-            margin-bottom: 4px;
-        }
+        /* 3. 导航栏高光 */
+        .nav-item { transition: all 0.3s ease; border-radius: 6px; color: #888; margin-bottom: 4px; }
         .nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
         .nav-item.active { 
-            background-color: #ffffff; 
-            color: #000000; 
-            font-weight: 900;
-            box-shadow: 0 0 15px rgba(255,255,255,0.3);
-            transform: scale(1.02);
+            background-color: #ffffff; color: #000000; font-weight: 900;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2); transform: scale(1.01);
         }
 
-        /* 4. 极光背景 */
-        .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; pointer-events: none; }
-        .aurora-blob { position: absolute; filter: blur(90px); opacity: 0.3; animation: float 15s infinite ease-in-out alternate; }
-        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: #172554; animation-duration: 20s; }
-        .blob-2 { bottom: -10%; right: -10%; width: 70vw; height: 70vw; background: #4c1d95; animation-duration: 25s; }
-        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
-
-        /* 5. 蓝橙 Logo */
+        /* 4. 蓝橙呼吸光效 (Logo & Title) */
         .cyber-text {
             background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
             background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -66,21 +51,23 @@
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 6. 波形动画 (首页用) */
-        .waveform-bar {
-            width: 4px; background: #3b82f6; border-radius: 2px;
-            animation: wave 1s ease-in-out infinite;
-        }
-        @keyframes wave { 0%, 100% { height: 10px; opacity: 0.5; } 50% { height: 24px; opacity: 1; } }
+        /* 5. 极光背景 */
+        .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; pointer-events: none; }
+        .aurora-blob { position: absolute; filter: blur(90px); opacity: 0.3; animation: float 15s infinite ease-in-out alternate; }
+        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: #172554; animation-duration: 20s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 70vw; height: 70vw; background: #4c1d95; animation-duration: 25s; }
+        @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
 
-        /* 7. Quill 暗黑 */
+        /* 6. 组件样式 */
+        .btn-black { background: #000; border: 1px solid #333; color: white; transition: all 0.2s; }
+        .btn-black:hover { border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.15); }
+
         .ql-toolbar { background: #0a0a0a; border-bottom: 1px solid #333 !important; border-top:none!important; border-left:none!important; border-right:none!important; }
         .ql-container { background: #000; border: none !important; color: #ccc; font-size: 16px !important; }
         .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
-        /* 8. 开关 */
         .toggle-checkbox { display: none; }
-        .toggle-label { width: 40px; height: 22px; background: #222; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; border: 1px solid #333; }
+        .toggle-label { width: 40px; height: 22px; background: #222; border-radius: 99px; position: relative; cursor: pointer; border: 1px solid #333; transition: 0.3s; }
         .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #666; border-radius: 50%; transition: 0.3s; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; border-color: #fff; }
         .toggle-checkbox:checked + .toggle-label::after { transform: translateX(18px); background: #000; }
@@ -102,7 +89,6 @@
                 <h1 class="text-3xl font-bold text-white tracking-tighter">MindForge OS</h1>
                 <p class="text-gray-500 text-xs font-mono tracking-widest uppercase mt-2">Identity Verification</p>
             </div>
-
             <div class="space-y-4">
                 <input v-model="email" type="email" placeholder="Access ID" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition">
                 <input v-model="password" type="password" placeholder="Passkey" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition">
@@ -186,54 +172,55 @@
 
             <div class="flex-1 overflow-y-auto p-6 md:p-8 relative">
                 
-                <div v-if="currentView === 'home'" class="max-w-5xl mx-auto space-y-6 animate-fade-in">
+                <div v-if="currentView === 'home'" class="max-w-6xl mx-auto space-y-6 animate-fade-in">
                     <div class="border border-border-dim bg-sidebar p-8 rounded-2xl relative overflow-hidden btn-hover">
                         <div class="relative z-10 flex flex-col md:flex-row gap-8 items-start">
                             <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center text-4xl shadow-xl shrink-0">🧠</div>
                             <div class="flex-1">
-                                <h1 class="text-3xl font-bold text-white mb-3">MindForge OS</h1>
+                                <h1 class="text-3xl font-black mb-3 cyber-text">MindForge OS Beta</h1>
                                 <div class="text-gray-400 text-sm leading-relaxed whitespace-pre-line border-l-2 border-white/20 pl-4 font-serif italic">{{ systemConfig.bio }}</div>
                             </div>
                         </div>
                         <div class="absolute -right-20 -top-20 w-64 h-64 bg-blue-900/20 blur-[80px] rounded-full pointer-events-none"></div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="border border-border-dim bg-sidebar p-6 rounded-xl relative overflow-hidden h-40">
-                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
-                                <span>System Health</span> <span class="text-green-500">Normal</span>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <div class="lg:col-span-2 border border-border-dim bg-sidebar p-6 rounded-xl relative flex flex-col h-80">
+                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Activity Stream
                             </h3>
-                            <div class="flex items-end gap-1 h-20 w-full opacity-50">
-                                <div v-for="i in 20" :key="i" class="waveform-bar flex-1" :style="{ animationDelay: i * 0.1 + 's', height: Math.random() * 80 + '%' }"></div>
-                            </div>
-                        </div>
-
-                        <div class="border border-border-dim bg-sidebar p-6 rounded-xl h-40 overflow-hidden">
-                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Recent Access</h3>
-                            <div v-if="notes.length > 0" class="space-y-2">
-                                <div v-for="note in notes.slice(0, 2)" :key="note.id" @click="viewNote(note)" class="flex justify-between items-center text-xs p-2 bg-white/5 rounded cursor-pointer hover:bg-white/10 transition">
-                                    <span class="text-white truncate max-w-[70%]">{{ note.title }}</span>
-                                    <span class="text-gray-500">{{ new Date(note.created_at).toLocaleDateString() }}</span>
+                            <div class="flex-1 overflow-y-auto pr-2 space-y-2">
+                                <div v-if="activityLog.length > 0" v-for="log in activityLog" :key="log.id" @click="viewNote(log)" 
+                                     class="flex items-center justify-between p-3 bg-white/5 rounded-lg hover:bg-white/10 transition cursor-pointer group">
+                                    <div class="flex items-center gap-3 overflow-hidden">
+                                        <span class="text-lg bg-black p-1 rounded">📝</span>
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-bold text-gray-200 group-hover:text-white truncate">{{ log.title }}</span>
+                                            <span class="text-[10px] text-gray-600">{{ log.category }} / {{ log.sub_category || 'General' }}</span>
+                                        </div>
+                                    </div>
+                                    <span class="text-[10px] text-gray-500 font-mono">{{ formatTime(log.updated_at || log.created_at) }}</span>
                                 </div>
+                                <div v-else class="text-gray-600 text-xs text-center mt-10">暂无活动记录</div>
                             </div>
-                            <div v-else class="text-xs text-gray-600 text-center py-4">No recent activity</div>
                         </div>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="border border-border-dim bg-sidebar p-6 rounded-xl">
-                            <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-4">Hardware Inventory</h3>
-                            <ul class="space-y-2 text-sm text-gray-400">
-                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-white/5 pb-2 last:border-0">
-                                    <span>{{ item.name }}</span><span class="text-[10px] text-green-500 font-mono bg-green-900/20 px-1.5 rounded">{{ item.status }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="border border-border-dim bg-sidebar p-6 rounded-xl">
-                            <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">Changelog</h3>
-                            <div class="space-y-2 text-xs text-gray-500 font-mono">
-                                <div v-for="log in systemConfig.logs" :key="log.date" class="flex gap-4">
-                                    <span class="text-gray-600">{{ log.date }}</span><span class="text-gray-400">{{ log.event }}</span>
+                        <div class="flex flex-col gap-6">
+                            <div class="border border-border-dim bg-sidebar p-6 rounded-xl flex-1">
+                                <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-4">Hardware Inventory</h3>
+                                <ul class="space-y-3 text-sm text-gray-400">
+                                    <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-white/5 pb-2 last:border-0">
+                                        <span>{{ item.name }}</span><span class="text-[10px] text-green-500 font-mono bg-green-900/20 px-1.5 rounded">{{ item.status }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="border border-border-dim bg-sidebar p-6 rounded-xl flex-1">
+                                <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">Changelog</h3>
+                                <div class="space-y-3 text-xs text-gray-500 font-mono">
+                                    <div v-for="log in systemConfig.logs" :key="log.date" class="flex gap-4">
+                                        <span class="text-gray-600">{{ log.date }}</span><span class="text-gray-400">{{ log.event }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -258,7 +245,7 @@
                             </div>
                             
                             <div class="mt-4 pt-3 border-t border-border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
-                                <span>🕒 {{ formatTime(note.created_at) }}</span>
+                                <span>🕒 {{ formatTime(note.updated_at || note.created_at) }}</span>
                                 <span class="opacity-0 group-hover:opacity-100 transition text-white">OPEN →</span>
                             </div>
                         </div>
@@ -290,7 +277,7 @@
                     <input v-model="tempProfile.avatar" class="w-full bg-black border border-white/20 p-3 rounded text-xs text-center text-gray-400 outline-none focus:border-white" placeholder="头像链接 URL">
                     <textarea v-model="tempProfile.bio" class="w-full bg-black border border-white/20 p-3 rounded text-sm text-center text-gray-300 outline-none h-24 focus:border-white" placeholder="个性签名"></textarea>
                     <div class="flex gap-2 justify-center pt-2">
-                        <button @click="saveProfile" class="bg-white text-black px-6 py-2 rounded text-xs font-bold hover:bg-gray-200 transition">保存资料</button>
+                        <button @click="saveProfile" class="bg-white text-black px-6 py-2 rounded text-xs font-bold hover:bg-gray-200 transition">保存同步</button>
                         <button @click="isEditingProfile = false" class="text-gray-500 text-xs px-4 hover:text-white">取消</button>
                     </div>
                 </div>
@@ -346,7 +333,7 @@
             
             <div v-if="!isEditing" class="h-10 border-t border-border-dim bg-sidebar flex justify-between items-center px-6 text-[10px] text-gray-600">
                 <span>ID: {{ currentNote.id }}</span>
-                <button @click="deleteNote" class="text-red-900 hover:text-red-500 transition">DELETE</button>
+                <button @click="deleteNote(currentNote.id)" class="text-red-900 hover:text-red-500 transition">DELETE</button>
             </div>
         </div>
     </div>
@@ -395,7 +382,6 @@
             const currentSub = ref('全部')
             const mobileMenuOpen = ref(false)
             
-            // 个人资料 (云端同步版)
             const isProfileOpen = ref(false)
             const profile = reactive({ name: 'MindForge Admin', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Admin', bio: 'Loading...' })
             const isEditingProfile = ref(false)
@@ -415,7 +401,6 @@
 
             let quill = null
 
-            // 🟢 修复：编辑器彻底重置
             const initQuill = (content = '') => {
                 nextTick(() => {
                     const container = document.getElementById('editor-container');
@@ -439,13 +424,12 @@
                 })
             }
 
-            // 初始化
             onMounted(async () => {
                 const { data: { session } } = await _supabase.auth.getSession()
                 if(session) { 
                     user.value = session.user; 
                     fetchNotes(); 
-                    fetchProfile(); // 🟢 拉取云端资料
+                    fetchProfile(); 
                 }
                 _supabase.auth.onAuthStateChange((_, session) => {
                     user.value = session?.user || null
@@ -455,13 +439,15 @@
             })
 
             const fetchNotes = async () => {
-                const { data } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
+                const { data } = await _supabase.from('notes').select('*').neq('category', 'profile').order('created_at', { ascending: false })
                 if (data) notes.value = data
             }
 
-            // 🟢 核心功能：云端同步个人资料 (伪装成 title='__SYSTEM_PROFILE__' 的笔记)
+            // 计算最近活动流
+            const activityLog = computed(() => notes.value.slice(0, 10))
+
             const fetchProfile = async () => {
-                const { data } = await _supabase.from('notes').select('*').eq('title', '__SYSTEM_PROFILE__').single()
+                const { data } = await _supabase.from('notes').select('*').eq('category', 'profile').single()
                 if (data && data.content) {
                     try { Object.assign(profile, JSON.parse(data.content)) } catch(e){}
                 }
@@ -470,9 +456,7 @@
             const saveProfile = async () => {
                 Object.assign(profile, tempProfile)
                 const jsonContent = JSON.stringify(profile)
-                
-                // 检查是否已存在 Profile 笔记
-                const { data } = await _supabase.from('notes').select('id').eq('title', '__SYSTEM_PROFILE__').single()
+                const { data } = await _supabase.from('notes').select('id').eq('category', 'profile').single()
                 
                 if (data) {
                     await _supabase.from('notes').update({ content: jsonContent }).eq('id', data.id)
@@ -554,9 +538,11 @@
                 fetchNotes(); 
             }
 
-            const deleteNote = async () => {
+            // 修复：接收参数 id
+            const deleteNote = async (id) => {
+                if(!id && form.id) id = form.id; // 兼容编辑模式
                 if(confirm('Delete?')) {
-                    await _supabase.from('notes').delete().eq('id', form.id)
+                    await _supabase.from('notes').delete().eq('id', id)
                     closeModal(); fetchNotes();
                 }
             }
@@ -567,7 +553,7 @@
 
             return { 
                 user, email, password, notes, currentView, currentSub, mobileMenuOpen, showModal, isEditing, currentNote, form, 
-                currentSubCategories, filteredNotes, systemConfig, isProfileOpen, profile, isEditingProfile, tempProfile,
+                currentSubCategories, filteredNotes, systemConfig, isProfileOpen, profile, isEditingProfile, tempProfile, activityLog,
                 handleLogin, handleRegister, handleLogout, switchView, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime, openProfile, saveProfile, toggleProfileEdit
             }
         }
