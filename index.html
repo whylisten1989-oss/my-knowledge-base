@@ -1,38 +1,34 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="zh-CN" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (Global)</title>
+    <title>MindForge OS (Fixed)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://npm.elemecdn.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     
-    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://npm.elemecdn.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     
-    <script src="https://unpkg.com/marked@5.1.0/marked.min.js"></script>
+    <script src="https://npm.elemecdn.com/marked@5.1.0/marked.min.js"></script>
     
-    <link href="https://unpkg.com/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
-    <script src="https://unpkg.com/quill@1.3.7/dist/quill.min.js"></script>
+    <link href="https://npm.elemecdn.com/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://npm.elemecdn.com/quill@1.3.7/dist/quill.min.js"></script>
     
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { 'void': '#050505', 'sidebar': '#0a0a0a', 'border-dim': '#222' },
-                    fontFamily: { sans: ['"Microsoft YaHei"', 'Inter', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
+    <script src="https://npm.elemecdn.com/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
 
     <style>
-        body { background-color: #050505; color: #e4e4e7; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
+        :root {
+            --bg-void: #050505;
+            --bg-sidebar: #0a0a0a;
+            --border-dim: #222;
+            --color-text: #e4e4e7;
+            --font-main: "Microsoft YaHei", sans-serif;
+        }
+
+        body { background-color: var(--bg-void); color: var(--color-text); font-family: var(--font-main); overflow: hidden; }
+        *, ::before, ::after { border-color: var(--border-dim); }
         
-        /* 1. 登录页：磨砂玻璃 */
         .glass-panel {
             background: rgba(20, 20, 20, 0.65);
             backdrop-filter: blur(20px);
@@ -40,14 +36,12 @@
             box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
         }
         
-        /* 2. 极光背景 */
         .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; }
         .aurora-blob { position: absolute; filter: blur(100px); opacity: 0.35; animation: float 12s infinite ease-in-out alternate; }
         .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #172554; animation-duration: 15s; }
         .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #312e81; animation-duration: 20s; }
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
 
-        /* 3. Logo 光效 */
         .cyber-text {
             background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
             background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -56,28 +50,22 @@
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 4. 黑白按钮 */
-        .btn-black {
-            background: #000; border: 1px solid #333; color: white; transition: all 0.2s;
-        }
+        .btn-black { background: #000; border: 1px solid #333; color: white; transition: all 0.2s; }
         .btn-black:hover { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.15); }
 
-        /* 5. 胶囊开关 */
         .toggle-checkbox { display: none; }
         .toggle-label { width: 36px; height: 20px; background: #333; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; }
         .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #888; border-radius: 50%; transition: 0.3s; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; }
         .toggle-checkbox:checked + .toggle-label::after { transform: translateX(16px); background: #000; }
 
-        /* 6. Quill 暗黑适配 */
         .ql-toolbar { background: var(--bg-sidebar); border-color: var(--border-dim) !important; }
         .ql-container { background: var(--bg-void); border-color: var(--border-dim) !important; color: #ccc; font-size: 15px !important; font-family: var(--font-main) !important; }
         .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
-        /* 7. 侧边栏选中态 */
-        .nav-item { transition: all 0.2s; border-left: 2px solid transparent; color: #888; font-size: 14px; font-weight: 500; }
-        .nav-item:hover { color: white; background: rgba(255,255,255,0.03); padding-left: 12px; }
-        .nav-item.active { color: white; border-left-color: #fff; background: rgba(255,255,255,0.05); padding-left: 12px; font-weight: bold; }
+        .bg-void { background-color: var(--bg-void); }
+        .bg-sidebar { background-color: var(--bg-sidebar); }
+        .border-dim { border-color: var(--border-dim); }
 
         [v-cloak] { display: none !important; }
         .note-card { transition: all 0.3s ease; border: 1px solid #222; }
@@ -126,35 +114,32 @@
                 <div class="h-20 flex items-center px-6 border-b border-dim">
                     <span class="text-lg font-black tracking-tight cyber-text">MindForge OS Beta</span>
                 </div>
-                
                 <nav class="p-6 space-y-6">
                     <div>
                         <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Core</div>
-                        <button @click="switchL1('profile')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'profile' ? 'active' : 'nav-item']">
+                        <button @click="switchL1('profile')" :class="['w-full text-left py-1 text-sm font-medium transition', currentL1 === 'profile' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                             Overview 系统概览
                         </button>
                     </div>
-                    
                     <div>
                         <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Modules</div>
                         <div class="space-y-3">
-                            <button @click="switchL1('wiki')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'wiki' ? 'active' : 'nav-item']">
+                            <button @click="switchL1('wiki')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'wiki' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                                 Wiki 知识库
                             </button>
-                            <button @click="switchL1('idea')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'idea' ? 'active' : 'nav-item']">
+                            <button @click="switchL1('idea')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'idea' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                                 Ideas 灵感
                             </button>
-                            <button @click="switchL1('blog')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'blog' ? 'active' : 'nav-item']">
+                            <button @click="switchL1('blog')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'blog' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                                 Blog 博客
                             </button>
-                            <button @click="switchL1('file')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'file' ? 'active' : 'nav-item']">
+                            <button @click="switchL1('file')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'file' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                                 Files 文件
                             </button>
                         </div>
                     </div>
                 </nav>
             </div>
-            
             <div class="p-6 border-t border-dim">
                 <div class="text-xs text-gray-600 mb-2 font-mono truncate">{{ user.email }}</div>
                 <button @click="handleLogout" class="text-xs font-bold text-red-600 hover:text-red-400 hover:underline transition">
@@ -284,13 +269,10 @@
     const { createClient } = window.supabase || {}
 
     // ==========================================
-    // 🔴 最终填空：Key 
+    // 🔴 必填区 (填你的 eyJ... Key)
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    
-    // 👇 填入你的 eyJ... Key
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
-    
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入 eyJ... Key
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
     // 初始化客户端
@@ -298,18 +280,15 @@
     function initSupabase() {
         if (typeof createClient !== 'function' || typeof Vue === 'undefined') {
             document.getElementById('error-bar').style.display = 'block';
-            document.getElementById('error-bar').innerText = '⚠️ 核心库未加载，请刷新页面重试。';
+            document.getElementById('error-bar').innerText = '⚠️ 网络错误：核心库加载失败。';
             return null;
         }
         try {
             return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                 auth: { persistSession: true },
-                // ⚠️ 关键补丁：解决 sb_ key 和某些环境下的 fetch 问题
                 global: { fetch: (...args) => fetch(...args) }
             });
-        } catch (e) {
-            console.error("Key Error", e);
-        }
+        } catch (e) { console.error("Key Error", e); }
     }
     _supabase = initSupabase();
 
@@ -338,13 +317,14 @@
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            const currentL1 = ref('profile') // 默认首页
+            const currentL1 = ref('profile')
             const currentL2 = ref('全部')
             const showModal = ref(false)
             const isEditing = ref(false)
             const currentNote = ref({})
             const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
+            // 本地分类配置
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
                 'idea': ['全部', '待办事项', '突发奇想'],
@@ -354,6 +334,10 @@
 
             const categoryNames = { 'wiki': 'Wiki', 'idea': 'Ideas', 'blog': 'Blog', 'file': 'Files' }
             let quill = null
+
+            // 🟢 修复的定义位置：计算属性现在在这里
+            const currentSubCategories = computed(() => categories[currentL1.value] || ['全部'])
+            const currentCategory = computed(() => currentL1.value)
 
             const initQuill = (initialContent = '') => {
                 nextTick(() => {
@@ -476,9 +460,12 @@
             const stripHtml = (html) => { const tmp = document.createElement("DIV"); tmp.innerHTML = html; return tmp.textContent || tmp.innerText || ""; }
             const formatTime = (ts) => new Date(ts).toLocaleDateString() + ' ' + new Date(ts).toLocaleTimeString()
 
+            const l1Class = (k) => currentL1.value === k ? 'text-white font-bold bg-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'
+
             return { 
-                user, email, password, notes, currentL1, currentL2, categories, showModal, isEditing, currentNote, form, currentSubCategories, filteredNotes, systemConfig,
-                handleLogin, handleRegister, handleLogout, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
+                user, email, password, notes, currentL1, currentL2, categories, showModal, isEditing, currentNote, form, 
+                currentSubCategories, currentCategory, filteredNotes, systemConfig,
+                handleLogin, handleRegister, handleLogout, l1Class, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
             }
         }
     }).mount('#app')
