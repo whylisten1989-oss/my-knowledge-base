@@ -1,67 +1,195 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的私密空间</title>
+    <title>My Digital Workspace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-</head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center font-sans text-gray-800">
-
-<div id="app" class="w-full max-w-md p-6 bg-white rounded-xl shadow-lg border border-gray-200">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
-    <div class="mb-8 text-center">
-        <h1 class="text-2xl font-bold text-gray-900">🔒 个人私密空间</h1>
-        <p v-if="user" class="text-sm text-green-600 mt-2">已安全连接: {{ user.email }}</p>
-        <p v-else class="text-sm text-gray-500 mt-2">请登录以访问加密数据</p>
-    </div>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        // 定义一种高级的“黑”，不是纯黑，是带一点点蓝的深灰，久看不累
+                        'void': '#09090b', 
+                        'surface': '#18181b',
+                        'accent': '#fafafa', // 极亮白作为强调
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 引入高级字体 Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #a1a1aa; }
+        
+        /* 玻璃拟态效果 (用于登录框) */
+        .glass {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* 隐形滚动条，保持界面简洁 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+        
+        /* 极简 Markdown 样式重写 */
+        .md-content h1, .md-content h2 { color: #fafafa; font-weight: 700; margin-bottom: 0.5rem; }
+        .md-content p { margin-bottom: 0.8rem; line-height: 1.6; }
+        .md-content a { color: #38bdf8; text-decoration: underline; }
+        .md-content pre { background: #27272a; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
 
-    <div v-if="!user" class="space-y-4">
-        <div>
-            <label class="block text-sm font-medium text-gray-700">邮箱</label>
-            <input v-model="email" type="email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="your@email.com">
-        </div>
-        <div>
-            <label class="block text-sm font-medium text-gray-700">密码</label>
-            <input v-model="password" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="********">
-        </div>
-        <div class="flex gap-2">
-            <button @click="handleLogin" class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition">登录</button>
-            <button @click="handleSignUp" class="flex-1 bg-white text-indigo-600 border border-indigo-600 py-2 px-4 rounded-md hover:bg-gray-50 transition">注册</button>
-        </div>
-        <p class="text-xs text-center text-gray-400">首次使用请点击“注册”<br>数据将通过 HTTPS 加密传输</p>
-    </div>
+<div id="app" class="flex-1 flex flex-col relative">
 
-    <div v-else>
-        <div class="flex gap-2 mb-6">
-            <input v-model="newTask" @keyup.enter="addTask" type="text" placeholder="记录一个新的想法..." class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-            <button @click="addTask" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">+</button>
+    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-black font-bold text-lg">K</div>
+            <span class="font-semibold text-white tracking-tight">Knowledge_Base</span>
         </div>
 
-        <div class="space-y-2 max-h-96 overflow-y-auto">
-            <div v-for="todo in todos" :key="todo.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition">
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" :checked="todo.is_complete" @change="toggleTodo(todo)" class="h-4 w-4 text-indigo-600 rounded border-gray-300">
-                    <span :class="{'line-through text-gray-400': todo.is_complete}">{{ todo.task }}</span>
-                </div>
-                <button @click="deleteTodo(todo.id)" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition text-sm">删除</button>
+        <div class="flex items-center gap-4 text-sm">
+            <div v-if="user" class="flex items-center gap-3">
+                <span class="text-green-500 flex items-center gap-1">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    Owner
+                </span>
+                <button @click="showEditor = true" class="text-white hover:text-gray-300 transition">+ 新建</button>
+                <button @click="handleLogout" class="text-gray-500 hover:text-white transition">退出</button>
             </div>
-            <p v-if="todos.length === 0" class="text-center text-gray-400 py-4">这里空空如也，开始记录吧</p>
+            <button v-else @click="showLogin = true" class="px-4 py-2 border border-white/20 rounded-full hover:bg-white hover:text-black transition duration-300">
+                Login
+            </button>
         </div>
+    </nav>
 
-        <button @click="handleLogout" class="mt-8 w-full text-sm text-gray-500 hover:text-gray-800 underline">退出安全连接</button>
+    <main class="flex-1 max-w-5xl mx-auto w-full p-6">
+        
+        <header class="py-20 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tighter">
+                Thinking in <span class="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-600">Public</span>.
+            </h1>
+            <p class="text-gray-400 max-w-xl mx-auto text-lg">
+                这里是我积累工作经验、存储文档和碎碎念的数字花园。<br>
+                <span v-if="!user">部分内容仅主人可见。</span>
+            </button>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-for="note in notes" :key="note.id" 
+                 class="group relative bg-surface border border-white/5 rounded-2xl p-6 hover:border-white/20 transition duration-300 flex flex-col h-64">
+                
+                <div class="flex justify-between items-start mb-4">
+                    <span :class="note.type === 'file' ? 'bg-blue-500/10 text-blue-400' : 'bg-purple-500/10 text-purple-400'" 
+                          class="px-2 py-1 rounded text-xs font-mono uppercase">
+                        {{ note.type }}
+                    </span>
+                    <span v-if="!note.is_public" class="text-gray-600" title="私密内容">🔒</span>
+                </div>
+
+                <h3 class="text-xl font-bold text-gray-100 mb-2 group-hover:text-white transition">{{ note.title }}</h3>
+                
+                <div class="flex-1 overflow-hidden text-sm text-gray-500 md-content relative">
+                    <div v-html="renderMarkdown(note.content)"></div>
+                    <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-surface to-transparent"></div>
+                </div>
+
+                <div v-if="user" class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition">
+                    <button @click="editNote(note)" class="p-2 bg-white text-black rounded-full hover:scale-110 transition shadow-lg">✎</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+
+    <div v-if="showLogin && !user" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm transition-all">
+        <div class="glass p-8 rounded-2xl w-full max-w-md relative animate-fade-in-up">
+            <button @click="showLogin = false" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">身份验证</h2>
+            <div class="space-y-4">
+                <input v-model="email" type="email" placeholder="Email" class="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-white/50 outline-none transition">
+                <input v-model="password" type="password" placeholder="Password" class="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-white/50 outline-none transition">
+                <button @click="handleLogin" class="w-full bg-white text-black font-bold py-3 rounded-lg hover:bg-gray-200 transition">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div v-if="showEditor && user" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
+        <div class="bg-surface w-full max-w-4xl h-[80vh] rounded-2xl border border-white/10 flex flex-col shadow-2xl overflow-hidden">
+            
+            <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-void">
+                <h3 class="text-white font-bold">{{ isEditing ? '编辑内容' : '新建内容' }}</h3>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" v-model="form.is_public" class="w-4 h-4">
+                        <span :class="form.is_public ? 'text-green-400' : 'text-gray-500'">{{ form.is_public ? '公开 Public' : '私密 Private' }}</span>
+                    </label>
+                    <button @click="closeEditor" class="text-gray-400 hover:text-white">取消</button>
+                    <button @click="saveNote" class="bg-white text-black px-6 py-1.5 rounded-full font-bold hover:bg-gray-200 transition">
+                        {{ isSaving ? '保存中...' : '保存' }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col md:flex-row">
+                <div class="flex-1 p-6 flex flex-col gap-4 border-r border-white/5">
+                    <input v-model="form.title" placeholder="输入标题..." class="bg-transparent text-2xl font-bold text-white outline-none placeholder-gray-600">
+                    
+                    <div class="flex gap-4 text-sm">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" value="note" v-model="form.type">
+                            <span class="text-gray-300">纯笔记 (Markdown)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" value="file" v-model="form.type">
+                            <span class="text-gray-300">文件链接</span>
+                        </label>
+                    </div>
+
+                    <textarea v-if="form.type === 'note'" v-model="form.content" placeholder="在这里写 Markdown..." class="flex-1 bg-void/50 p-4 rounded-lg text-gray-300 font-mono outline-none resize-none border border-white/5 focus:border-white/20"></textarea>
+                    
+                    <div v-else class="flex-1 bg-void/50 p-4 rounded-lg border border-dashed border-gray-700 flex flex-col items-center justify-center text-gray-500">
+                        <p>请手动粘贴文件链接 (File URL)</p>
+                        <input v-model="form.content" placeholder="https://..." class="w-full mt-4 bg-black border border-gray-700 p-2 rounded text-white">
+                        <p class="text-xs mt-2 text-gray-600">目前暂未开启自动上传，请去 Supabase Storage 上传后复制链接填入。</p>
+                    </div>
+                </div>
+
+                <div class="flex-1 p-6 bg-black/20 overflow-y-auto">
+                    <h4 class="text-xs font-bold text-gray-500 uppercase mb-4 tracking-widest">Preview</h4>
+                    <div class="md-content text-gray-300" v-html="renderMarkdown(form.content)"></div>
+                </div>
+            </div>
+            
+            <div v-if="isEditing" class="p-4 bg-red-900/10 border-t border-red-900/20 flex justify-between items-center">
+                <span class="text-xs text-red-400">危险区域</span>
+                <button @click="deleteNote" class="text-xs text-red-500 hover:text-red-300 underline">删除此条目</button>
+            </div>
+        </div>
     </div>
 
 </div>
 
 <script>
-    const { createApp, ref, onMounted } = Vue
+    const { createApp, ref, onMounted, reactive } = Vue
     const { createClient } = supabase
 
     // ==========================================
-    // 🔴 请替换为你自己的 Supabase 配置 !!!
+    // 🔴 必填：你的 Supabase 配置
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
     const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'
@@ -70,94 +198,141 @@
 
     createApp({
         setup() {
+            // --- 状态变量 ---
             const user = ref(null)
+            const showLogin = ref(false)
+            const showEditor = ref(false)
             const email = ref('')
             const password = ref('')
-            const todos = ref([])
-            const newTask = ref('')
+            const notes = ref([])
+            const isSaving = ref(false)
+            
+            // 表单数据 (用于新建/编辑)
+            const form = reactive({
+                id: null,
+                title: '',
+                content: '',
+                is_public: false, // 默认私密
+                type: 'note'
+            })
 
-            // 1. 检查当前是否已登录
+            // --- 生命周期 ---
             onMounted(async () => {
+                // 1. 检查有没有登录
                 const { data: { session } } = await _supabase.auth.getSession()
-                if (session) {
-                    user.value = session.user
-                    fetchTodos()
-                }
+                user.value = session?.user || null
+                
+                // 2. 加载数据
+                fetchNotes()
 
-                // 监听登录状态变化
+                // 3. 监听登录状态变化
                 _supabase.auth.onAuthStateChange((_event, session) => {
                     user.value = session?.user || null
-                    if (user.value) fetchTodos()
-                    else todos.value = []
+                    fetchNotes() // 状态变了(登录/登出)都要重新拉数据
                 })
             })
 
-            // 2. 注册
-            const handleSignUp = async () => {
-                const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value })
-                if (error) alert(error.message)
-                else alert('注册成功！请检查你的邮箱确认链接（如果是真邮箱的话），或者去 Supabase 后台关闭“邮箱验证”选项直接登录。')
-            }
+            // --- 核心逻辑 ---
 
-            // 3. 登录
-            const handleLogin = async () => {
-                const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value })
-                if (error) alert(error.message)
-            }
-
-            // 4. 登出
-            const handleLogout = async () => {
-                await _supabase.auth.signOut()
-            }
-
-            // 5. 获取数据 (Read)
-            const fetchTodos = async () => {
+            // 拉取笔记：根据是否登录，Supabase RLS 会自动决定返回什么数据
+            // 没登录 -> 只能查到 is_public=true
+            // 登录了 -> 能查到所有
+            const fetchNotes = async () => {
                 const { data, error } = await _supabase
-                    .from('todos')
+                    .from('notes')
                     .select('*')
                     .order('created_at', { ascending: false })
-                if (error) console.error(error)
-                else todos.value = data
-            }
-
-            // 6. 添加数据 (Create)
-            const addTask = async () => {
-                if (!newTask.value.trim()) return
-                const { error } = await _supabase
-                    .from('todos')
-                    .insert({ task: newTask.value, user_id: user.value.id })
                 
-                if (error) console.error(error)
-                else {
-                    newTask.value = ''
-                    fetchTodos()
+                if (error) console.error('获取失败:', error)
+                else notes.value = data
+            }
+
+            // 登录
+            const handleLogin = async () => {
+                const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value })
+                if (error) alert('登录失败: ' + error.message)
+                else showLogin.value = false // 登录成功关闭弹窗
+            }
+
+            // 登出
+            const handleLogout = async () => {
+                await _supabase.auth.signOut()
+                // 登出后需要清空敏感数据，重新拉取公开数据
+                fetchNotes()
+            }
+
+            // 打开编辑器 (新建模式)
+            const openNewEditor = () => {
+                form.id = null
+                form.title = ''
+                form.content = ''
+                form.is_public = false
+                form.type = 'note'
+                showEditor.value = true
+            }
+
+            // 打开编辑器 (编辑模式)
+            const editNote = (note) => {
+                form.id = note.id
+                form.title = note.title
+                form.content = note.content
+                form.is_public = note.is_public
+                form.type = note.type
+                showEditor.value = true
+            }
+
+            // 保存逻辑 (区分新建和更新)
+            const saveNote = async () => {
+                if (!form.title) return alert('标题不能为空')
+                isSaving.value = true
+                
+                const noteData = {
+                    user_id: user.value.id,
+                    title: form.title,
+                    content: form.content,
+                    is_public: form.is_public,
+                    type: form.type
                 }
+
+                if (form.id) {
+                    // 更新模式
+                    await _supabase.from('notes').update(noteData).eq('id', form.id)
+                } else {
+                    // 新建模式
+                    await _supabase.from('notes').insert(noteData)
+                }
+
+                isSaving.value = false
+                showEditor.value = false // 关闭弹窗
+                fetchNotes() // 刷新列表
             }
 
-            // 7. 更新状态 (Update)
-            const toggleTodo = async (todo) => {
-                const { error } = await _supabase
-                    .from('todos')
-                    .update({ is_complete: !todo.is_complete })
-                    .eq('id', todo.id)
-                if (error) console.error(error)
-                else fetchTodos() // 刷新一下
+            // 删除逻辑
+            const deleteNote = async () => {
+                if(!confirm('确定永久删除吗？')) return
+                await _supabase.from('notes').delete().eq('id', form.id)
+                showEditor.value = false
+                fetchNotes()
             }
 
-            // 8. 删除数据 (Delete)
-            const deleteTodo = async (id) => {
-                const { error } = await _supabase.from('todos').delete().eq('id', id)
-                if (error) console.error(error)
-                else fetchTodos()
+            // 工具：Markdown 渲染
+            const renderMarkdown = (text) => {
+                return text ? marked.parse(text) : ''
+            }
+            
+            // 关闭编辑器
+            const closeEditor = () => {
+                showEditor.value = false
             }
 
             return {
-                user, email, password, todos, newTask,
-                handleLogin, handleSignUp, handleLogout, addTask, toggleTodo, deleteTodo
+                user, showLogin, showEditor, email, password, notes, form, isSaving,
+                handleLogin, handleLogout, editNote, saveNote, deleteNote, renderMarkdown, closeEditor,
+                // 计算属性：判断当前是编辑还是新建
+                isEditing: Vue.computed(() => !!form.id)
             }
         }
     }).mount('#app')
 </script>
 </body>
-
 </html>
