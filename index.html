@@ -3,22 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (CN Final)</title>
+    <title>MindForge OS (Aliyun Stable)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
-    <link href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://npm.elemecdn.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     
-    <script src="https://cdn.staticfile.org/vue/3.3.4/vue.global.prod.min.js"></script>
+    <script src="https://npm.elemecdn.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     
-    <script src="https://cdn.staticfile.org/marked/5.1.0/marked.min.js"></script>
+    <script src="https://npm.elemecdn.com/marked@5.1.0/marked.min.js"></script>
     
-    <link href="https://cdn.staticfile.org/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
-    <script src="https://cdn.staticfile.org/quill/1.3.7/quill.min.js"></script>
+    <link href="https://npm.elemecdn.com/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://npm.elemecdn.com/quill@1.3.7/dist/quill.min.js"></script>
     
-    <script src="https://cdn.staticfile.org/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+    <script src="https://npm.elemecdn.com/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+
+    <script>
+        window.onload = function() {
+            var missing = [];
+            if (typeof Vue === 'undefined') missing.push('Vue.js');
+            if (typeof marked === 'undefined') missing.push('Marked');
+            if (typeof Quill === 'undefined') missing.push('Quill');
+            if (typeof supabase === 'undefined') missing.push('Supabase');
+            
+            if (missing.length > 0) {
+                var msg = "⚠️ 严重网络错误：\n以下核心库加载失败 (阿里源也不通)：\n" + missing.join(', ') + "\n\n请检查您的网络防火墙或尝试切换手机热点。";
+                alert(msg);
+                document.body.innerHTML = '<div style="color:red;padding:50px;text-align:center;background:#000;height:100vh">' + msg.replace(/\n/g, '<br>') + '</div>';
+            }
+        }
+    </script>
 
     <style>
-        /* --- 核心主题定义 (替代 tailwind.config) --- */
+        /* --- 主题变量 --- */
         :root {
             --bg-void: #050505;
             --bg-sidebar: #0a0a0a;
@@ -32,23 +48,12 @@
             color: var(--color-text); 
             font-family: var(--font-main); 
             overflow: hidden; 
-            margin: 0;
-            padding: 0;
         }
 
-        /* 强制覆盖 Tailwind 默认边框色 */
+        /* 覆盖 Tailwind 默认边框色 */
         *, ::before, ::after { border-color: var(--border-dim); }
         
-        /* 动画类 */
-        @keyframes fade-in {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        .animate-fade-in {
-            animation: fade-in 0.3s ease-in-out;
-        }
-        
-        /* 1. 登录页：磨砂玻璃 */
+        /* 登录页 */
         .glass-panel {
             background: rgba(20, 20, 20, 0.65);
             backdrop-filter: blur(20px);
@@ -56,129 +61,51 @@
             box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
         }
         
-        /* 2. 极光背景 */
+        /* 极光背景 */
         .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; }
         .aurora-blob { position: absolute; filter: blur(100px); opacity: 0.35; animation: float 12s infinite ease-in-out alternate; }
         .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #172554; animation-duration: 15s; }
         .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #312e81; animation-duration: 20s; }
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
 
-        /* 3. Logo 光效 */
+        /* Logo 光效 */
         .cyber-text {
             background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
-            background-size: 200% auto; 
-            -webkit-background-clip: text; 
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             animation: shine 4s linear infinite alternate;
             font-weight: 900;
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 4. 黑白按钮 */
+        /* 黑白按钮 */
         .btn-black {
-            background: #000; 
-            border: 1px solid #333; 
-            color: white; 
-            transition: all 0.2s;
-            cursor: pointer;
+            background: #000; border: 1px solid #333; color: white; transition: all 0.2s;
         }
-        .btn-black:hover { 
-            border-color: #fff; 
-            box-shadow: 0 0 10px rgba(255,255,255,0.15); 
-        }
+        .btn-black:hover { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.15); }
 
-        /* 5. 胶囊开关 */
+        /* 开关 */
         .toggle-checkbox { display: none; }
-        .toggle-label { 
-            width: 36px; 
-            height: 20px; 
-            background: #333; 
-            border-radius: 99px; 
-            position: relative; 
-            cursor: pointer; 
-            transition: 0.3s; 
-        }
-        .toggle-label::after { 
-            content: ''; 
-            position: absolute; 
-            top: 2px; 
-            left: 2px; 
-            width: 16px; 
-            height: 16px; 
-            background: #888; 
-            border-radius: 50%; 
-            transition: 0.3s; 
-        }
+        .toggle-label { width: 36px; height: 20px; background: #333; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; }
+        .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #888; border-radius: 50%; transition: 0.3s; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; }
         .toggle-checkbox:checked + .toggle-label::after { transform: translateX(16px); background: #000; }
 
-        /* 6. Quill 暗黑适配 */
-        .ql-toolbar { 
-            background: var(--bg-sidebar); 
-            border-color: var(--border-dim) !important; 
-        }
-        .ql-container { 
-            background: var(--bg-void); 
-            border-color: var(--border-dim) !important; 
-            color: #ccc; 
-            font-size: 15px !important; 
-            font-family: var(--font-main) !important; 
-            height: calc(100% - 42px);
-        }
-        .ql-stroke { stroke: #666 !important; } 
-        .ql-fill { fill: #666 !important; } 
-        .ql-picker { color: #666 !important; }
+        /* Quill 暗黑适配 */
+        .ql-toolbar { background: var(--bg-sidebar); border-color: var(--border-dim) !important; }
+        .ql-container { background: var(--bg-void); border-color: var(--border-dim) !important; color: #ccc; font-size: 15px !important; font-family: var(--font-main) !important; }
+        .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
-        /* 自定义工具类 */
+        /* 工具类 */
         .bg-void { background-color: var(--bg-void); }
         .bg-sidebar { background-color: var(--bg-sidebar); }
         .border-dim { border-color: var(--border-dim); }
         .text-dim { color: #888; }
 
-        /* 滚动条样式 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
         [v-cloak] { display: none !important; }
-        .note-card { 
-            transition: all 0.3s ease; 
-            border: 1px solid #222; 
-            cursor: pointer;
-        }
-        .note-card:hover { 
-            border-color: #555; 
-            transform: translateY(-2px); 
-            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8); 
-        }
+        .note-card { transition: all 0.3s ease; border: 1px solid #222; }
+        .note-card:hover { border-color: #555; transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8); }
         
-        /* 错误提示栏 */
-        #error-bar { 
-            display: none; 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            background: #991b1b; 
-            color: white; 
-            text-align: center; 
-            padding: 8px; 
-            z-index: 99999; 
-            font-size: 12px; 
-        }
-        
-        /* 内容样式 */
-        .prose {
-            max-width: 100%;
-        }
-        .prose-invert {
-            color: #e4e4e7;
-        }
+        #error-bar { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #991b1b; color: white; text-align: center; padding: 8px; z-index: 99999; font-size: 12px; }
     </style>
 </head>
 <body class="bg-void h-screen flex flex-col">
@@ -193,18 +120,18 @@
         <div class="glass-panel w-full max-w-sm p-10 rounded-xl relative z-10 animate-fade-in shadow-2xl">
             <div class="text-center mb-10">
                 <div class="w-14 h-14 bg-white rounded-xl mx-auto flex items-center justify-center text-black font-bold text-2xl mb-4 shadow-lg shadow-white/10">K</div>
-                <h1 class="text-3xl font-bold text-white tracking-tighter mb-1">MindForge OS</h1>
+                <h1 class="text-2xl font-bold text-white tracking-tighter mb-1">MindForge OS</h1>
                 <p class="text-gray-400 text-xs font-mono tracking-widest uppercase">Identity Verification</p>
             </div>
 
             <div class="space-y-5">
                 <div>
                     <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Access ID</label>
-                    <input v-model="email" type="email" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition font-mono">
+                    <input v-model="email" type="email" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/30 transition font-mono">
                 </div>
                 <div>
                     <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Passkey</label>
-                    <input v-model="password" type="password" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition font-mono">
+                    <input v-model="password" type="password" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/30 transition font-mono">
                 </div>
                 
                 <div class="flex gap-3 pt-3">
@@ -221,7 +148,6 @@
                 <div class="h-20 flex items-center px-6 border-b border-dim">
                     <span class="text-lg font-black tracking-tight cyber-text">MindForge OS Beta</span>
                 </div>
-                
                 <nav class="p-6 space-y-6">
                     <div>
                         <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Core</div>
@@ -267,13 +193,13 @@
                     </button>
                     <button @click="addCategory" class="w-7 h-7 rounded-full border border-dashed border-gray-700 text-gray-500 hover:text-white hover:border-white flex items-center justify-center transition">+</button>
                 </div>
-                <button v-if="currentL1 !== 'profile'" @click="createNote" class="btn-black px-5 py-2 rounded text-xs font-bold flex items-center gap-2">
+                <button v-if="currentCategory !== 'profile'" @click="createNote" class="btn-black px-5 py-2 rounded text-xs font-bold flex items-center gap-2">
                     + 新建文档
                 </button>
             </header>
 
             <div class="flex-1 overflow-y-auto p-8">
-                <div v-if="currentL1 === 'profile'" class="max-w-4xl mx-auto space-y-6 animate-fade-in">
+                <div v-if="currentCategory === 'profile'" class="max-w-4xl mx-auto space-y-6 animate-fade-in">
                     <div class="border border-dim bg-sidebar p-8 rounded-xl relative overflow-hidden">
                         <div class="relative z-10 flex flex-col md:flex-row gap-6 items-start">
                             <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl">🧠</div>
@@ -382,35 +308,22 @@
     // 🔴 必填区 (填你的 eyJ... Key)
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入你的 Supabase anon key (格式: eyJ...)
-    
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入 eyJ... Key
+    const ADMIN_EMAIL = '1493694948@qq.com' 
+
     // 初始化客户端
     let _supabase = null
     function initSupabase() {
-        if (typeof createClient !== 'function') {
-            const errorBar = document.getElementById('error-bar');
-            if (errorBar) {
-                errorBar.style.display = 'block';
-                errorBar.innerText = '⚠️ 网络错误：核心库加载失败，请刷新页面。';
-            }
-            return null;
+        if (typeof createClient !== 'function' || typeof Vue === 'undefined') {
+            return null; // 静默失败，依赖探针提示
         }
         try {
-            if (!SUPABASE_ANON_KEY) {
-                throw new Error('Supabase密钥未配置');
-            }
             return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                 auth: { persistSession: true },
                 global: { fetch: (...args) => fetch(...args) }
             });
-        } catch (e) { 
-            console.error("Supabase初始化错误", e);
-            const errorBar = document.getElementById('error-bar');
-            if (errorBar) {
-                errorBar.style.display = 'block';
-                errorBar.innerText = '⚠️ Supabase配置错误：请检查密钥配置';
-            }
-            return null;
+        } catch (e) {
+            console.error("Key Error", e);
         }
     }
     _supabase = initSupabase();
@@ -434,27 +347,20 @@
 
     createApp({
         setup() {
-            // 基本状态
+            if (!_supabase) return {};
+
             const user = ref(null)
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            const currentL1 = ref('profile')
+            const currentL1 = ref('profile') // 默认首页
             const currentL2 = ref('全部')
             const showModal = ref(false)
             const isEditing = ref(false)
             const currentNote = ref({})
-            const form = reactive({ 
-                id: null, 
-                title: '', 
-                content: '', 
-                is_public: false, 
-                category: 'wiki', 
-                link_url: '', 
-                sub_category: '全部' 
-            })
+            const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
-            // 分类配置
+            // 本地分类配置
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
                 'idea': ['全部', '待办事项', '突发奇想'],
@@ -462,321 +368,133 @@
                 'file': ['全部', '素材', '归档']
             })
 
-            // 计算属性
-            const currentSubCategories = computed(() => {
-                return categories[currentL1.value] || [];
-            })
-            
-            const filteredNotes = computed(() => {
-                return notes.value.filter(note => 
-                    note.category === currentL1.value && 
-                    (currentL2.value === '全部' || note.sub_category === currentL2.value)
-                );
-            })
-
-            // Quill编辑器实例
+            const categoryNames = { 'wiki': 'Wiki', 'idea': 'Ideas', 'blog': 'Blog', 'file': 'Files' }
             let quill = null
 
-            // 初始化Quill编辑器
             const initQuill = (initialContent = '') => {
                 nextTick(() => {
                     const container = document.getElementById('editor-container');
                     if (container) {
-                        // 清除已有内容
-                        container.innerHTML = '';
-                        
-                        // 创建编辑器
-                        quill = new Quill(container, {
-                            theme: 'snow',
-                            placeholder: '开始输入...',
-                            modules: {
-                                toolbar: [
-                                    [{ 'header': [1, 2, false] }],
-                                    ['bold', 'italic', 'underline', 'code-block'],
-                                    [{ 'color': [] }, { 'background': [] }],
-                                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                    ['link', 'clean']
-                                ]
-                            }
-                        });
-                        
-                        // 设置初始内容
-                        if (initialContent) {
-                            quill.root.innerHTML = initialContent;
+                        if (!quill) {
+                            quill = new Quill('#editor-container', {
+                                theme: 'snow',
+                                placeholder: '开始输入...',
+                                modules: {
+                                    toolbar: [
+                                        [{ 'header': [1, 2, false] }],
+                                        ['bold', 'italic', 'underline', 'code-block'],
+                                        [{ 'color': [] }, { 'background': [] }],
+                                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                        ['link', 'clean']
+                                    ]
+                                }
+                            });
                         }
+                        quill.root.innerHTML = initialContent;
                     }
-                });
+                })
             }
 
-            // 生命周期
             onMounted(async () => {
-                if (!_supabase) return;
-                
-                try {
-                    const { data: { session } } = await _supabase.auth.getSession();
-                    if (session) { 
-                        user.value = session.user; 
-                        await fetchNotes(); 
-                    }
-                    
-                    // 监听认证状态变化
-                    _supabase.auth.onAuthStateChange((_, session) => {
-                        user.value = session?.user || null;
-                        if (user.value) {
-                            fetchNotes();
-                        } else {
-                            notes.value = [];
-                        }
-                    });
-                } catch (error) {
-                    console.error('初始化错误:', error);
-                }
+                const { data: { session } } = await _supabase.auth.getSession()
+                if(session) { user.value = session.user; fetchNotes(); }
+                _supabase.auth.onAuthStateChange((_, session) => {
+                    user.value = session?.user || null
+                    if(user.value) fetchNotes()
+                    else notes.value = []
+                })
             })
 
-            // 方法
             const fetchNotes = async () => {
-                if (!user.value || !_supabase) return;
-                
-                try {
-                    const { data, error } = await _supabase
-                        .from('notes')
-                        .select('*')
-                        .order('created_at', { ascending: false });
-                    
-                    if (!error) {
-                        notes.value = data || [];
-                    } else {
-                        console.error('获取笔记失败:', error);
-                    }
-                } catch (error) {
-                    console.error('获取笔记异常:', error);
-                }
+                if (!user.value) return 
+                const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
+                if (!error) notes.value = data
             }
 
             const handleLogin = async () => {
-                if (!_supabase) return;
-                
-                try {
-                    const { error } = await _supabase.auth.signInWithPassword({ 
-                        email: email.value, 
-                        password: password.value 
-                    });
-                    if (error) {
-                        alert('登录失败: ' + error.message);
-                    }
-                } catch (error) {
-                    console.error('登录异常:', error);
-                }
+                const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value })
+                if (error) alert(error.message)
             }
-            
             const handleRegister = async () => {
-                if (!_supabase) return;
-                
-                try {
-                    const { error } = await _supabase.auth.signUp({ 
-                        email: email.value, 
-                        password: password.value 
-                    });
-                    if (error) {
-                        alert('注册失败: ' + error.message);
-                    } else {
-                        alert('注册成功，请登录');
-                    }
-                } catch (error) {
-                    console.error('注册异常:', error);
-                }
+                const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value })
+                if (error) alert(error.message)
+                else alert('注册成功，请登录')
             }
-            
-            const handleLogout = async () => {
-                if (!_supabase) return;
-                
-                try {
-                    await _supabase.auth.signOut();
-                    user.value = null;
-                    notes.value = [];
-                } catch (error) {
-                    console.error('登出异常:', error);
-                }
-            }
+            const handleLogout = async () => { await _supabase.auth.signOut(); user.value = null; notes.value = []; }
 
-            const switchL1 = (category) => { 
-                currentL1.value = category; 
-                currentL2.value = '全部'; 
-            }
-            
-            const addCategory = () => { 
-                const newCategory = prompt("添加标签:");
-                if (newCategory && newCategory.trim()) {
-                    if (!categories[currentL1.value]) {
-                        categories[currentL1.value] = [];
-                    }
-                    categories[currentL1.value].push(newCategory.trim());
-                }
-            }
+            const switchL1 = (k) => { currentL1.value = k; currentL2.value = '全部'; }
+            const addCategory = () => { const n = prompt("添加标签:"); if(n) categories[currentL1.value].push(n); }
+
+            const filteredNotes = computed(() => notes.value.filter(n => 
+                n.category === currentL1.value && 
+                (currentL2.value === '全部' || n.sub_category === currentL2.value)
+            ))
 
             const createNote = () => {
-                currentNote.value = {};
-                Object.assign(form, { 
-                    id: null, 
-                    title: '', 
-                    content: '', 
-                    is_public: false, 
-                    category: currentL1.value, 
-                    sub_category: currentL2.value,
-                    link_url: ''
-                });
-                isEditing.value = true;
-                showModal.value = true;
-                initQuill('');
+                currentNote.value = {}
+                Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentL1.value, sub_category: currentL2.value })
+                isEditing.value = true
+                showModal.value = true
+                initQuill('')
             }
 
             const viewNote = (note) => {
-                currentNote.value = note;
-                isEditing.value = false;
-                showModal.value = true;
+                currentNote.value = note
+                isEditing.value = false
+                showModal.value = true
             }
 
             const startEdit = () => {
-                Object.assign(form, currentNote.value);
-                isEditing.value = true;
-                initQuill(currentNote.value.content || '');
+                Object.assign(form, currentNote.value)
+                isEditing.value = true
+                initQuill(currentNote.value.content)
             }
 
-            const cancelEdit = () => { 
-                if (!form.id) {
-                    closeModal();
-                } else {
-                    isEditing.value = false;
-                }
-            }
-            
-            const closeModal = () => { 
-                showModal.value = false; 
-                isEditing.value = false; 
-                if (quill) {
-                    // 清理编辑器
-                    quill = null;
-                }
-            }
+            const cancelEdit = () => { if(!form.id) closeModal(); else isEditing.value = false; }
+            const closeModal = () => { showModal.value = false; isEditing.value = false; }
 
             const saveNote = async () => {
-                if (!_supabase) return;
-                
-                if (!form.title.trim()) {
-                    alert('请输入标题');
-                    return;
-                }
-                
-                const content = quill ? quill.root.innerHTML : form.content;
+                if(!form.title) return alert('请输入标题')
+                const content = quill.root.innerHTML
                 const payload = { 
                     user_id: user.value.id,
-                    title: form.title.trim(), 
-                    content: content, 
+                    title: form.title, content, 
                     category: currentL1.value, 
                     is_public: form.is_public,
-                    sub_category: form.sub_category === '全部' ? '默认' : form.sub_category,
-                    link_url: form.link_url || null
+                    sub_category: form.sub_category === '全部' ? '默认' : form.sub_category
                 };
                 
-                try {
-                    let error = null;
-                    if (form.id) {
-                        // 更新
-                        delete payload.user_id;
-                        const { error: updateError } = await _supabase
-                            .from('notes')
-                            .update(payload)
-                            .eq('id', form.id);
-                        error = updateError;
-                    } else {
-                        // 新增
-                        const { error: insertError } = await _supabase
-                            .from('notes')
-                            .insert(payload);
-                        error = insertError;
-                    }
-                    
-                    if (error) {
-                        alert('保存失败: ' + error.message);
-                    } else {
-                        isEditing.value = false;
-                        await fetchNotes();
-                        if (form.id) {
-                            currentNote.value = { ...currentNote.value, ...payload };
-                        }
-                    }
-                } catch (error) {
-                    console.error('保存异常:', error);
-                    alert('保存失败');
+                let error;
+                if(form.id) {
+                    delete payload.user_id;
+                    const res = await _supabase.from('notes').update(payload).eq('id', form.id)
+                    error = res.error
+                } else {
+                    const res = await _supabase.from('notes').insert(payload)
+                    error = res.error
+                }
+
+                if(error) alert(error.message)
+                else { 
+                    isEditing.value = false; 
+                    fetchNotes(); 
+                    if(form.id) currentNote.value = { ...currentNote.value, ...payload }
                 }
             }
 
             const deleteNote = async () => {
-                if (!_supabase || !form.id) return;
-                
-                if (confirm('确定删除此笔记吗？')) {
-                    try {
-                        const { error } = await _supabase
-                            .from('notes')
-                            .delete()
-                            .eq('id', form.id);
-                        
-                        if (error) {
-                            alert('删除失败: ' + error.message);
-                        } else {
-                            closeModal();
-                            await fetchNotes();
-                        }
-                    } catch (error) {
-                        console.error('删除异常:', error);
-                        alert('删除失败');
-                    }
+                if(confirm('Delete?')) {
+                    await _supabase.from('notes').delete().eq('id', form.id)
+                    closeModal(); fetchNotes();
                 }
             }
 
-            // 工具函数
-            const stripHtml = (html) => {
-                if (!html) return '';
-                const tmp = document.createElement("div");
-                tmp.innerHTML = html;
-                return tmp.textContent || tmp.innerText || "";
-            }
-            
-            const formatTime = (timestamp) => {
-                if (!timestamp) return '';
-                const date = new Date(timestamp);
-                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            }
+            const stripHtml = (html) => { const tmp = document.createElement("DIV"); tmp.innerHTML = html; return tmp.textContent || tmp.innerText || ""; }
+            const formatTime = (ts) => new Date(ts).toLocaleDateString() + ' ' + new Date(ts).toLocaleTimeString()
 
             return { 
-                user, 
-                email, 
-                password, 
-                notes, 
-                currentL1, 
-                currentL2, 
-                categories,
-                currentSubCategories,
-                showModal, 
-                isEditing, 
-                currentNote, 
-                form, 
-                filteredNotes, 
-                systemConfig,
-                handleLogin, 
-                handleRegister, 
-                handleLogout, 
-                switchL1, 
-                addCategory, 
-                createNote, 
-                viewNote, 
-                startEdit, 
-                cancelEdit, 
-                closeModal, 
-                saveNote, 
-                deleteNote, 
-                stripHtml, 
-                formatTime
+                user, email, password, notes, currentL1, currentL2, categories, showModal, isEditing, currentNote, form, currentSubCategories, filteredNotes, systemConfig,
+                handleLogin, handleRegister, handleLogout, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
             }
         }
     }).mount('#app')
