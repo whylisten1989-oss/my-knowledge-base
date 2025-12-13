@@ -4,13 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Personal OS (Fixed)</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script src="https://cdn.staticfile.org/vue/3.3.4/vue.global.prod.min.js"></script>
-    <script src="https://cdn.staticfile.org/marked/5.1.0/marked.min.js"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.js"></script>
+    <script src="https://cdn.staticfile.org/marked/5.1.0/marked.min.js"></script>
+
+    <style>
+        #error-console { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #7f1d1d; color: #fecaca; padding: 12px; z-index: 99999; font-family: monospace; border-bottom: 2px solid #ef4444; }
+        [v-cloak] { display: none; }
+    </style>
+    <script>
+        window.onerror = function(msg, url, line) {
+            var el = document.getElementById('error-console');
+            if(el) { el.style.display = 'block'; el.innerHTML += '💥 ' + msg + ' (Line: ' + line + ')<br>'; }
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            var el = document.getElementById('error-console');
+            if(el) { el.style.display = 'block'; el.innerHTML += '💥 Async Error: ' + event.reason + '<br>'; }
+        });
+    </script>
 
     <script>
         tailwind.config = {
@@ -29,15 +42,11 @@
         .gradient-text { background: linear-gradient(to right, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .md-content a { color: #3b82f6; text-decoration: underline; }
         .md-content h1, h2 { color: white; font-weight: bold; margin-top: 10px; }
-        [v-cloak] { display: none !important; }
-        
-        /* 错误提示框 */
-        #error-bar { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #ef4444; color: white; text-align: center; padding: 10px; z-index: 9999; }
     </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col">
 
-<div id="error-bar"></div>
+<div id="error-console"></div>
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
@@ -45,7 +54,7 @@
         <div class="relative z-10 space-y-8">
             <div class="w-16 h-16 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-2xl mb-6">K</div>
             <h1 class="text-5xl md:text-7xl font-bold tracking-tighter gradient-text">Private<br>Workspace.</h1>
-            <p class="text-gray-500 max-w-md mx-auto text-lg">Key 修复版</p>
+            <p class="text-gray-500 max-w-md mx-auto text-lg">Online Mode (Latest Engine)</p>
             <button @click="showAuthModal = true" class="px-8 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition cursor-pointer">
                 Enter System ->
             </button>
@@ -57,7 +66,7 @@
             <div>
                 <div class="flex items-center gap-3 mb-8 px-2 text-white">
                     <div class="w-8 h-8 bg-white rounded flex items-center justify-center text-black font-bold">K</div>
-                    <span class="hidden md:block font-bold text-lg">OS v3.0</span>
+                    <span class="hidden md:block font-bold text-lg">OS v3.2</span>
                 </div>
                 <nav class="space-y-1">
                     <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition"><span>📚</span> <span class="hidden md:block">知识库</span></button>
@@ -135,37 +144,27 @@
     </div>
 </div>
 
-<script>
-    const { createApp, ref, computed, onMounted, reactive } = Vue
-    const { createClient } = supabase
-
-    // ==========================================
-    // 🔴 最终填空：请一定点击那个 "Legacy" 标签页！
-    // ==========================================
+<script type="module">
+    import { createApp, ref, computed, onMounted, reactive } from 'https://esm.sh/vue@3.3.4'
+    // 👇 这里的 esm.sh 会自动拉取支持 sb_ key 的最新版 Supabase
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
     
-    // 1. URL 保持不变
+    // ==========================================
+    // 🔴 填空区：使用你的 sb_ Key (这次肯定能行)
+    // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    
-    // 2. 🔴 这里！！去点 "Legacy anon, service_role API keys" 那个标签！
-    // 复制以 eyJ 开头的那一长串 Key！
-    // 绝对不要用 sb_ 开头的！
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI'
-    
-    // 3. 你的邮箱
+    const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu' // 👈 填你那个 sb_ 开头的 Key
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-
-    // --- 自动检查 Key 格式 ---
-    if (SUPABASE_ANON_KEY.startsWith('sb_')) {
-        const bar = document.getElementById('error-bar');
-        bar.style.display = 'block';
-        bar.innerHTML = '🛑 <b>错误：</b>你依然使用的是 sb_ 开头的 Key！<br>请回到 Supabase，点击 <b>"Legacy anon"</b> 标签，复制 <b>eyJ</b> 开头的 Key！';
-        throw new Error('Wrong Key Format');
+    // 初始化
+    let _supabase = null
+    try {
+        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    } catch (e) {
+        throw new Error('Supabase 初始化失败: ' + e.message)
     }
 
-    const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-
-    createApp({
+    const app = createApp({
         setup() {
             const user = ref(null)
             const showAuthModal = ref(false)
@@ -184,37 +183,38 @@
 
             onMounted(async () => {
                 if(!_supabase) return;
-                const { data: { session } } = await _supabase.auth.getSession()
-                user.value = session?.user || null
-                if(user.value) fetchNotes()
-                _supabase.auth.onAuthStateChange((_, session) => {
+                try {
+                    const { data: { session } } = await _supabase.auth.getSession()
                     user.value = session?.user || null
-                    if (user.value) fetchNotes()
-                    else notes.value = []
-                })
+                    if(user.value) fetchNotes()
+                    _supabase.auth.onAuthStateChange((_, session) => {
+                        user.value = session?.user || null
+                        if (user.value) fetchNotes()
+                        else notes.value = []
+                    })
+                } catch (e) {
+                    throw new Error('Auth Error: ' + e.message)
+                }
             })
 
             const fetchNotes = async () => {
                 if (!user.value) return 
                 const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
-                if (error) {
-                    // 如果还能走到这里，说明 Key 格式对，但可能没权限
-                    alert('获取数据错误: ' + error.message)
-                } else {
-                    notes.value = data
-                }
+                if (error) throw new Error('Fetch Error: ' + error.message)
+                notes.value = data
             }
 
             const handleAuth = async () => {
                 const action = isRegisterMode.value ? _supabase.auth.signUp : _supabase.auth.signInWithPassword
                 const { error } = await action({ email: email.value, password: password.value })
-                if (error) alert(error.message)
+                if (error) alert('验证失败: ' + error.message)
                 else showAuthModal.value = false
             }
 
             const handleLogout = async () => await _supabase.auth.signOut()
             const openEditor = () => { Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value, link_url: '' }); showEditor.value = true; }
             const editNote = (note) => { Object.assign(form, note); showEditor.value = true; }
+            
             const saveNote = async () => {
                 if (!form.title) return alert('标题必填')
                 const payload = { ...form, user_id: user.value.id }; delete payload.id
@@ -227,7 +227,9 @@
 
             return { user, isAdmin, showAuthModal, showEditor, isRegisterMode, email, password, currentCategory, categoryNames, filteredNotes, navClass, form, handleAuth, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown }
         }
-    }).mount('#app')
+    })
+    
+    app.mount('#app')
 </script>
 </body>
 </html>
