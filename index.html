@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Personal OS (Stable)</title>
+    <title>My Personal OS (Fixed Fetch)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script src="https://cdn.staticfile.org/vue/3.3.4/vue.global.prod.min.js"></script>
     <script src="https://cdn.staticfile.org/marked/5.1.0/marked.min.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         tailwind.config = {
@@ -28,28 +29,13 @@
         .gradient-text { background: linear-gradient(to right, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .md-content a { color: #3b82f6; text-decoration: underline; }
         .md-content h1, h2 { color: white; font-weight: bold; margin-top: 10px; }
-        
-        /* 关键：Vue 加载完成前隐藏所有内容，防止乱码 */
         [v-cloak] { display: none !important; }
-        
-        /* 错误提示层 */
-        #crash-screen { display: none; position: fixed; inset: 0; background: #000; z-index: 99999; padding: 40px; text-align: center; color: #ef4444; }
+        #error-bar { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #ef4444; color: white; text-align: center; padding: 10px; z-index: 9999; }
     </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col">
 
-<div id="crash-screen">
-    <h1 class="text-3xl font-bold mb-4">🚫 系统启动失败</h1>
-    <p class="text-xl text-gray-400 mb-8">检测到 Supabase 连接配置错误。</p>
-    <div class="bg-gray-900 p-6 rounded text-left font-mono text-sm inline-block border border-red-900">
-        <p class="mb-2">可能的解决方案：</p>
-        <ol class="list-decimal pl-5 space-y-2 text-gray-300">
-            <li>你可能还在使用 <code>sb_</code> 开头的 Key。</li>
-            <li>请去 Supabase 后台，点击 <b>"Legacy anon keys"</b> 标签。</li>
-            <li>复制那个 <b>eyJ...</b> 开头的长 Key 填入代码。</li>
-        </ol>
-    </div>
-</div>
+<div id="error-bar"></div>
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
@@ -57,7 +43,7 @@
         <div class="relative z-10 space-y-8 animate-fade-in">
             <div class="w-16 h-16 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-2xl mb-6">K</div>
             <h1 class="text-5xl md:text-7xl font-bold tracking-tighter gradient-text">Private<br>Workspace.</h1>
-            <p class="text-gray-500 max-w-md mx-auto text-lg">Online System</p>
+            <p class="text-gray-500 max-w-md mx-auto text-lg">System Ready</p>
             <button @click="showAuthModal = true" class="px-8 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition cursor-pointer">
                 Enter System ->
             </button>
@@ -69,7 +55,7 @@
             <div>
                 <div class="flex items-center gap-3 mb-8 px-2 text-white">
                     <div class="w-8 h-8 bg-white rounded flex items-center justify-center text-black font-bold">K</div>
-                    <span class="hidden md:block font-bold text-lg">OS v3.3</span>
+                    <span class="hidden md:block font-bold text-lg">OS v3.4</span>
                 </div>
                 <nav class="space-y-1">
                     <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition"><span>📚</span> <span class="hidden md:block">知识库</span></button>
@@ -152,31 +138,30 @@
     const { createClient } = supabase
 
     // ==========================================
-    // 🔴 请把你的 Key 填在这里
-    // 1. URL 保持不变
-    // 2. Key 必须是 eyJ 开头的长字符串！！
+    // 🔴 最终填空：填入你的 eyJ... Legacy Key
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 在这里粘贴你刚刚找到的 Legacy Key (eyJ...)
-    const ADMIN_EMAIL = 'admin@xiaorong.xyz' 
+    
+    // 👇 填入你的 eyJ... Key
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
+    
+    const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 初始化客户端 (带错误捕获)
-    let _supabase = null
-    try {
-        if (!SUPABASE_ANON_KEY.startsWith('eyJ')) {
-            throw new Error("Key 格式错误：请使用 Legacy anon key (eyJ 开头)")
+    // 🛑 核心修复：强制绑定全局 Fetch
+    // 这样无论 Supabase 是否找不到 fetch，我们都手动喂给它
+    const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+            persistSession: true,
+            detectSessionInUrl: true
+        },
+        global: {
+            // 🚀 这里就是修复 BUG 的关键
+            fetch: (...args) => fetch(...args)
         }
-        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    } catch (e) {
-        document.getElementById('crash-screen').style.display = 'block';
-        console.error(e)
-    }
+    })
 
     createApp({
         setup() {
-            // 如果初始化失败，直接停止 Setup
-            if (!_supabase) return {};
-
             const user = ref(null)
             const showAuthModal = ref(false)
             const showEditor = ref(false)
@@ -193,20 +178,28 @@
             const navClass = (cat) => currentCategory.value === cat ? 'bg-white text-black font-bold' : 'text-gray-400 hover:text-white hover:bg-white/5'
 
             onMounted(async () => {
-                const { data: { session } } = await _supabase.auth.getSession()
-                user.value = session?.user || null
-                if(user.value) fetchNotes()
-                _supabase.auth.onAuthStateChange((_, session) => {
+                try {
+                    const { data: { session }, error } = await _supabase.auth.getSession()
+                    if (error) throw error
                     user.value = session?.user || null
-                    if (user.value) fetchNotes()
-                    else notes.value = []
-                })
+                    if(user.value) fetchNotes()
+                    _supabase.auth.onAuthStateChange((_, session) => {
+                        user.value = session?.user || null
+                        if (user.value) fetchNotes()
+                        else notes.value = []
+                    })
+                } catch (e) {
+                    // 显示错误，但不白屏
+                    const bar = document.getElementById('error-bar')
+                    bar.style.display = 'block'
+                    bar.innerText = '⚠️ 初始化警告: ' + e.message
+                }
             })
 
             const fetchNotes = async () => {
                 if (!user.value) return 
                 const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
-                if (error) alert('Error: ' + error.message)
+                if (error) alert('获取数据错误: ' + error.message)
                 else notes.value = data
             }
 
@@ -224,7 +217,7 @@
                 if (!form.title) return alert('标题必填')
                 const payload = { ...form, user_id: user.value.id }; delete payload.id
                 const { error } = form.id ? await _supabase.from('notes').update(payload).eq('id', form.id) : await _supabase.from('notes').insert(payload)
-                if (error) alert(error.message)
+                if (error) alert('保存失败: ' + error.message)
                 else { showEditor.value = false; fetchNotes(); }
             }
             const deleteNote = async () => { if(confirm('删除?')) { await _supabase.from('notes').delete().eq('id', form.id); showEditor.value = false; fetchNotes(); } }
