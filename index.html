@@ -15,155 +15,142 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { 
-                        'void': '#050505',       
-                        'sidebar': '#0f0f11', 
-                        'surface': '#18181b',
-                        'accent': '#3b82f6',     // 科技蓝作为主色
-                        'accent-glow': 'rgba(59, 130, 246, 0.5)'
-                    },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                    colors: { 'void': '#050505', 'sidebar': '#0f0f11', 'accent': '#3b82f6' },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['Consolas', 'monospace'] }
                 }
             }
         }
     </script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
         
         body { background-color: #050505; color: #e4e4e7; font-family: 'Inter', sans-serif; overflow: hidden; }
         
-        /* 隐藏滚动条 */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-
-        /* 玻璃拟态 (用于登录框) */
-        .glass-panel {
-            background: rgba(20, 20, 25, 0.7);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.5);
-        }
-
-        /* 现代卡片样式 */
-        .tech-card {
-            background: #111;
-            border: 1px solid #222;
-            transition: all 0.3s ease;
-        }
-        .tech-card:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
-            transform: translateY(-2px);
-        }
-
-        /* 呼吸灯 */
-        @keyframes breathe { 0%, 100% { opacity: 0.8; } 50% { opacity: 0.4; } }
-        .status-dot { animation: breathe 2s infinite; }
-
-        .md-content h1, .md-content h2 { color: white; font-weight: bold; margin-top: 0.8em; font-size: 1.1em; }
-        .md-content a { color: #3b82f6; text-decoration: underline; }
+        /* 1. 登录页代码雨特效画布 */
+        #matrix-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.3; }
         
+        /* 2. 橙蓝光效动画 (MindForge Logo) */
+        .cyber-gradient-text {
+            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6); /* 蓝 -> 橙 -> 蓝 */
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientMove 3s linear infinite;
+        }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+
+        /* 3. 玻璃拟态登录框 */
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+        }
+
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; }
         [v-cloak] { display: none !important; }
+        .md-content h1 { color: white; font-weight: bold; font-size: 1.2em; margin-top: 10px; }
+        .md-content a { color: #3b82f6; text-decoration: underline; }
     </style>
 </head>
-<body class="bg-void">
+<body class="bg-void h-screen flex flex-col">
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
-    <div v-if="!user" class="absolute inset-0 z-50 flex flex-col items-center justify-center p-6">
-        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-        <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-900/10 via-void to-purple-900/10 pointer-events-none"></div>
-
-        <div class="glass-panel w-full max-w-md p-10 rounded-2xl relative z-10 animate-fade-in-up">
+    <div v-if="!user" class="absolute inset-0 z-50 flex items-center justify-center bg-black overflow-hidden">
+        <canvas id="matrix-canvas"></canvas>
+        
+        <div class="glass-panel w-full max-w-sm p-8 rounded-none relative z-10 animate-fade-in border-t-2 border-blue-600">
             <div class="text-center mb-8">
-                <div class="w-14 h-14 bg-white rounded-xl mx-auto flex items-center justify-center text-black font-bold text-2xl mb-4 shadow-lg shadow-white/20">K</div>
-                <h1 class="text-3xl font-bold text-white tracking-tight">MindForge OS</h1>
-                <p class="text-gray-400 text-sm mt-2">身份验证系统 / Beta 1.0</p>
+                <div class="w-12 h-12 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-xl mb-4">K</div>
+                <h1 class="text-2xl font-black tracking-tighter cyber-gradient-text uppercase">MindForge OS</h1>
+                <p class="text-gray-500 text-xs mt-2 tracking-widest">SYSTEM IDENTITY VERIFICATION</p>
             </div>
 
-            <div class="space-y-4">
-                <input v-model="email" type="email" placeholder="Access ID (Email)" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white outline-none focus:border-white/40 transition text-sm">
-                <input v-model="password" type="password" placeholder="Passkey" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white outline-none focus:border-white/40 transition text-sm">
+            <div class="space-y-5">
+                <div class="group">
+                    <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Access ID</label>
+                    <input v-model="email" type="email" class="w-full bg-black/50 border border-white/10 p-3 text-white text-sm outline-none focus:border-blue-500 transition font-mono">
+                </div>
+                <div class="group">
+                    <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Passkey</label>
+                    <input v-model="password" type="password" class="w-full bg-black/50 border border-white/10 p-3 text-white text-sm outline-none focus:border-orange-500 transition font-mono">
+                </div>
                 
                 <div class="flex gap-3 pt-2">
-                    <button @click="handleLogin" class="flex-1 bg-white text-black font-bold py-3 rounded-lg hover:bg-gray-200 transition shadow-lg shadow-white/10 text-sm">
-                        登录 Login
+                    <button @click="handleLogin" class="flex-1 bg-white text-black font-bold py-2.5 text-xs hover:bg-gray-200 transition uppercase tracking-widest">
+                        Login
                     </button>
-                    <button @click="handleRegister" class="flex-1 bg-white/5 border border-white/10 text-gray-300 font-bold py-3 rounded-lg hover:bg-white/10 transition text-sm">
-                        注册 Sign Up
+                    <button @click="handleRegister" class="flex-1 border border-white/20 text-gray-400 font-bold py-2.5 text-xs hover:text-white hover:border-white transition uppercase tracking-widest">
+                        Register
                     </button>
                 </div>
-            </div>
-
-            <div class="mt-8 text-center border-t border-white/5 pt-6">
-                <p class="text-[10px] text-gray-600 font-mono tracking-widest uppercase flex items-center justify-center gap-2">
-                    <span>Secure Connection</span>
-                    <span class="w-1 h-1 bg-green-500 rounded-full"></span>
-                    <span>Powered by Supabase</span>
-                </p>
             </div>
         </div>
     </div>
 
     <template v-else>
-        <aside class="w-20 md:w-64 bg-sidebar border-r border-white/5 flex flex-col justify-between shrink-0 z-10 transition-all duration-300">
+        <aside class="w-64 bg-sidebar border-r border-white/5 flex flex-col justify-between shrink-0 z-20">
             <div>
                 <div class="h-20 flex items-center px-6 border-b border-white/5">
-                    <div class="w-2 h-2 bg-blue-500 rounded-full status-dot mr-3 shadow-[0_0_10px_#3b82f6]"></div>
-                    <span class="text-white font-bold tracking-wide hidden md:block">MINDFORGE</span>
+                    <span class="text-xl font-black tracking-tight cyber-gradient-text">MindForge OS Beta</span>
                 </div>
                 
-                <nav class="p-4 space-y-1">
-                    <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest px-4 mb-2 mt-2 hidden md:block">Core</div>
-                    <button @click="currentCategory = 'profile'" :class="navClass('profile')" class="w-full text-left px-4 py-2.5 rounded-lg transition flex items-center gap-3 group">
-                        <span class="group-hover:scale-110 transition">🧬</span> <span class="hidden md:block text-sm">系统核心 (Core)</span>
-                    </button>
+                <nav class="p-6 space-y-4">
+                    <div>
+                        <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-3 pl-1">Core</div>
+                        <button @click="currentCategory = 'profile'" :class="navClass('profile')" class="w-full text-left px-0 py-1 transition text-sm font-medium hover:pl-2">
+                            Overview 系统概览
+                        </button>
+                    </div>
                     
-                    <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest px-4 mb-2 mt-6 hidden md:block">Modules</div>
-                    <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full text-left px-4 py-2.5 rounded-lg transition flex items-center gap-3 group">
-                        <span class="group-hover:scale-110 transition">📚</span> <span class="hidden md:block text-sm">知识库 (Wiki)</span>
-                    </button>
-                    <button @click="currentCategory = 'snippet'" :class="navClass('snippet')" class="w-full text-left px-4 py-2.5 rounded-lg transition flex items-center gap-3 group">
-                        <span class="group-hover:scale-110 transition">⚡</span> <span class="hidden md:block text-sm">灵感 (Ideas)</span>
-                    </button>
-                    <button @click="currentCategory = 'link'" :class="navClass('link')" class="w-full text-left px-4 py-2.5 rounded-lg transition flex items-center gap-3 group">
-                        <span class="group-hover:scale-110 transition">🔗</span> <span class="hidden md:block text-sm">书签 (Links)</span>
-                    </button>
-                    <button @click="currentCategory = 'file'" :class="navClass('file')" class="w-full text-left px-4 py-2.5 rounded-lg transition flex items-center gap-3 group">
-                        <span class="group-hover:scale-110 transition">🗄️</span> <span class="hidden md:block text-sm">文件 (Files)</span>
-                    </button>
+                    <div>
+                        <div class="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-3 pl-1 mt-6">Modules</div>
+                        <div class="space-y-3">
+                            <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
+                                Wiki 知识库
+                            </button>
+                            <button @click="currentCategory = 'snippet'" :class="navClass('snippet')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
+                                Ideas 灵感
+                            </button>
+                            <button @click="currentCategory = 'link'" :class="navClass('link')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
+                                Blog 博客
+                            </button>
+                            <button @click="currentCategory = 'file'" :class="navClass('file')" class="w-full text-left px-0 py-1 transition text-sm hover:pl-2">
+                                Files 文件
+                            </button>
+                        </div>
+                    </div>
                 </nav>
             </div>
             
-            <div class="p-4 border-t border-white/5">
-                <button @click="handleLogout" class="w-full flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-red-400 hover:bg-white/5 rounded-lg transition">
-                    <span>🛑</span> <span class="hidden md:block text-xs">断开连接</span>
+            <div class="p-6 border-t border-white/5">
+                <div class="text-xs text-gray-500 mb-2 truncate font-mono">{{ user.email }}</div>
+                <button @click="handleLogout" class="text-xs text-red-500 hover:text-red-400 hover:underline transition">
+                    Logout 退出登录
                 </button>
             </div>
         </aside>
-
-        <main class="flex-1 flex flex-col bg-void relative overflow-hidden">
+<main class="flex-1 flex flex-col bg-void relative overflow-hidden">
             <header class="h-16 flex justify-between items-center px-8 border-b border-white/5 bg-void/50 backdrop-blur shrink-0 z-20">
-                <div class="flex items-center gap-4">
-                    <h2 class="text-lg font-bold text-white capitalize">{{ currentCategory === 'profile' ? 'System Overview' : categoryNames[currentCategory] }}</h2>
-                    <span class="text-xs text-gray-600 border border-gray-800 px-2 py-0.5 rounded font-mono">v1.0.4-beta</span>
-                </div>
-                <button v-if="isAdmin && currentCategory !== 'profile'" @click="openEditor" class="bg-white text-black px-4 py-1.5 rounded text-sm font-bold hover:bg-gray-200 transition shadow-lg shadow-white/5">
-                    + 新建
+                <h2 class="text-lg font-bold text-white tracking-wide">{{ currentCategory === 'profile' ? 'System Overview' : categoryNames[currentCategory] }}</h2>
+                <button v-if="isAdmin && currentCategory !== 'profile'" @click="openEditor" class="bg-white text-black px-4 py-1.5 text-xs font-bold hover:bg-gray-200 transition">
+                    + NEW ENTRY
                 </button>
             </header>
 
             <div class="flex-1 overflow-y-auto p-8 relative">
                 
-                <div v-if="currentCategory === 'profile'" class="max-w-5xl mx-auto space-y-6 animate-fade-in">
-                    
-                    <div class="tech-card p-8 rounded-2xl relative overflow-hidden bg-gradient-to-br from-[#111] to-black">
+                <div v-if="currentCategory === 'profile'" class="max-w-5xl mx-auto space-y-8 animate-fade-in">
+                    <div class="border border-white/10 p-8 bg-sidebar relative overflow-hidden">
                         <div class="flex flex-col md:flex-row gap-8 items-start relative z-10">
-                            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center text-4xl shadow-2xl">🧠</div>
+                            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center text-4xl">🧠</div>
                             <div class="flex-1">
-                                <h1 class="text-3xl font-bold text-white mb-4">MindForge OS</h1>
-                                <div class="text-gray-400 leading-relaxed whitespace-pre-line text-sm border-l-2 border-blue-500/30 pl-4">
+                                <h1 class="text-3xl font-bold text-white mb-4 cyber-gradient-text">MindForge OS</h1>
+                                <div class="text-gray-400 leading-relaxed whitespace-pre-line text-sm border-l border-white/20 pl-4 font-serif italic">
                                     {{ systemConfig.bio }}
                                 </div>
                             </div>
@@ -171,64 +158,56 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="tech-card p-6 rounded-xl">
-                            <h3 class="text-blue-400 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> Hardware
-                            </h3>
+                        <div class="border border-white/10 p-6 bg-sidebar">
+                            <h3 class="text-blue-500 font-bold text-[10px] uppercase tracking-widest mb-4">Hardware</h3>
                             <ul class="space-y-3">
-                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between items-center text-sm border-b border-white/5 pb-2 last:border-0">
+                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between items-center text-sm border-b border-white/5 pb-2">
                                     <span class="text-gray-300">{{ item.name }}</span>
-                                    <span class="text-[10px] text-green-500 font-mono bg-green-500/10 px-1.5 rounded">{{ item.status }}</span>
+                                    <span class="text-[10px] text-green-500 font-mono">{{ item.status }}</span>
                                 </li>
                             </ul>
                         </div>
-
-                        <div class="tech-card p-6 rounded-xl">
-                            <h3 class="text-purple-400 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <span class="w-1.5 h-1.5 bg-purple-500 rounded-full"></span> Stack
-                            </h3>
+                        <div class="border border-white/10 p-6 bg-sidebar">
+                            <h3 class="text-orange-500 font-bold text-[10px] uppercase tracking-widest mb-4">Stack</h3>
                             <div class="flex flex-wrap gap-2">
-                                <span v-for="skill in systemConfig.skills" :key="skill" class="px-3 py-1 bg-white/5 text-gray-300 rounded-full text-xs hover:bg-white/10 transition cursor-default">
+                                <span v-for="skill in systemConfig.skills" :key="skill" class="px-3 py-1 border border-white/10 text-gray-400 text-xs hover:text-white hover:border-white/30 transition cursor-default">
                                     {{ skill }}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="tech-card p-6 rounded-xl">
-                        <h3 class="text-gray-500 font-bold text-xs uppercase tracking-widest mb-4">Changelog</h3>
+                    <div class="border border-white/10 p-6 bg-sidebar">
+                        <h3 class="text-gray-500 font-bold text-[10px] uppercase tracking-widest mb-4">Changelog</h3>
                         <div class="space-y-4">
                             <div v-for="log in systemConfig.logs" :key="log.date" class="flex gap-4 text-sm items-start">
-                                <span class="text-gray-500 font-mono text-xs mt-0.5">{{ log.date }}</span>
-                                <div class="flex-1 border-l border-white/10 pl-4 relative">
-                                    <div class="absolute -left-[17px] top-1.5 w-2 h-2 rounded-full bg-blue-500/20 border border-blue-500/50"></div>
-                                    <span class="text-gray-300">{{ log.event }}</span>
-                                </div>
+                                <span class="text-gray-600 font-mono text-xs mt-0.5">{{ log.date }}</span>
+                                <span class="text-gray-300">{{ log.event }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div v-for="note in filteredNotes" :key="note.id" @click="isAdmin && editNote(note)" 
-                         class="tech-card p-6 rounded-xl relative h-60 flex flex-col cursor-pointer group">
+                         class="border border-white/10 bg-sidebar p-6 hover:border-blue-500/50 transition cursor-pointer relative h-56 flex flex-col group">
                         
                         <div class="flex justify-between items-start mb-3">
-                            <h3 class="text-lg font-bold text-gray-100 line-clamp-1 group-hover:text-blue-400 transition">{{ note.title }}</h3>
-                            <span v-if="!note.is_public" class="text-[10px] text-yellow-600 bg-yellow-900/20 px-2 py-0.5 rounded border border-yellow-700/30">LOCK</span>
+                            <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
+                            <span v-if="!note.is_public" class="text-[10px] text-yellow-600 border border-yellow-900/50 px-1">LOCK</span>
                         </div>
                         
-                        <div v-if="currentCategory === 'link'" class="flex-1 flex items-center gap-2 text-blue-400 break-all text-sm">
-                            🔗 <a :href="note.link_url" target="_blank" @click.stop class="hover:underline">{{ note.link_url }}</a>
+                        <div v-if="currentCategory === 'link'" class="flex-1 flex items-center gap-2 text-blue-400 break-all text-sm underline">
+                            <a :href="note.link_url" target="_blank" @click.stop>{{ note.link_url }}</a>
                         </div>
                         <div v-else class="flex-1 overflow-hidden text-sm text-gray-500 md-content relative">
                             <div v-html="renderMarkdown(note.content)"></div>
-                            <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-[#111] to-transparent"></div>
+                            <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-sidebar to-transparent"></div>
                         </div>
                         
-                        <div class="mt-4 pt-3 border-t border-white/5 flex justify-between items-center text-xs text-gray-600 font-mono">
+                        <div class="mt-4 pt-3 border-t border-white/5 flex justify-between items-center text-[10px] text-gray-600 font-mono">
                             <span>{{ new Date(note.created_at).toLocaleDateString() }}</span>
-                            <span class="opacity-0 group-hover:opacity-100 transition text-blue-400">Edit -></span>
+                            <span class="opacity-0 group-hover:opacity-100 transition text-blue-400">EDIT</span>
                         </div>
                     </div>
                 </div>
@@ -237,29 +216,26 @@
     </template>
 
     <div v-if="showEditor" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm">
-        <div class="bg-[#111] border border-white/10 w-full max-w-4xl h-[85vh] rounded-xl flex flex-col shadow-2xl">
-            <div class="p-4 border-b border-white/5 flex justify-between items-center bg-black/20">
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Editor Console</span>
-                <button @click="showEditor = false" class="text-gray-500 hover:text-white px-2">✕</button>
+        <div class="bg-[#0a0a0a] border border-white/10 w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-white/5 flex justify-between items-center bg-sidebar">
+                <span class="text-xs font-bold text-gray-500 uppercase">Editor</span>
+                <button @click="showEditor = false" class="text-gray-500 hover:text-white">✕</button>
             </div>
-            
             <div class="p-6 border-b border-white/5 flex flex-col gap-4">
                 <div class="flex gap-4">
-                    <input v-model="form.title" placeholder="输入标题..." class="bg-black/50 border border-white/10 text-white p-3 rounded-lg flex-1 outline-none focus:border-blue-500/50 transition">
-                    <select v-model="form.category" class="bg-black/50 border border-white/10 text-gray-300 p-3 rounded-lg outline-none focus:border-blue-500/50"><option value="wiki">Wiki</option><option value="snippet">Snippet</option><option value="link">Link</option><option value="file">File</option></select>
+                    <input v-model="form.title" placeholder="输入标题..." class="bg-black border border-white/10 text-white p-2 flex-1 outline-none focus:border-blue-500 transition font-mono text-sm">
+                    <select v-model="form.category" class="bg-black border border-white/10 text-gray-300 p-2 outline-none text-sm"><option value="wiki">Wiki</option><option value="snippet">Idea</option><option value="link">Blog</option><option value="file">File</option></select>
                 </div>
                 <div class="flex justify-between items-center">
-                    <label class="flex items-center gap-2 text-gray-400 text-sm cursor-pointer select-none"><input type="checkbox" v-model="form.is_public" class="rounded bg-white/10 border-white/20"> 公开访问 (Public)</label>
-                    <button @click="saveNote" class="bg-white text-black px-6 py-2 rounded-lg font-bold hover:bg-gray-200 transition text-sm">保存内容</button>
+                    <label class="flex items-center gap-2 text-gray-400 text-xs cursor-pointer select-none"><input type="checkbox" v-model="form.is_public"> Public</label>
+                    <button @click="saveNote" class="bg-white text-black px-6 py-1.5 text-xs font-bold hover:bg-gray-200 transition">SAVE</button>
                 </div>
             </div>
-
             <div class="flex-1 p-0">
-                <textarea v-model="form.content" placeholder="在此输入 Markdown 内容..." class="w-full h-full bg-[#0a0a0a] text-gray-300 p-6 font-mono text-sm leading-relaxed outline-none resize-none"></textarea>
+                <textarea v-model="form.content" placeholder="Type Markdown..." class="w-full h-full bg-black text-gray-300 p-6 font-mono text-sm leading-relaxed outline-none resize-none"></textarea>
             </div>
-            
             <div v-if="form.id" class="p-3 bg-red-900/10 border-t border-red-900/20 text-right px-6">
-                <button @click="deleteNote" class="text-xs text-red-500 hover:underline">删除此条目</button>
+                <button @click="deleteNote" class="text-xs text-red-500 hover:underline">DELETE</button>
             </div>
         </div>
     </div>
@@ -267,50 +243,40 @@
 </div>
 
 <script>
-    const { createApp, ref, computed, onMounted, reactive } = Vue
+    const { createApp, ref, computed, onMounted, reactive, watch, nextTick } = Vue
     const { createClient } = supabase
 
     // ==========================================
-    // 1. 文案配置区 (Config Zone)
-    // ==========================================
-    const systemConfig = {
-        bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
-        
-        inventory: [
-            { name: "主控: MacBook Pro M2", status: "运行中" },
-            { name: "输入: HHKB Hybrid Type-S", status: "已连接" },
-            { name: "视觉: LG 4K Ultrafine", status: "在线" },
-            { name: "音频: Sony WH-1000XM4", status: "待机" }
-        ],
-        
-        skills: ["Vue.js", "Supabase", "Python", "Node.js", "Docker", "CyberSecurity", "UI/UX Design"],
-        
-        logs: [
-            { date: "2025-12-13", event: "MindForge OS Beta 发布" },
-            { date: "2025-12-10", event: "数据库核心初始化完成" },
-            { date: "2025-12-01", event: "系统概念设计确立" }
-        ]
-    }
-
-    // ==========================================
-    // 2. 数据库配置
+    // 🔴 必填区 (请填入你的信息)
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    
-    // 🔴 必填：请填入你的 eyJ... Key
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
-    
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入你的 eyJ... Key
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 初始化客户端 (强制绑定 fetch)
+    // 初始化客户端
     let _supabase = null
     try {
         _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: { persistSession: true },
             global: { fetch: (...args) => fetch(...args) }
         })
-    } catch (e) {
-        console.error("Supabase Error", e)
+    } catch (e) { console.error(e) }
+
+    // 文案配置
+    const systemConfig = {
+        bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
+        inventory: [
+            { name: "主控: MacBook Pro M2", status: "运行中" },
+            { name: "输入: HHKB Hybrid Type-S", status: "已连接" },
+            { name: "视觉: LG 4K Ultrafine", status: "在线" },
+            { name: "音频: Sony WH-1000XM4", status: "待机" }
+        ],
+        skills: ["Vue.js", "Supabase", "Python", "Node.js", "Docker", "CyberSecurity", "UI/UX Design"],
+        logs: [
+            { date: "2025-12-13", event: "MindForge OS Beta 发布" },
+            { date: "2025-12-10", event: "数据库核心初始化完成" },
+            { date: "2025-12-01", event: "系统概念设计确立" }
+        ]
     }
 
     createApp({
@@ -326,26 +292,85 @@
             const notes = ref([])
             const currentCategory = ref('profile') 
             
+            // 菜单映射
             const categoryNames = { 
-                'wiki': '知识库', 
-                'snippet': '灵感碎片', 
-                'link': '常用书签', 
-                'file': '数据归档' 
+                'wiki': 'Knowledge Base', 
+                'snippet': 'Neural Sparks', 
+                'link': 'Personal Blog', 
+                'file': 'Data Archives' 
             }
             
             const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '' })
-            
             const isAdmin = computed(() => user.value && user.value.email === ADMIN_EMAIL)
             const filteredNotes = computed(() => notes.value.filter(n => n.category === currentCategory.value))
             
             const navClass = (cat) => currentCategory.value === cat 
-                ? 'bg-white/10 text-white font-bold' 
-                : 'text-gray-500 hover:text-white hover:bg-white/5'
+                ? 'text-white font-bold' 
+                : 'text-gray-500 hover:text-white'
+
+            // --- 登录页特效逻辑 ---
+            const initMatrixRain = () => {
+                const canvas = document.getElementById('matrix-canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                const chars = '01';
+                const fontSize = 14;
+                const columns = canvas.width / fontSize;
+                const drops = Array(Math.floor(columns)).fill(1);
+                
+                // 模拟堆叠高度
+                let pileHeight = 0; 
+
+                const draw = () => {
+                    // 半透明遮罩，形成拖尾
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.fillStyle = '#22c55e'; // 绿色代码
+                    ctx.font = fontSize + 'px monospace';
+
+                    // 绘制堆叠层 (绿色液体上涨)
+                    pileHeight += 0.05; // 缓慢上涨
+                    if(pileHeight > canvas.height * 0.3) pileHeight = canvas.height * 0.3; // 限制最高堆叠30%
+                    
+                    ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+                    ctx.fillRect(0, canvas.height - pileHeight, canvas.width, pileHeight);
+
+                    // 绘制下落代码
+                    ctx.fillStyle = '#15803d'; // 深绿色代码
+                    for (let i = 0; i < drops.length; i++) {
+                        const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                        const x = i * fontSize;
+                        const y = drops[i] * fontSize;
+                        
+                        // 如果触底或碰到堆叠层，重置
+                        if (y > canvas.height - pileHeight && Math.random() > 0.975) {
+                            drops[i] = 0;
+                        }
+                        
+                        // 只在堆叠层上方绘制文字
+                        if (y < canvas.height - pileHeight) {
+                            ctx.fillText(text, x, y);
+                        }
+                        drops[i]++;
+                    }
+                };
+                setInterval(draw, 33);
+            };
+
+            // 监听 user 变化，如果是未登录状态，启动特效
+            watch(user, (newVal) => {
+                if (!newVal) {
+                    nextTick(() => initMatrixRain());
+                }
+            }, { immediate: true });
 
             onMounted(async () => {
                 const { data: { session } } = await _supabase.auth.getSession()
-                user.value = session?.user || null
-                if(user.value) fetchNotes()
+                if (session) { user.value = session.user; fetchNotes(); }
                 _supabase.auth.onAuthStateChange((_, session) => {
                     user.value = session?.user || null
                     if(user.value) fetchNotes()
@@ -353,7 +378,6 @@
             })
 
             const fetchNotes = async () => {
-                if (!user.value) return 
                 const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
                 if (!error) notes.value = data
             }
@@ -362,38 +386,24 @@
                 const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value })
                 if (error) alert(error.message)
             }
-            
             const handleRegister = async () => {
                 const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value })
                 if (error) alert(error.message)
-                else alert('注册成功，请登录')
+                else alert('注册成功')
             }
-
             const handleLogout = async () => { await _supabase.auth.signOut(); user.value = null; notes.value = []; }
-
-            const openEditor = () => { 
-                Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value === 'profile' ? 'wiki' : currentCategory.value, link_url: '' }); 
-                showEditor.value = true; 
-            }
-            
+            const openEditor = () => { Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value === 'profile' ? 'wiki' : currentCategory.value, link_url: '' }); showEditor.value = true; }
             const editNote = (note) => { Object.assign(form, note); showEditor.value = true; }
-            
             const saveNote = async () => {
-                if (!form.title) return alert('请输入标题')
+                if (!form.title) return alert('输入标题')
                 const payload = { ...form, user_id: user.value.id }; delete payload.id
                 const { error } = form.id ? await _supabase.from('notes').update(payload).eq('id', form.id) : await _supabase.from('notes').insert(payload)
                 if (error) alert(error.message)
                 else { showEditor.value = false; fetchNotes(); }
             }
-
             const deleteNote = async () => {
-                if(confirm('确定删除?')) {
-                    await _supabase.from('notes').delete().eq('id', form.id)
-                    showEditor.value = false
-                    fetchNotes()
-                }
+                if(confirm('删除?')) { await _supabase.from('notes').delete().eq('id', form.id); showEditor.value = false; fetchNotes(); }
             }
-
             const renderMarkdown = (text) => text ? marked.parse(text) : ''
 
             return { 
