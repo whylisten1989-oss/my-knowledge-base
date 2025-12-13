@@ -3,39 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Personal OS</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <title>My Personal OS (Debug Ver)</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        'void': '#000000',      'sidebar': '#09090b',
-                        'card': '#121212',      'accent': '#3b82f6',
-                    },
+                    colors: { 'void': '#000000', 'sidebar': '#09090b', 'card': '#121212', 'accent': '#3b82f6' },
                     fontFamily: { sans: ['Inter', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #000; color: #d4d4d8; }
+        body { font-family: sans-serif; background-color: #000; color: #d4d4d8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .gradient-text { background: linear-gradient(to right, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .md-content a { color: #3b82f6; text-decoration: underline; }
         .md-content h1, h2 { color: white; font-weight: bold; margin-top: 10px; }
-        .md-content pre { background: #1f1f1f; padding: 10px; border-radius: 6px; overflow-x: auto; }
     </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col">
 
 <div id="app" class="h-full w-full flex relative">
+    <div v-if="errorMsg" class="absolute inset-0 z-[200] bg-black/90 flex items-center justify-center p-10">
+        <div class="bg-red-900/50 border border-red-500 p-6 rounded text-white max-w-lg">
+            <h3 class="font-bold text-xl mb-2">🚫 启动失败</h3>
+            <p>{{ errorMsg }}</p>
+            <button @click="errorMsg = ''" class="mt-4 bg-red-600 px-4 py-2 rounded">关闭</button>
+        </div>
+    </div>
 
     <div v-if="!user" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 text-center">
         <div class="relative z-10 space-y-8">
@@ -56,23 +58,13 @@
                     <span class="hidden md:block font-bold text-lg">OS v3.0</span>
                 </div>
                 <nav class="space-y-1">
-                    <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition">
-                        <span>📚</span> <span class="hidden md:block">知识库 (Wiki)</span>
-                    </button>
-                    <button @click="currentCategory = 'snippet'" :class="navClass('snippet')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition">
-                        <span>⚡</span> <span class="hidden md:block">灵感 (Ideas)</span>
-                    </button>
-                    <button @click="currentCategory = 'link'" :class="navClass('link')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition">
-                        <span>🔗</span> <span class="hidden md:block">书签 (Links)</span>
-                    </button>
-                    <button @click="currentCategory = 'file'" :class="navClass('file')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition">
-                        <span>🗄️</span> <span class="hidden md:block">文件 (Files)</span>
-                    </button>
+                    <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition"><span>📚</span> <span class="hidden md:block">知识库</span></button>
+                    <button @click="currentCategory = 'snippet'" :class="navClass('snippet')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition"><span>⚡</span> <span class="hidden md:block">灵感</span></button>
+                    <button @click="currentCategory = 'link'" :class="navClass('link')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition"><span>🔗</span> <span class="hidden md:block">书签</span></button>
+                    <button @click="currentCategory = 'file'" :class="navClass('file')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition"><span>🗄️</span> <span class="hidden md:block">文件</span></button>
                 </nav>
             </div>
-            <div class="border-t border-white/10 pt-4">
-                <button @click="handleLogout" class="w-full text-left text-xs text-gray-500 hover:text-white px-2 py-1 transition">退出登录</button>
-            </div>
+            <div class="border-t border-white/10 pt-4"><button @click="handleLogout" class="w-full text-left text-xs text-gray-500 hover:text-white px-2 py-1 transition">退出登录</button></div>
         </aside>
 
         <main class="flex-1 flex flex-col bg-void overflow-hidden">
@@ -80,7 +72,6 @@
                 <h2 class="text-xl font-bold text-white">{{ categoryNames[currentCategory] }}</h2>
                 <button v-if="isAdmin" @click="openEditor" class="bg-white text-black px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200 transition">+ 新建</button>
             </header>
-
             <div class="flex-1 overflow-y-auto p-6">
                 <div v-if="currentCategory === 'link'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <a v-for="note in filteredNotes" :key="note.id" :href="note.link_url" target="_blank" class="group bg-card border border-white/5 p-4 rounded-xl flex items-center gap-4 relative hover:bg-white/5">
@@ -126,9 +117,7 @@
             <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-sidebar">
                 <h3 class="text-white font-bold">{{ form.id ? '编辑' : '新建' }}</h3>
                 <div class="flex gap-4 items-center">
-                    <select v-model="form.category" class="bg-black text-gray-300 text-sm border border-white/10 rounded px-2 py-1 outline-none">
-                        <option value="wiki">📚 知识库</option><option value="snippet">⚡ 灵感</option><option value="link">🔗 书签</option><option value="file">🗄️ 文件</option>
-                    </select>
+                    <select v-model="form.category" class="bg-black text-gray-300 text-sm border border-white/10 rounded px-2 py-1 outline-none"><option value="wiki">📚 知识库</option><option value="snippet">⚡ 灵感</option><option value="link">🔗 书签</option><option value="file">🗄️ 文件</option></select>
                     <label class="flex items-center gap-2 text-sm cursor-pointer select-none text-gray-400"><input type="checkbox" v-model="form.is_public"><span>{{ form.is_public ? '🟢 公开' : '🔒 私密' }}</span></label>
                     <button @click="saveNote" class="bg-white text-black px-4 py-1.5 rounded text-sm font-bold">保存</button>
                     <button @click="showEditor = false" class="text-gray-500 hover:text-white">✕</button>
@@ -136,9 +125,7 @@
             </div>
             <div class="flex-1 flex flex-col p-6 gap-4">
                 <input v-model="form.title" placeholder="输入标题..." class="bg-transparent text-2xl font-bold text-white outline-none">
-                <div v-if="form.category === 'link'" class="flex gap-2 items-center bg-black/30 p-2 rounded border border-white/5">
-                    <span class="text-gray-500">🔗 URL:</span><input v-model="form.link_url" placeholder="https://..." class="flex-1 bg-transparent text-blue-400 outline-none">
-                </div>
+                <div v-if="form.category === 'link'" class="flex gap-2 items-center bg-black/30 p-2 rounded border border-white/5"><span class="text-gray-500">🔗 URL:</span><input v-model="form.link_url" placeholder="https://..." class="flex-1 bg-transparent text-blue-400 outline-none"></div>
                 <textarea v-model="form.content" placeholder="输入内容 (Markdown)..." class="flex-1 bg-black/20 p-4 rounded text-gray-300 font-mono outline-none resize-none border border-white/5"></textarea>
                 <div v-if="form.id" class="flex justify-between"><span class="text-xs text-gray-600">ID: {{ form.id }}</span><button @click="deleteNote" class="text-xs text-red-500">删除</button></div>
             </div>
@@ -147,15 +134,22 @@
 </div>
 
 <script>
-    // 1. 我直接帮你填好了，不要改
-    const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'
-
-    // 2. 引入 Vue 和 Supabase
     const { createApp, ref, computed, onMounted, reactive } = Vue
     const { createClient } = supabase
 
-    // 3. 初始化客户端
+    // ==========================================
+    // 🔴 最终检查：Key 必须是 ey 开头的长字符串！
+    // ==========================================
+    const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
+    const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu' // 👈 请在这里粘贴那个 ey 开头的长 Key！保留引号！
+    const ADMIN_EMAIL = '1493694948@qq.com' 
+
+    // 自检程序
+    if (SUPABASE_ANON_KEY.length < 50) {
+        alert('🛑 Key 格式错误！\n\n你填写的 Key 太短了，绝对不是 sb_ 开头的那个。\n请去 Supabase 复制那个 eyJ 开头的长 Key。');
+        throw new Error('Key too short');
+    }
+
     const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
     createApp({
@@ -164,6 +158,8 @@
             const showAuthModal = ref(false)
             const showEditor = ref(false)
             const isRegisterMode = ref(false)
+            const errorMsg = ref('')
+            
             const email = ref('')
             const password = ref('')
             const notes = ref([])
@@ -176,20 +172,26 @@
             const navClass = (cat) => currentCategory.value === cat ? 'bg-white text-black font-bold' : 'text-gray-400 hover:text-white hover:bg-white/5'
 
             onMounted(async () => {
-                const { data: { session } } = await _supabase.auth.getSession()
-                user.value = session?.user || null
-                if(user.value) fetchNotes()
-                _supabase.auth.onAuthStateChange((_, session) => {
+                try {
+                    const { data: { session }, error } = await _supabase.auth.getSession()
+                    if (error) throw error
                     user.value = session?.user || null
-                    if (user.value) fetchNotes()
-                    else notes.value = []
-                })
+                    if(user.value) fetchNotes()
+                    _supabase.auth.onAuthStateChange((_, session) => {
+                        user.value = session?.user || null
+                        if (user.value) fetchNotes()
+                        else notes.value = []
+                    })
+                } catch (e) {
+                    errorMsg.value = '连接 Supabase 失败: ' + e.message
+                }
             })
 
             const fetchNotes = async () => {
                 if (!user.value) return 
-                const { data } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
-                if (data) notes.value = data
+                const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
+                if (error) { errorMsg.value = '获取数据失败: ' + error.message; return }
+                notes.value = data
             }
 
             const handleAuth = async () => {
@@ -200,23 +202,23 @@
             }
 
             const handleLogout = async () => await _supabase.auth.signOut()
-
             const openEditor = () => { Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value, link_url: '' }); showEditor.value = true; }
             const editNote = (note) => { Object.assign(form, note); showEditor.value = true; }
+            
             const saveNote = async () => {
                 if (!form.title) return alert('标题必填')
                 const payload = { ...form, user_id: user.value.id }; delete payload.id
-                if (form.id) await _supabase.from('notes').update(payload).eq('id', form.id)
-                else await _supabase.from('notes').insert(payload)
-                showEditor.value = false; fetchNotes();
+                const { error } = form.id ? await _supabase.from('notes').update(payload).eq('id', form.id) : await _supabase.from('notes').insert(payload)
+                if (error) alert('保存失败: ' + error.message)
+                else { showEditor.value = false; fetchNotes(); }
             }
+            
             const deleteNote = async () => { if(confirm('删除?')) { await _supabase.from('notes').delete().eq('id', form.id); showEditor.value = false; fetchNotes(); } }
             const renderMarkdown = (text) => text ? marked.parse(text) : ''
 
-            return { user, isAdmin, showAuthModal, showEditor, isRegisterMode, email, password, currentCategory, categoryNames, filteredNotes, navClass, form, handleAuth, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown }
+            return { user, errorMsg, isAdmin, showAuthModal, showEditor, isRegisterMode, email, password, currentCategory, categoryNames, filteredNotes, navClass, form, handleAuth, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown }
         }
     }).mount('#app')
 </script>
 </body>
 </html>
-
