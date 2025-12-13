@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge OS (V25 Pure)</title>
+    <title>MindForge OS (V26 Perfect)</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -18,76 +19,58 @@
             theme: {
                 extend: {
                     colors: { 'void': '#000000', 'sidebar': '#050505', 'card': '#0a0a0a', 'border-dim': 'rgba(255,255,255,0.15)' },
-                    fontFamily: { sans: ['"Microsoft YaHei"', '"Helvetica Neue"', 'sans-serif'] }
+                    fontFamily: { sans: ['"Microsoft YaHei"', '"PingFang SC"', 'sans-serif'] }, // 强制微软雅黑
+                    animation: {
+                        'pulse-bar': 'pulse-bar 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    },
+                    keyframes: {
+                        'pulse-bar': { '0%, 100%': { opacity: 0.3 }, '50%': { opacity: 1 } }
+                    }
                 }
             }
         }
     </script>
 
     <style>
-        /* 1. 全局强制设置 */
-        * { font-family: "Microsoft YaHei", sans-serif !important; letter-spacing: 0.5px; }
-        body { background-color: #000; color: #e0e0e0; overflow: hidden; }
+        /* 1. 强制全局字体 */
+        * { font-family: "Microsoft YaHei", "PingFang SC", sans-serif !important; letter-spacing: 0.5px; }
+        body { background-color: #000; color: #e0e0e0; overflow: hidden; position: relative; }
         
-        /* 2. 高级按钮 (去图标，纯文字，反色交互) */
+        /* 2. 定制高级滚动条 (Scrollbar) */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 3px; border: 1px solid #000; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+        
+        /* 3. 按钮样式 (保持 V25 的高级感) */
         .btn-cyber {
-            border: 1px solid rgba(255,255,255,0.2);
-            background: #000;
-            color: #fff;
-            text-transform: uppercase;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 8px 16px;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2); background: #000; color: #fff;
+            text-transform: uppercase; font-size: 12px; font-weight: 700;
+            padding: 10px 20px; transition: all 0.2s ease; position: relative; overflow: hidden;
         }
         .btn-cyber::before {
             content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: 0.5s;
         }
-        .btn-cyber:hover {
-            background: #fff;
-            color: #000;
-            border-color: #fff;
-            box-shadow: 0 0 15px rgba(255,255,255,0.3);
-        }
+        .btn-cyber:hover { background: #fff; color: #000; border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.3); }
         .btn-cyber:hover::before { left: 100%; }
         
-        .btn-danger {
-            border: 1px solid rgba(255, 50, 50, 0.3); color: #ff4444;
-        }
-        .btn-danger:hover {
-            background: #ff4444; color: #000; border-color: #ff4444;
-            box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
-        }
+        .btn-danger { border: 1px solid rgba(255, 50, 50, 0.3); color: #ff4444; background: transparent; padding: 8px 16px; font-size: 12px; font-weight: 700; transition: all 0.2s; }
+        .btn-danger:hover { background: #ff4444; color: #000; border-color: #ff4444; box-shadow: 0 0 15px rgba(255, 68, 68, 0.4); }
 
-        /* 3. 导航栏交互 */
+        /* 4. 导航栏交互 (字体加大) */
         .nav-item { 
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
-            border-left: 2px solid transparent; 
-            color: #666; 
-            padding-left: 12px;
+            border-left: 2px solid transparent; color: #666; padding-left: 12px;
+            font-size: 14px; /* 字体加大 */
         }
         .nav-item:hover { color: #fff; padding-left: 16px; background: rgba(255,255,255,0.03); }
         .nav-item.active { 
-            color: #000; 
-            background: #fff; 
-            padding-left: 20px; 
-            font-weight: 900;
-            border-left: none;
-            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            color: #000; background: #fff; padding-left: 20px; font-weight: 900;
+            border-left: none; box-shadow: 0 0 20px rgba(255,255,255,0.2);
         }
 
-        /* 4. Canvas 容器 (数据流动画) */
-        #activity-canvas {
-            width: 100%; height: 100%;
-            opacity: 0.6;
-            mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
-        }
-
-        /* 5. 呼吸光幕 (上下边框) */
+        /* 5. 呼吸光幕 */
         .edge-glow-top, .edge-glow-bottom {
             position: fixed; left: 0; right: 0; height: 1px; z-index: 9999; pointer-events: none;
             background: linear-gradient(90deg, transparent, #3b82f6, #f97316, transparent);
@@ -98,19 +81,31 @@
         .edge-glow-bottom { bottom: 0; }
         @keyframes pulse-width { 0%, 100% { opacity: 0.3; transform: scaleX(0.8); } 50% { opacity: 1; transform: scaleX(1); } }
 
-        /* 6. Quill 修复与美化 */
+        /* 6. Logo 回归 (渐变流光) */
+        .cyber-text {
+            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite alternate; font-weight: 900;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        /* 7. Quill 编辑器修正 */
         .ql-toolbar { background: #0a0a0a; border-bottom: 1px solid #333 !important; border-top:none!important; border-left:none!important; border-right:none!important; }
-        .ql-container { background: #000; border: none !important; color: #ccc; font-size: 15px !important; }
-        .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
+        .ql-container { background: #000; border: none !important; color: #ccc; font-size: 16px !important; }
+        /* 关键：允许编辑器滚动 */
+        .ql-editor { height: 100%; overflow-y: auto; }
+        
+        /* 8. 监控条动画 (替代 Activity Canvas) */
+        .monitor-bar { height: 100%; width: 4px; background: #333; border-radius: 2px; position: relative; overflow: hidden; }
+        .monitor-fill { position: absolute; bottom: 0; left: 0; width: 100%; background: #10b981; animation: pulse-bar 2s infinite ease-in-out; }
 
-        /* 开关 */
         .toggle-checkbox { display: none; }
-        .toggle-label { width: 36px; height: 18px; background: #222; border: 1px solid #444; position: relative; cursor: pointer; transition: 0.3s; }
-        .toggle-label::after { content: ''; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: #666; transition: 0.3s; }
+        .toggle-label { width: 40px; height: 20px; background: #222; border: 1px solid #444; position: relative; cursor: pointer; transition: 0.3s; border-radius: 99px; }
+        .toggle-label::after { content: ''; position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; background: #666; transition: 0.3s; border-radius: 50%; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; border-color: #fff; }
-        .toggle-checkbox:checked + .toggle-label::after { transform: translateX(18px); background: #000; }
+        .toggle-checkbox:checked + .toggle-label::after { transform: translateX(20px); background: #000; }
 
-        .glass-panel { background: rgba(10,10,10,0.8); backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,0.1); }
+        .glass-panel { background: rgba(10,10,10,0.85); backdrop-filter: blur(30px); border: 1px solid rgba(255,255,255,0.1); }
         .note-card { transition: all 0.3s ease; border: 1px solid #222; background: #050505; }
         .note-card:hover { border-color: #666; transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255,255,255,0.05); }
         
@@ -126,10 +121,9 @@
 
     <div v-if="!user" class="absolute inset-0 z-50 flex items-center justify-center p-6">
         <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-        
-        <div class="glass-panel w-full max-w-sm p-10 rounded-none border border-white/20 relative z-10 animate-fade-in">
-            <div class="mb-10">
-                <h1 class="text-4xl font-black text-white tracking-tighter mb-2">MINDFORGE</h1>
+        <div class="glass-panel w-full max-w-sm p-12 rounded-none border border-white/20 relative z-10 animate-fade-in">
+            <div class="mb-12 text-center">
+                <h1 class="text-4xl font-black mb-2 cyber-text tracking-tighter">MINDFORGE OS</h1>
                 <p class="text-gray-500 text-[10px] font-bold tracking-[0.4em] uppercase">System Access Control</p>
             </div>
             <div class="space-y-6">
@@ -143,7 +137,7 @@
                 </div>
                 <div class="flex gap-4 pt-4">
                     <button @click="handleLogin" class="flex-1 btn-cyber">LOGIN 登录</button>
-                    <button @click="handleRegister" class="flex-1 border border-white/10 text-gray-500 text-xs font-bold hover:text-white hover:border-white transition uppercase">Register</button>
+                    <button @click="handleRegister" class="flex-1 border border-white/10 text-gray-500 text-xs font-bold hover:text-white hover:border-white transition uppercase py-3">Register</button>
                 </div>
             </div>
         </div>
@@ -155,30 +149,30 @@
         <aside :class="['fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-border-dim flex flex-col justify-between z-40 transition-transform duration-300 md:relative md:translate-x-0', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full']">
             <div>
                 <div class="h-20 flex items-center px-8 border-b border-border-dim">
-                    <span class="text-lg font-black tracking-tighter text-white">MINDFORGE <span class="text-blue-500 text-xs align-top">BETA</span></span>
+                    <span class="text-xl font-black tracking-tighter cyber-text">MINDFORGE <span class="text-white text-[10px] align-top font-normal opacity-50">BETA</span></span>
                 </div>
                 
                 <nav class="p-6 space-y-8">
                     <div>
                         <div class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-4 pl-3">Core</div>
-                        <button @click="switchView('home')" :class="['nav-item w-full text-left py-2 mb-2 text-xs font-bold uppercase tracking-wider', currentView === 'home' ? 'active' : '']">
-                            Dashboard 仪表盘
+                        <button @click="switchView('home')" :class="['nav-item w-full text-left py-2.5 mb-2 font-bold uppercase tracking-wider', currentView === 'home' ? 'active' : '']">
+                            System Home 主页
                         </button>
                     </div>
                     
                     <div>
                         <div class="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-4 pl-3">Data Modules</div>
-                        <div class="space-y-1">
-                            <button @click="switchView('wiki')" :class="['nav-item w-full text-left py-2 text-xs font-bold uppercase tracking-wider', currentView === 'wiki' ? 'active' : '']">
+                        <div class="space-y-2">
+                            <button @click="switchView('wiki')" :class="['nav-item w-full text-left py-2.5 font-bold uppercase tracking-wider', currentView === 'wiki' ? 'active' : '']">
                                 Wiki 知识库
                             </button>
-                            <button @click="switchView('idea')" :class="['nav-item w-full text-left py-2 text-xs font-bold uppercase tracking-wider', currentView === 'idea' ? 'active' : '']">
+                            <button @click="switchView('idea')" :class="['nav-item w-full text-left py-2.5 font-bold uppercase tracking-wider', currentView === 'idea' ? 'active' : '']">
                                 Ideas 灵感
                             </button>
-                            <button @click="switchView('blog')" :class="['nav-item w-full text-left py-2 text-xs font-bold uppercase tracking-wider', currentView === 'blog' ? 'active' : '']">
+                            <button @click="switchView('blog')" :class="['nav-item w-full text-left py-2.5 font-bold uppercase tracking-wider', currentView === 'blog' ? 'active' : '']">
                                 Blog 博客
                             </button>
-                            <button @click="switchView('file')" :class="['nav-item w-full text-left py-2 text-xs font-bold uppercase tracking-wider', currentView === 'file' ? 'active' : '']">
+                            <button @click="switchView('file')" :class="['nav-item w-full text-left py-2.5 font-bold uppercase tracking-wider', currentView === 'file' ? 'active' : '']">
                                 Files 文件
                             </button>
                         </div>
@@ -187,16 +181,16 @@
             </div>
             
             <div class="p-6 border-t border-border-dim bg-[#020202]">
-                <div class="flex items-center gap-3 cursor-pointer mb-4 opacity-70 hover:opacity-100 transition" @click="openProfile">
-                    <div class="w-8 h-8 bg-white/10 rounded-full overflow-hidden">
+                <div class="flex items-center gap-3 cursor-pointer mb-5 opacity-80 hover:opacity-100 transition" @click="openProfile">
+                    <div class="w-10 h-10 bg-white/10 rounded-full overflow-hidden border border-white/10">
                         <img :src="profile.avatar" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="text-xs font-bold text-white truncate">{{ profile.name }}</div>
+                        <div class="text-sm font-bold text-white truncate">{{ profile.name }}</div>
                         <div class="text-[10px] text-gray-500 truncate font-mono">STATUS: ACTIVE</div>
                     </div>
                 </div>
-                <button @click="handleLogout" class="w-full text-left text-[10px] font-bold text-red-600 hover:text-red-400 tracking-widest uppercase transition">
+                <button @click="handleLogout" class="w-full text-left text-[10px] font-bold text-red-600 hover:text-red-400 tracking-widest uppercase transition pl-1">
                     Logout Terminate
                 </button>
             </div>
@@ -213,7 +207,7 @@
                         </button>
                         <button @click="addCategory" class="w-6 h-6 border border-dashed border-gray-700 text-gray-500 hover:text-white flex items-center justify-center transition shrink-0">+</button>
                     </div>
-                    <span v-else class="text-xs font-bold text-gray-600 uppercase tracking-[0.2em]">System Overview</span>
+                    <span v-else class="text-xs font-bold text-gray-600 uppercase tracking-[0.2em]">System Home</span>
                 </div>
 
                 <button v-if="currentView !== 'home'" @click="createNote" class="btn-cyber">
@@ -228,28 +222,27 @@
                         <div class="relative z-10 flex flex-col md:flex-row gap-10 items-start">
                             <div class="w-24 h-24 bg-white flex items-center justify-center text-5xl shadow-2xl shrink-0 text-black">🧠</div>
                             <div class="flex-1">
-                                <h1 class="text-4xl font-black mb-4 text-white tracking-tighter">MIND_FORGE_OS <span class="text-blue-500 text-sm align-top">V25</span></h1>
+                                <h1 class="text-4xl font-black mb-4 cyber-text tracking-tighter">MIND_FORGE_OS</h1>
                                 <div class="text-gray-400 text-sm leading-loose border-l-4 border-white pl-6 font-serif italic max-w-2xl">{{ systemConfig.bio }}</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="lg:col-span-2 border border-border-dim bg-sidebar relative h-[350px] overflow-hidden flex flex-col">
-                            <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>
-                            <div class="p-4 border-b border-border-dim flex justify-between items-center z-10 bg-[#080808]">
-                                <h3 class="text-[10px] font-bold text-white uppercase tracking-widest">Network Traffic / Activity</h3>
-                                <div class="flex gap-2">
-                                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                    <span class="text-[10px] text-green-500 font-mono">LIVE</span>
+                        <div class="lg:col-span-2 border border-border-dim bg-sidebar relative h-[350px] overflow-hidden flex flex-col p-8">
+                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-8">System Neural Monitor</h3>
+                            
+                            <div class="flex-1 flex items-end justify-between gap-2 px-4 pb-4">
+                                <div v-for="i in 30" :key="i" class="monitor-bar flex-1">
+                                    <div class="monitor-fill" :style="{ height: Math.random() * 60 + 20 + '%', animationDelay: i * 0.1 + 's', animationDuration: (1 + Math.random()) + 's' }"></div>
                                 </div>
                             </div>
-                            <canvas id="activity-canvas"></canvas>
+                            <div class="text-center text-[10px] text-green-500 font-mono tracking-widest mt-4">CORE STABILITY: 99.8%</div>
                         </div>
 
                         <div class="flex flex-col gap-6">
                             <div class="border border-border-dim bg-sidebar p-6 flex-1">
-                                <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-6">System Inventory</h3>
+                                <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-6">Inventory</h3>
                                 <ul class="space-y-4 text-xs text-gray-400 font-mono">
                                     <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-white/5 pb-2">
                                         <span>{{ item.name }}</span><span class="text-white">{{ item.status }}</span>
@@ -257,7 +250,7 @@
                                 </ul>
                             </div>
                             <div class="border border-border-dim bg-sidebar p-6 flex-1">
-                                <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-6">Changelog</h3>
+                                <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-6">Logs</h3>
                                 <div class="space-y-3 text-[10px] text-gray-500 font-mono">
                                     <div v-for="log in systemConfig.logs" :key="log.date" class="flex gap-4">
                                         <span class="text-white">{{ log.date }}</span><span>{{ log.event }}</span>
@@ -275,7 +268,7 @@
                             
                             <div class="flex justify-between items-start mb-6">
                                 <h3 class="text-lg font-bold text-white line-clamp-1 group-hover:underline decoration-1 underline-offset-4">{{ note.title }}</h3>
-                                <span v-if="!note.is_public" class="text-[9px] font-bold text-black bg-white px-2 py-0.5 uppercase tracking-wider">Private</span>
+                                <span v-if="!note.is_public" class="text-[9px] font-bold text-black bg-white px-2 py-0.5 uppercase tracking-wider">Private 私密</span>
                             </div>
                             
                             <div class="flex-1 overflow-hidden">
@@ -307,7 +300,6 @@
             <span class="text-xs font-bold text-gray-500 uppercase tracking-[0.3em]">User Profile Configuration</span>
         </div>
         <div class="flex-1 flex items-center justify-center p-6 relative overflow-hidden">
-            
             <div class="w-full max-w-3xl bg-sidebar border border-border-dim p-16 relative z-10 shadow-2xl flex flex-col items-center text-center">
                 <div class="relative group mb-10">
                     <img :src="profile.avatar" class="w-40 h-40 border border-white/20 shadow-2xl object-cover grayscale group-hover:grayscale-0 transition duration-500">
@@ -377,8 +369,8 @@
             
             <div v-if="!isEditing" class="h-16 border-t border-border-dim bg-[#0a0a0a] flex justify-between items-center px-8">
                 <span class="text-[10px] text-gray-600 font-mono">UUID: {{ currentNote.id }}</span>
-                <button @click="deleteNote(currentNote.id)" class="btn-danger text-[10px] uppercase font-bold px-4 py-2">
-                    Delete Entry 删除
+                <button @click="deleteNote(currentNote.id)" class="btn-danger">
+                    DELETE ENTRY
                 </button>
             </div>
         </div>
@@ -387,7 +379,7 @@
 </div>
 
 <script>
-    const { createApp, ref, computed, onMounted, reactive, nextTick, watch } = Vue
+    const { createApp, ref, computed, onMounted, reactive, nextTick } = Vue
     const { createClient } = window.supabase
 
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
@@ -410,7 +402,7 @@
             { name: "AUDIO: Sony WH-1000XM4", status: "STANDBY" }
         ],
         logs: [
-            { date: "2025-12-13", event: "SYSTEM KERNEL UPDATE V25" },
+            { date: "2025-12-13", event: "SYSTEM KERNEL UPDATE V26" },
             { date: "2025-12-10", event: "DATABASE CONNECTION ESTABLISHED" }
         ]
     }
@@ -445,63 +437,13 @@
             })
 
             let quill = null
-            let canvasInterval = null
 
-            // 🟢 Canvas 动画引擎
-            const initCanvas = () => {
-                const canvas = document.getElementById('activity-canvas');
-                if(!canvas) return;
-                const ctx = canvas.getContext('2d');
-                let width, height;
-                
-                const resize = () => {
-                    width = canvas.width = canvas.offsetWidth;
-                    height = canvas.height = canvas.offsetHeight;
-                }
-                window.addEventListener('resize', resize);
-                resize();
-
-                const particles = [];
-                for(let i=0; i<30; i++) particles.push({ x: Math.random()*width, y: Math.random()*height, speed: 0.5+Math.random(), len: 20+Math.random()*50 });
-
-                const draw = () => {
-                    ctx.fillStyle = '#0a0a0a';
-                    ctx.fillRect(0,0,width,height);
-                    
-                    // 网格
-                    ctx.strokeStyle = '#111';
-                    ctx.beginPath();
-                    for(let i=0; i<width; i+=40) { ctx.moveTo(i,0); ctx.lineTo(i,height); }
-                    for(let i=0; i<height; i+=40) { ctx.moveTo(0,i); ctx.lineTo(width,i); }
-                    ctx.stroke();
-
-                    // 数据流
-                    ctx.fillStyle = '#10b981';
-                    particles.forEach(p => {
-                        ctx.fillRect(p.x, p.y, 2, p.len);
-                        p.y += p.speed * 4;
-                        if(p.y > height) p.y = -100;
-                    });
-
-                    // 随机 Hex 码
-                    ctx.font = '10px monospace';
-                    ctx.fillStyle = '#333';
-                    if(Math.random() > 0.9) ctx.fillText('0x' + Math.floor(Math.random()*16777215).toString(16), Math.random()*width, Math.random()*height);
-                }
-                
-                if(canvasInterval) clearInterval(canvasInterval);
-                canvasInterval = setInterval(draw, 30);
-            }
-
-            watch(currentView, (val) => { if(val === 'home') nextTick(initCanvas); });
-
-            // 🟢 Quill 修复：彻底清空 + 重建
+            // 🟢 Quill 重置逻辑 (修复重影)
             const initQuill = (content = '') => {
                 nextTick(() => {
                     const container = document.getElementById('editor-container');
                     if (container) {
-                        // 暴力清空旧实例残留
-                        container.innerHTML = ''; 
+                        container.innerHTML = ''; // 暴力清空
                         const editorDiv = document.createElement('div');
                         container.appendChild(editorDiv);
                         
@@ -525,10 +467,10 @@
 
             onMounted(async () => {
                 const { data: { session } } = await _supabase.auth.getSession()
-                if(session) { user.value = session.user; fetchNotes(); fetchProfile(); nextTick(initCanvas); }
+                if(session) { user.value = session.user; fetchNotes(); fetchProfile(); }
                 _supabase.auth.onAuthStateChange((_, session) => {
                     user.value = session?.user || null
-                    if(user.value) { fetchNotes(); fetchProfile(); nextTick(initCanvas); }
+                    if(user.value) { fetchNotes(); fetchProfile(); }
                 })
             })
 
@@ -617,7 +559,11 @@
                 } else {
                     await _supabase.from('notes').insert(payload)
                 }
-                isEditing.value = false; 
+                
+                // 🟢 保存成功反馈
+                alert('System Notification: Data Synced Successfully.');
+                isEditing.value = false;
+                closeModal(); // 自动关闭
                 fetchNotes(); 
             }
 
