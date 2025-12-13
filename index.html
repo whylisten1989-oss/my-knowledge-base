@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Digital Space</title>
+    <title>MindForge OS Beta</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.staticfile.org/vue/3.3.4/vue.global.prod.min.js"></script>
@@ -16,203 +16,240 @@
             theme: {
                 extend: {
                     colors: { 
-                        'void': '#09090b', 
-                        'sidebar': '#18181b', 
-                        'glass': 'rgba(255, 255, 255, 0.05)',
-                        'accent': '#10b981' // 翡翠绿作为主色调
+                        'void': '#050505',       // 极黑
+                        'neon-blue': '#00f3ff',  // 赛博蓝
+                        'neon-purple': '#bc13fe',// 赛博紫
+                        'surface': '#111111', 
                     },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                    fontFamily: { mono: ['Consolas', 'Monaco', 'monospace'] } // 强制代码字体
                 }
             }
         }
     </script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { background-color: #000; color: #e4e4e7; font-family: 'Inter', sans-serif; }
+        body { background-color: #050505; color: #e0e0e0; font-family: 'Consolas', monospace; overflow: hidden; }
         
-        /* 隐藏滚动条但保留功能 */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* 磨砂玻璃效果 (登录框专用) */
-        .glass-panel {
-            background: rgba(20, 20, 23, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        /* CRT 扫描线滤镜 */
+        .crt::before {
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 999; background-size: 100% 2px, 3px 100%; pointer-events: none;
         }
 
-        /* 便签样式 */
-        .memo-card {
-            background-color: #fef3c7; /* 浅黄色 */
-            color: #78350f;
-            border: none;
-            transform: rotate(-1deg);
-            transition: transform 0.2s;
-        }
-        .memo-card:hover { transform: rotate(0deg) scale(1.02); z-index: 10; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
-
-        /* Markdown 样式微调 */
-        .md-content h1, .md-content h2 { color: inherit; font-weight: bold; margin-top: 0.5em; }
-        .md-content a { text-decoration: underline; opacity: 0.8; }
+        /* 霓虹文字光晕 */
+        .glow-text { text-shadow: 0 0 10px rgba(0, 243, 255, 0.7); }
+        .glow-border { box-shadow: 0 0 10px rgba(0, 243, 255, 0.2), inset 0 0 20px rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.3); }
         
+        /* 呼吸灯动画 */
+        @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .breathing { animation: breathe 2s infinite ease-in-out; }
+
+        /* 故障艺术效果 (Glitch) */
+        .glitch { position: relative; }
+        .glitch::before, .glitch::after {
+            content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.8;
+        }
+        .glitch::before { color: #bc13fe; z-index: -1; transform: translate(-2px, 0); }
+        .glitch::after { color: #00f3ff; z-index: -2; transform: translate(2px, 0); }
+
         [v-cloak] { display: none !important; }
     </style>
 </head>
-<body class="h-screen overflow-hidden flex flex-col bg-void">
+<body class="crt">
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
-    <div v-if="!user" class="absolute inset-0 z-50 flex flex-col items-center justify-center p-6">
-        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-        <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20 pointer-events-none"></div>
+    <div v-if="!user" class="absolute inset-0 z-50 bg-void flex flex-col items-center justify-center p-6">
+        <div class="glow-border p-10 rounded-none w-full max-w-md relative bg-black/80 backdrop-blur">
+            <div class="absolute top-0 left-0 w-2 h-2 bg-neon-blue"></div>
+            <div class="absolute top-0 right-0 w-2 h-2 bg-neon-blue"></div>
+            <div class="absolute bottom-0 left-0 w-2 h-2 bg-neon-blue"></div>
+            <div class="absolute bottom-0 right-0 w-2 h-2 bg-neon-blue"></div>
 
-        <div class="glass-panel w-full max-w-md p-10 rounded-2xl relative z-10 animate-fade-in-up">
-            <div class="text-center mb-8">
-                <div class="w-12 h-12 bg-white rounded-xl mx-auto flex items-center justify-center text-black font-bold text-xl mb-4 shadow-lg shadow-white/20">K</div>
-                <h1 class="text-3xl font-bold text-white tracking-tight">Welcome Back</h1>
-                <p class="text-gray-400 text-sm mt-2">请输入密钥进入您的数字花园</p>
+            <div class="text-center mb-10">
+                <div class="text-4xl font-bold text-white mb-2 glitch glow-text" data-text="MINDFORGE OS">MINDFORGE OS</div>
+                <div class="text-xs text-neon-blue tracking-[0.5em]">SYSTEM BETA LOADED</div>
             </div>
 
-            <div class="space-y-4">
-                <input v-model="email" type="email" placeholder="Email" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg text-white outline-none focus:border-white/40 transition">
-                <input v-model="password" type="password" placeholder="Password" class="w-full bg-black/50 border border-white/10 p-3 rounded-lg text-white outline-none focus:border-white/40 transition">
-                
-                <div class="flex gap-3 pt-2">
-                    <button @click="handleLogin" class="flex-1 bg-white text-black font-bold py-3 rounded-lg hover:bg-gray-200 transition shadow-lg shadow-white/10">
-                        登录
-                    </button>
-                    <button @click="handleRegister" class="flex-1 bg-white/10 text-white font-bold py-3 rounded-lg hover:bg-white/20 transition">
-                        注册
-                    </button>
+            <div class="space-y-6">
+                <div class="relative">
+                    <span class="absolute left-3 top-3 text-neon-blue">></span>
+                    <input v-model="email" type="email" placeholder="USER_ID" class="w-full bg-black border border-gray-800 text-neon-blue p-3 pl-8 outline-none focus:border-neon-blue transition font-mono">
                 </div>
-            </div>
-
-            <div class="mt-8 text-center border-t border-white/10 pt-6">
-                <p class="text-xs text-gray-500 font-mono flex items-center justify-center gap-1">
-                    <span>⚡ Powered by</span>
-                    <span class="text-emerald-500 font-bold">Supabase</span>
-                </p>
+                <div class="relative">
+                    <span class="absolute left-3 top-3 text-neon-blue">></span>
+                    <input v-model="password" type="password" placeholder="ACCESS_KEY" class="w-full bg-black border border-gray-800 text-neon-blue p-3 pl-8 outline-none focus:border-neon-blue transition font-mono">
+                </div>
+                
+                <button @click="handleLogin" class="w-full bg-neon-blue/10 border border-neon-blue/50 text-neon-blue py-3 hover:bg-neon-blue hover:text-black transition font-bold uppercase tracking-widest">
+                    Initialize
+                </button>
+                <div class="text-center">
+                    <button @click="handleRegister" class="text-xs text-gray-500 hover:text-white underline">Register New Unit</button>
+                </div>
             </div>
         </div>
     </div>
 
-
     <template v-else>
-        <aside class="w-20 md:w-64 bg-sidebar border-r border-white/5 flex flex-col justify-between p-4 shrink-0 transition-all">
+        <aside class="w-20 md:w-64 bg-black border-r border-gray-800 flex flex-col justify-between shrink-0 z-10">
             <div>
-                <div class="flex items-center gap-3 mb-10 px-2 text-white">
-                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-lg"></div>
-                    <span class="hidden md:block font-bold text-lg tracking-wide">My Space</span>
+                <div class="h-20 flex items-center px-6 border-b border-gray-800">
+                    <div class="w-3 h-3 bg-neon-blue rounded-full breathing mr-3"></div>
+                    <span class="text-white font-bold tracking-wider hidden md:block">MINDFORGE</span>
                 </div>
                 
-                <nav class="space-y-2">
-                    <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
-                        <span class="text-lg">📚</span> <span class="hidden md:block font-medium">知识库 (Wiki)</span>
+                <nav class="p-4 space-y-2">
+                    <button @click="currentCategory = 'profile'" :class="navClass('profile')" class="w-full text-left px-4 py-3 rounded border border-transparent transition flex items-center gap-3">
+                        <span>🧬</span> <span class="hidden md:block">System Core</span>
                     </button>
-                    <button @click="currentCategory = 'memo'" :class="navClass('memo')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
-                        <span class="text-lg">📝</span> <span class="hidden md:block font-medium">便签墙 (Memos)</span>
+                    <div class="h-px bg-gray-800 my-2"></div>
+                    <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full text-left px-4 py-2 rounded transition flex items-center gap-3">
+                        <span>📚</span> <span class="hidden md:block">Knowledge Base</span>
                     </button>
-                    <button @click="currentCategory = 'snippet'" :class="navClass('snippet')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
-                        <span class="text-lg">⚡</span> <span class="hidden md:block font-medium">灵感 (Ideas)</span>
+                    <button @click="currentCategory = 'snippet'" :class="navClass('snippet')" class="w-full text-left px-4 py-2 rounded transition flex items-center gap-3">
+                        <span>⚡</span> <span class="hidden md:block">Snippets</span>
                     </button>
-                    <button @click="currentCategory = 'file'" :class="navClass('file')" class="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all">
-                        <span class="text-lg">🗄️</span> <span class="hidden md:block font-medium">归档 (Files)</span>
+                    <button @click="currentCategory = 'link'" :class="navClass('link')" class="w-full text-left px-4 py-2 rounded transition flex items-center gap-3">
+                        <span>🔗</span> <span class="hidden md:block">Hyperlinks</span>
+                    </button>
+                    <button @click="currentCategory = 'file'" :class="navClass('file')" class="w-full text-left px-4 py-2 rounded transition flex items-center gap-3">
+                        <span>🗄️</span> <span class="hidden md:block">Archives</span>
                     </button>
                 </nav>
             </div>
-
-            <div class="pt-4 border-t border-white/5">
-                <button @click="handleLogout" class="w-full flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition">
-                    <span>🚪</span> <span class="hidden md:block text-xs">退出登录</span>
-                </button>
+            
+            <div class="p-4 border-t border-gray-800 text-xs text-gray-500 font-mono">
+                <p>STATUS: <span class="text-green-500">ONLINE</span></p>
+                <button @click="handleLogout" class="mt-2 hover:text-red-500">[ TERMINATE SESSION ]</button>
             </div>
         </aside>
 
         <main class="flex-1 flex flex-col bg-void relative overflow-hidden">
-            
-            <header class="h-20 flex justify-between items-end pb-4 px-8 shrink-0">
-                <div>
-                    <p class="text-xs text-gray-500 mb-1">{{ greeting }}</p>
-                    <h2 class="text-2xl font-bold text-white capitalize">{{ categoryNames[currentCategory] }}</h2>
-                </div>
-                <button v-if="isAdmin" @click="openEditor" class="bg-white text-black px-5 py-2 rounded-full text-sm font-bold hover:bg-gray-200 transition shadow-lg shadow-white/5 flex items-center gap-2">
-                    <span>+</span> 新建内容
+            <div class="h-1 w-full bg-gradient-to-r from-neon-blue to-neon-purple opacity-50"></div>
+
+            <header class="h-16 flex justify-between items-center px-8 border-b border-white/5">
+                <h2 class="text-xl font-bold text-white uppercase tracking-widest glow-text">
+                    {{ currentCategory === 'profile' ? 'SYSTEM_STATUS_OVERVIEW' : categoryNames[currentCategory] }}
+                </h2>
+                <button v-if="isAdmin && currentCategory !== 'profile'" @click="openEditor" class="border border-neon-blue text-neon-blue px-4 py-1 text-sm hover:bg-neon-blue hover:text-black transition">
+                    + NEW ENTRY
                 </button>
             </header>
 
-            <div class="flex-1 overflow-y-auto p-8">
+            <div class="flex-1 overflow-y-auto p-8 relative">
                 
-                <div v-if="currentCategory === 'memo'" class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                    <div v-for="note in filteredNotes" :key="note.id" @click="isAdmin && editNote(note)" 
-                         class="memo-card p-5 rounded-lg shadow-lg cursor-pointer h-48 flex flex-col relative group">
-                        <div class="absolute -top-3 left-1/2 w-3 h-3 rounded-full bg-red-400 shadow-sm border border-black/10"></div>
+                <div v-if="currentCategory === 'profile'" class="max-w-5xl mx-auto space-y-8 animate-fade-in">
+                    
+                    <div class="glow-border bg-black/50 p-8 relative overflow-hidden group">
+                        <div class="absolute -right-10 -bottom-10 text-9xl font-bold text-white/5 select-none pointer-events-none group-hover:text-neon-blue/10 transition">OS</div>
                         
-                        <div class="flex-1 overflow-hidden font-mono text-sm leading-relaxed md-content opacity-90">
-                            {{ note.content || note.title }}
+                        <div class="flex flex-col md:flex-row gap-8 items-start">
+                            <div class="w-24 h-24 border-2 border-neon-purple flex items-center justify-center bg-black shrink-0 relative">
+                                <div class="absolute inset-0 bg-neon-purple/20 animate-pulse"></div>
+                                <span class="text-4xl relative z-10">🧠</span>
+                            </div>
+                            
+                            <div class="flex-1">
+                                <h1 class="text-3xl font-bold text-white mb-4">MindForge OS <span class="text-neon-blue text-sm align-top">Beta</span></h1>
+                                <div class="text-gray-400 leading-relaxed font-mono whitespace-pre-line border-l-2 border-neon-blue pl-4">
+                                    {{ systemConfig.bio }}
+                                </div>
+                            </div>
                         </div>
-                        <div class="mt-2 text-[10px] opacity-50 flex justify-between">
-                            <span>{{ new Date(note.created_at).toLocaleDateString() }}</span>
-                            <span v-if="!note.is_public">🔒</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="border border-gray-800 bg-surface p-6">
+                            <h3 class="text-neon-blue font-bold mb-4 border-b border-gray-800 pb-2 flex justify-between">
+                                <span>HARDWARE_INVENTORY</span>
+                                <span class="text-xs opacity-50">LISTING...</span>
+                            </h3>
+                            <ul class="space-y-3">
+                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between items-center text-sm group">
+                                    <span class="text-gray-300 group-hover:text-white transition">{{ item.name }}</span>
+                                    <span class="text-xs text-gray-600 font-mono">{{ item.status }}</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="border border-gray-800 bg-surface p-6">
+                            <h3 class="text-neon-purple font-bold mb-4 border-b border-gray-800 pb-2">SKILL_MODULES</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <span v-for="skill in systemConfig.skills" :key="skill" class="px-2 py-1 border border-gray-700 text-xs text-gray-400 hover:border-neon-purple hover:text-neon-purple transition cursor-default">
+                                    {{ skill }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border border-gray-800 bg-surface p-6">
+                        <h3 class="text-white font-bold mb-4">SYSTEM_LOGS</h3>
+                        <div class="space-y-4 font-mono text-xs">
+                            <div v-for="log in systemConfig.logs" :key="log.date" class="flex gap-4">
+                                <span class="text-neon-blue w-24 shrink-0">{{ log.date }}</span>
+                                <span class="text-gray-400">{{ log.event }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div v-for="note in filteredNotes" :key="note.id" @click="isAdmin && editNote(note)" 
-                         class="group bg-sidebar border border-white/5 rounded-2xl p-6 hover:border-white/20 transition cursor-pointer relative h-60 flex flex-col">
+                         class="group border border-gray-800 bg-surface p-6 hover:border-neon-blue transition cursor-pointer relative h-60 flex flex-col overflow-hidden">
+                        <div class="absolute inset-0 bg-neon-blue/5 translate-y-full group-hover:translate-y-0 transition duration-500 pointer-events-none"></div>
                         
-                        <div class="flex justify-between items-start mb-3">
-                            <h3 class="text-lg font-bold text-gray-100 line-clamp-1">{{ note.title }}</h3>
-                            <span v-if="!note.is_public && isAdmin" class="text-[10px] bg-yellow-500/10 text-yellow-500 px-2 py-0.5 rounded border border-yellow-500/20">私密</span>
+                        <div class="flex justify-between items-start mb-3 relative z-10">
+                            <h3 class="text-lg font-bold text-gray-200 line-clamp-1 group-hover:text-white">{{ note.title }}</h3>
+                            <span v-if="!note.is_public" class="text-[10px] text-yellow-600 border border-yellow-900/50 px-1">LOCK</span>
                         </div>
                         
-                        <div class="flex-1 overflow-hidden text-sm text-gray-500 md-content relative">
+                        <div v-if="currentCategory === 'link'" class="flex-1 flex items-center gap-2 text-neon-blue break-all text-sm relative z-10">
+                            🔗 <a :href="note.link_url" target="_blank" @click.stop class="hover:underline">{{ note.link_url }}</a>
+                        </div>
+                        <div v-else class="flex-1 overflow-hidden text-sm text-gray-500 md-content relative z-10">
                             <div v-html="renderMarkdown(note.content)"></div>
-                            <div class="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-sidebar to-transparent"></div>
                         </div>
                         
-                        <div class="mt-4 pt-3 border-t border-white/5 flex justify-between items-center text-xs text-gray-600">
+                        <div class="mt-4 pt-3 border-t border-gray-800 flex justify-between items-center text-xs text-gray-600 font-mono relative z-10">
                             <span>{{ new Date(note.created_at).toLocaleDateString() }}</span>
-                            <span class="group-hover:text-white transition">编辑 →</span>
+                            <span class="opacity-0 group-hover:opacity-100 transition text-neon-blue">> ACCESS</span>
                         </div>
                     </div>
-                </div>
-
-                <div v-if="filteredNotes.length === 0" class="flex flex-col items-center justify-center h-64 text-gray-700">
-                    <div class="text-4xl mb-2 opacity-30">🕸️</div>
-                    <p>这里空空如也</p>
                 </div>
             </div>
         </main>
     </template>
 
-    <div v-if="showEditor" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-        <div class="bg-[#111] border border-white/10 w-full max-w-3xl rounded-2xl overflow-hidden flex flex-col h-[80vh] shadow-2xl animate-fade-in-up">
+    <div v-if="showEditor" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4">
+        <div class="border border-neon-blue/30 w-full max-w-4xl h-[85vh] bg-black flex flex-col shadow-[0_0_30px_rgba(0,243,255,0.1)]">
+            <div class="bg-gray-900 p-2 flex justify-between items-center border-b border-gray-800">
+                <span class="text-xs text-neon-blue px-2">TERMINAL_EDITOR_V1.0</span>
+                <button @click="showEditor = false" class="text-gray-500 hover:text-white px-2">X</button>
+            </div>
             
-            <div class="p-4 border-b border-white/5 flex justify-between items-center bg-black/40">
-                <input v-model="form.title" placeholder="输入标题 (便签可不填)..." class="bg-transparent text-xl font-bold text-white outline-none w-1/2 placeholder-gray-700">
-                <div class="flex gap-3 items-center">
-                    <select v-model="form.category" class="bg-white/5 border border-white/10 text-gray-300 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-white/30">
-                        <option value="wiki">📚 知识库</option>
-                        <option value="memo">📝 便签</option>
-                        <option value="snippet">⚡ 灵感</option>
-                        <option value="file">🗄️ 文件</option>
-                    </select>
-                    <label class="flex items-center gap-2 text-gray-400 text-sm cursor-pointer select-none hover:text-white">
-                        <input type="checkbox" v-model="form.is_public" class="rounded bg-white/10 border-white/20"> 公开
-                    </label>
-                    <button @click="saveNote" class="bg-white text-black px-5 py-1.5 rounded-full text-sm font-bold hover:bg-gray-200 transition">保存</button>
-                    <button @click="showEditor = false" class="text-gray-500 hover:text-white px-2">✕</button>
+            <div class="p-6 border-b border-gray-800 flex flex-col gap-4">
+                <div class="flex gap-4">
+                    <input v-model="form.title" placeholder="ENTER_TITLE..." class="bg-black border border-gray-700 text-white p-2 flex-1 outline-none focus:border-neon-blue font-mono">
+                    <select v-model="form.category" class="bg-black border border-gray-700 text-gray-300 p-2 outline-none"><option value="wiki">WIKI</option><option value="snippet">SNIPPET</option><option value="link">LINK</option><option value="file">FILE</option></select>
+                </div>
+                <div class="flex justify-between items-center">
+                    <label class="flex items-center gap-2 text-gray-400 text-xs cursor-pointer"><input type="checkbox" v-model="form.is_public"> PUBLIC_ACCESS</label>
+                    <button @click="saveNote" class="bg-neon-blue text-black px-6 py-1 font-bold hover:bg-white transition text-sm">SAVE DATA</button>
                 </div>
             </div>
 
-            <div class="flex-1 p-0 flex flex-col">
-                <textarea v-model="form.content" placeholder="在此输入内容 (支持 Markdown)..." class="flex-1 bg-transparent p-6 text-gray-300 font-mono text-sm leading-relaxed outline-none resize-none"></textarea>
+            <div class="flex-1 p-0">
+                <textarea v-model="form.content" placeholder="Type Markdown here..." class="w-full h-full bg-black text-gray-300 p-6 font-mono outline-none resize-none"></textarea>
             </div>
-
-            <div v-if="form.id" class="p-3 bg-red-900/10 border-t border-red-900/20 flex justify-between items-center px-6">
-                <span class="text-xs text-gray-600 font-mono">ID: {{ form.id }}</span>
-                <button @click="deleteNote" class="text-xs text-red-500 hover:text-red-300 hover:underline">删除此内容</button>
+            
+            <div v-if="form.id" class="p-2 bg-red-900/20 border-t border-red-900/30 text-right">
+                <button @click="deleteNote" class="text-xs text-red-500 hover:underline">DELETE_ENTRY</button>
             </div>
         </div>
     </div>
@@ -224,16 +261,43 @@
     const { createClient } = supabase
 
     // ==========================================
-    // 🔴 必填区 (请填入你的信息)
+    // 1. 文案配置区 (Config Zone)
+    // 以后你想改文案，直接改这里！
+    // ==========================================
+    const systemConfig = {
+        // 你的 Bio (支持换行)
+        bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
+        
+        // 装备清单 (我先帮你写了赛博风的占位，你可以改成真实的 MacBook Pro 等)
+        inventory: [
+            { name: "Mainframe: MacBook Pro M2", status: "Active" },
+            { name: "Input: HHKB Hybrid Type-S", status: "Connected" },
+            { name: "Vision: LG 4K Ultrafine", status: "Online" },
+            { name: "Audio: Sony WH-1000XM4", status: "Standby" }
+        ],
+        
+        // 技能树
+        skills: ["Vue.js", "Supabase", "Python", "Node.js", "Docker", "CyberSecurity", "UI/UX Design"],
+        
+        // 版本日志 (时间轴)
+        logs: [
+            { date: "2025-12-13", event: "MindForge OS Beta Released." },
+            { date: "2025-12-10", event: "Core Database Initialized." },
+            { date: "2025-12-01", event: "System Concept Design." }
+        ]
+    }
+
+    // ==========================================
+    // 2. 数据库配置
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
     
-    // 👇 填入你的 eyJ... 开头的 Legacy Key
+    // 🔴 必填：请填入你的 eyJ... Key
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
     
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 初始化客户端 (强制绑定 fetch 修复兼容性)
+    // 初始化客户端 (强制绑定 fetch)
     let _supabase = null
     try {
         _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -241,7 +305,7 @@
             global: { fetch: (...args) => fetch(...args) }
         })
     } catch (e) {
-        console.error("Supabase Init Error", e)
+        console.error("Supabase Error", e)
     }
 
     createApp({
@@ -249,41 +313,34 @@
             if (!_supabase) return {};
 
             const user = ref(null)
+            const showAuthModal = ref(false)
             const showEditor = ref(false)
+            const isRegisterMode = ref(false)
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            const currentCategory = ref('wiki')
+            const currentCategory = ref('profile') // 默认显示个人档案页
             
             const categoryNames = { 
-                'wiki': '核心知识库', 
-                'memo': '便签墙', 
-                'snippet': '灵感碎片', 
-                'file': '文件归档' 
+                'wiki': 'KNOWLEDGE_BASE', 
+                'snippet': 'NEURAL_SPARKS', 
+                'link': 'HYPERLINKS', 
+                'file': 'DATA_ARCHIVES' 
             }
             
-            const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki' })
+            const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '' })
             
             const isAdmin = computed(() => user.value && user.value.email === ADMIN_EMAIL)
             const filteredNotes = computed(() => notes.value.filter(n => n.category === currentCategory.value))
             
-            // 动态问候语
-            const greeting = computed(() => {
-                const hour = new Date().getHours()
-                if(hour < 12) return 'Good Morning, Admin'
-                if(hour < 18) return 'Good Afternoon, Admin'
-                return 'Good Evening, Admin'
-            })
-
             const navClass = (cat) => currentCategory.value === cat 
-                ? 'bg-white text-black font-bold shadow-lg shadow-white/5' 
-                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                ? 'bg-neon-blue/10 text-neon-blue border-l-2 border-neon-blue' 
+                : 'text-gray-500 hover:text-white hover:bg-white/5 border-l-2 border-transparent'
 
-            // 初始化
             onMounted(async () => {
                 const { data: { session } } = await _supabase.auth.getSession()
-                if (session) { user.value = session.user; fetchNotes(); }
-                
+                user.value = session?.user || null
+                if(user.value) fetchNotes()
                 _supabase.auth.onAuthStateChange((_, session) => {
                     user.value = session?.user || null
                     if(user.value) fetchNotes()
@@ -297,41 +354,35 @@
             }
 
             const handleLogin = async () => {
-                if(!email.value || !password.value) return alert('请输入信息')
                 const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value })
                 if (error) alert(error.message)
             }
-
+            
             const handleRegister = async () => {
-                if(!email.value || !password.value) return alert('请输入信息')
                 const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value })
                 if (error) alert(error.message)
-                else alert('注册成功！请点击登录')
+                else alert('Registration successful. Please login.')
             }
 
             const handleLogout = async () => { await _supabase.auth.signOut(); user.value = null; notes.value = []; }
 
             const openEditor = () => { 
-                Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value }); 
+                Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value === 'profile' ? 'wiki' : currentCategory.value, link_url: '' }); 
                 showEditor.value = true; 
             }
             
             const editNote = (note) => { Object.assign(form, note); showEditor.value = true; }
             
             const saveNote = async () => {
-                if (form.category !== 'memo' && !form.title) return alert('标题必填')
+                if (!form.title) return alert('MISSING_TITLE_ERROR')
                 const payload = { ...form, user_id: user.value.id }; delete payload.id
-                
-                const { error } = form.id 
-                    ? await _supabase.from('notes').update(payload).eq('id', form.id)
-                    : await _supabase.from('notes').insert(payload)
-                
+                const { error } = form.id ? await _supabase.from('notes').update(payload).eq('id', form.id) : await _supabase.from('notes').insert(payload)
                 if (error) alert(error.message)
                 else { showEditor.value = false; fetchNotes(); }
             }
 
             const deleteNote = async () => {
-                if(confirm('确定删除?')) {
+                if(confirm('CONFIRM_DELETION?')) {
                     await _supabase.from('notes').delete().eq('id', form.id)
                     showEditor.value = false
                     fetchNotes()
@@ -341,7 +392,7 @@
             const renderMarkdown = (text) => text ? marked.parse(text) : ''
 
             return { 
-                user, email, password, notes, currentCategory, showEditor, form, isAdmin, filteredNotes, navClass, categoryNames, greeting,
+                user, email, password, notes, currentCategory, showAuthModal, showEditor, form, isAdmin, filteredNotes, navClass, categoryNames, systemConfig, isRegisterMode,
                 handleLogin, handleRegister, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown 
             }
         }
