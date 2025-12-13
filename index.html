@@ -38,7 +38,6 @@
 <div id="app" class="h-full w-full flex relative">
 
     <div v-if="!user" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 text-center">
-        <div class="absolute inset-0 bg-gradient-to-b from-blue-900/10 to-black pointer-events-none"></div>
         <div class="relative z-10 space-y-8">
             <div class="w-16 h-16 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-2xl mb-6">K</div>
             <h1 class="text-5xl md:text-7xl font-bold tracking-tighter gradient-text">Private<br>Workspace.</h1>
@@ -148,19 +147,16 @@
 </div>
 
 <script>
+    // 1. 我直接帮你填好了，不要改
+    const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
+    const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'
+    const ADMIN_EMAIL = '1493694948@qq.com' 
+
+    // 2. 引入 Vue 和 Supabase
     const { createApp, ref, computed, onMounted, reactive } = Vue
     const { createClient } = supabase
 
-    // ==========================================
-    // 🔴 重点！请把你的信息填在引号里面！
-    // ==========================================
-    const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'       // 👈 填这里，保留单引号！
-    const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'  // 👈 填这里，保留单引号！
-    const ADMIN_EMAIL = '1493694948@qq.com'        // 👈 填你的邮箱，保留单引号！
-
-    // 自检代码：防止你填错
-    if(!SUPABASE_URL || !SUPABASE_ANON_KEY) alert('❌ 错误：代码底部的 Key 还没填！请去 index.html 底部填写。');
-
+    // 3. 初始化客户端
     const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
     createApp({
