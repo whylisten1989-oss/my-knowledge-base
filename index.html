@@ -1,51 +1,38 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="dark">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (Final Rescue)</title>
+    <title>MindForge OS (Global)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
-    <link href="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     
-    <script src="https://cdn.bootcdn.net/ajax/libs/marked/5.1.0/marked.min.js"></script>
+    <script src="https://unpkg.com/marked@5.1.0/marked.min.js"></script>
     
-    <link href="https://cdn.bootcdn.net/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
-    <script src="https://cdn.bootcdn.net/ajax/libs/quill/1.3.7/quill.min.js"></script>
+    <link href="https://unpkg.com/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://unpkg.com/quill@1.3.7/dist/quill.min.js"></script>
     
-    <script src="https://cdn.bootcdn.net/ajax/libs/supabase-js/2.39.3/supabase.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <script>
-        window.onload = function() {
-            var missing = [];
-            if (typeof Vue === 'undefined') missing.push('Vue');
-            if (typeof marked === 'undefined') missing.push('Marked');
-            if (typeof Quill === 'undefined') missing.push('Quill');
-            if (typeof supabase === 'undefined') missing.push('Supabase');
-            
-            if (missing.length > 0) {
-                var msg = "🛑 网络严重受限：\nBootCDN 也无法连接。缺少库：" + missing.join(', ') + "\n\n建议方案：请挂上 VPN 再试，或者通过手机热点访问。";
-                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;color:red;font-size:20px;text-align:center;">' + msg.replace(/\n/g, '<br>') + '</div>';
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { 'void': '#050505', 'sidebar': '#0a0a0a', 'border-dim': '#222' },
+                    fontFamily: { sans: ['"Microsoft YaHei"', 'Inter', 'sans-serif'] }
+                }
             }
         }
     </script>
 
     <style>
-        /* --- 核心主题 --- */
-        :root {
-            --bg-void: #050505;
-            --bg-sidebar: #0a0a0a;
-            --border-dim: #222;
-            --color-text: #e4e4e7;
-            --font-main: "Microsoft YaHei", sans-serif;
-        }
-
-        body { background-color: var(--bg-void); color: var(--color-text); font-family: var(--font-main); overflow: hidden; }
-        *, ::before, ::after { border-color: var(--border-dim); }
+        body { background-color: #050505; color: #e4e4e7; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
         
-        /* 登录页 */
+        /* 1. 登录页：磨砂玻璃 */
         .glass-panel {
             background: rgba(20, 20, 20, 0.65);
             backdrop-filter: blur(20px);
@@ -53,14 +40,14 @@
             box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
         }
         
-        /* 极光背景 */
+        /* 2. 极光背景 */
         .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; }
         .aurora-blob { position: absolute; filter: blur(100px); opacity: 0.35; animation: float 12s infinite ease-in-out alternate; }
         .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #172554; animation-duration: 15s; }
         .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #312e81; animation-duration: 20s; }
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
 
-        /* 光效文字 */
+        /* 3. Logo 光效 */
         .cyber-text {
             background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
             background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -69,23 +56,28 @@
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 组件样式 */
-        .btn-black { background: #000; border: 1px solid #333; color: white; transition: all 0.2s; }
+        /* 4. 黑白按钮 */
+        .btn-black {
+            background: #000; border: 1px solid #333; color: white; transition: all 0.2s;
+        }
         .btn-black:hover { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.15); }
 
+        /* 5. 胶囊开关 */
         .toggle-checkbox { display: none; }
         .toggle-label { width: 36px; height: 20px; background: #333; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; }
         .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #888; border-radius: 50%; transition: 0.3s; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; }
         .toggle-checkbox:checked + .toggle-label::after { transform: translateX(16px); background: #000; }
 
+        /* 6. Quill 暗黑适配 */
         .ql-toolbar { background: var(--bg-sidebar); border-color: var(--border-dim) !important; }
         .ql-container { background: var(--bg-void); border-color: var(--border-dim) !important; color: #ccc; font-size: 15px !important; font-family: var(--font-main) !important; }
         .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
-        .bg-void { background-color: var(--bg-void); }
-        .bg-sidebar { background-color: var(--bg-sidebar); }
-        .border-dim { border-color: var(--border-dim); }
+        /* 7. 侧边栏选中态 */
+        .nav-item { transition: all 0.2s; border-left: 2px solid transparent; color: #888; font-size: 14px; font-weight: 500; }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.03); padding-left: 12px; }
+        .nav-item.active { color: white; border-left-color: #fff; background: rgba(255,255,255,0.05); padding-left: 12px; font-weight: bold; }
 
         [v-cloak] { display: none !important; }
         .note-card { transition: all 0.3s ease; border: 1px solid #222; }
@@ -106,7 +98,7 @@
         <div class="glass-panel w-full max-w-sm p-10 rounded-xl relative z-10 animate-fade-in shadow-2xl">
             <div class="text-center mb-10">
                 <div class="w-14 h-14 bg-white rounded-xl mx-auto flex items-center justify-center text-black font-bold text-2xl mb-4 shadow-lg shadow-white/10">K</div>
-                <h1 class="text-3xl font-bold text-white tracking-tighter mb-1">MindForge OS</h1>
+                <h1 class="text-2xl font-bold text-white tracking-tighter mb-1">MindForge OS</h1>
                 <p class="text-gray-400 text-xs font-mono tracking-widest uppercase">Identity Verification</p>
             </div>
 
@@ -134,32 +126,35 @@
                 <div class="h-20 flex items-center px-6 border-b border-dim">
                     <span class="text-lg font-black tracking-tight cyber-text">MindForge OS Beta</span>
                 </div>
+                
                 <nav class="p-6 space-y-6">
                     <div>
                         <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Core</div>
-                        <button @click="switchL1('profile')" :class="['w-full text-left py-1 text-sm font-medium transition', currentL1 === 'profile' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
+                        <button @click="switchL1('profile')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'profile' ? 'active' : 'nav-item']">
                             Overview 系统概览
                         </button>
                     </div>
+                    
                     <div>
                         <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Modules</div>
                         <div class="space-y-3">
-                            <button @click="switchL1('wiki')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'wiki' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
+                            <button @click="switchL1('wiki')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'wiki' ? 'active' : 'nav-item']">
                                 Wiki 知识库
                             </button>
-                            <button @click="switchL1('idea')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'idea' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
+                            <button @click="switchL1('idea')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'idea' ? 'active' : 'nav-item']">
                                 Ideas 灵感
                             </button>
-                            <button @click="switchL1('blog')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'blog' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
+                            <button @click="switchL1('blog')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'blog' ? 'active' : 'nav-item']">
                                 Blog 博客
                             </button>
-                            <button @click="switchL1('file')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'file' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
+                            <button @click="switchL1('file')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'file' ? 'active' : 'nav-item']">
                                 Files 文件
                             </button>
                         </div>
                     </div>
                 </nav>
             </div>
+            
             <div class="p-6 border-t border-dim">
                 <div class="text-xs text-gray-600 mb-2 font-mono truncate">{{ user.email }}</div>
                 <button @click="handleLogout" class="text-xs font-bold text-red-600 hover:text-red-400 hover:underline transition">
@@ -215,14 +210,17 @@
                     <div v-if="filteredNotes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         <div v-for="note in filteredNotes" :key="note.id" @click="viewNote(note)" 
                              class="note-card bg-sidebar p-6 rounded-xl relative h-60 flex flex-col cursor-pointer group">
+                            
                             <div class="flex justify-between items-start mb-4">
                                 <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
                                 <span v-if="!note.is_public" class="text-[10px] text-gray-500 border border-gray-800 px-1.5 py-0.5 rounded">私密</span>
                             </div>
+                            
                             <div class="flex-1 overflow-hidden">
                                 <div v-if="note.category === 'link'" class="text-blue-500 underline text-xs break-all">{{ note.link_url }}</div>
                                 <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">{{ stripHtml(note.content) || '暂无内容...' }}</p>
                             </div>
+                            
                             <div class="mt-4 pt-3 border-t border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
                                 <span>🕒 {{ formatTime(note.created_at) }}</span>
                                 <span class="opacity-0 group-hover:opacity-100 transition text-white">查看 -></span>
@@ -286,24 +284,32 @@
     const { createClient } = window.supabase || {}
 
     // ==========================================
-    // 🔴 必填区 (填你的 eyJ... Key)
+    // 🔴 最终填空：Key 
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入 eyJ... Key
+    
+    // 👇 填入你的 eyJ... Key
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
+    
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
     // 初始化客户端
     let _supabase = null
     function initSupabase() {
         if (typeof createClient !== 'function' || typeof Vue === 'undefined') {
-            return null; // 静默失败，依赖探针提示
+            document.getElementById('error-bar').style.display = 'block';
+            document.getElementById('error-bar').innerText = '⚠️ 核心库未加载，请刷新页面重试。';
+            return null;
         }
         try {
             return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
                 auth: { persistSession: true },
+                // ⚠️ 关键补丁：解决 sb_ key 和某些环境下的 fetch 问题
                 global: { fetch: (...args) => fetch(...args) }
             });
-        } catch (e) { console.error("Key Error", e); }
+        } catch (e) {
+            console.error("Key Error", e);
+        }
     }
     _supabase = initSupabase();
 
@@ -339,7 +345,6 @@
             const currentNote = ref({})
             const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
-            // 本地分类配置
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
                 'idea': ['全部', '待办事项', '突发奇想'],
