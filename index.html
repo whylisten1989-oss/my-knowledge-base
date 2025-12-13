@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge OS (V29 Fixed)</title>
+    <title>MindForge OS (V30 Final)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,7 +35,7 @@
         /* 1. 强制全局字体 */
         * { font-family: "Microsoft YaHei", "PingFang SC", sans-serif !important; letter-spacing: 0.5px; }
         body { background-color: #000; color: #e0e0e0; overflow: hidden; position: relative; }
-        [v-cloak] { display: none !important; } /* 核心修复：防止 {{}} 乱码 */
+        [v-cloak] { display: none !important; }
 
         /* 2. 高级滚动条 */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -43,7 +43,7 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; border: 1px solid #000; }
         ::-webkit-scrollbar-thumb:hover { background: #666; }
         
-        /* 3. 按钮样式 (V28 纯文字风格) */
+        /* 3. 按钮样式 */
         .btn-cyber {
             border: 1px solid rgba(255,255,255,0.2); background: #000; color: #fff;
             text-transform: uppercase; font-size: 11px; font-weight: 700; letter-spacing: 1px;
@@ -75,7 +75,7 @@
             border-left: none; box-shadow: 0 0 20px rgba(255,255,255,0.2); transform: scale(1.02);
         }
 
-        /* 5. Logo 蓝橙流光 (修复 Beta 显示) */
+        /* 5. Logo 蓝橙流光 (BETA 已改为斜体) */
         .cyber-text {
             background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
             background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -83,7 +83,7 @@
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 6. System Neural Monitor 动画 (修复为 V27 跳动效果) */
+        /* 6. System Neural Monitor 动画 */
         .monitor-bar { height: 100%; width: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; position: relative; overflow: hidden; }
         .monitor-fill { 
             position: absolute; bottom: 0; left: 0; width: 100%; background: #10b981; 
@@ -94,14 +94,22 @@
             100% { height: 90%; opacity: 1; filter: drop-shadow(0 0 5px #10b981); } 
         }
 
-        /* 7. Quill 编辑器滚动修复 (Flex 布局) */
-        .ql-toolbar { background: #0a0a0a; border-bottom: 1px solid #333 !important; border-top:none!important; border-left:none!important; border-right:none!important; flex-shrink: 0; }
+        /* 7. Quill 编辑器滚动 终极修复 */
+        .ql-toolbar { 
+            background: #0a0a0a; 
+            border-bottom: 1px solid #333 !important; 
+            border-top: none !important; border-left: none !important; border-right: none !important; 
+            flex-shrink: 0; /* 防止工具栏被压缩 */
+        }
+        #editor-container {
+            display: flex; flex-direction: column; flex: 1; overflow: hidden; /* 关键：Flex 容器限制溢出 */
+        }
         .ql-container { 
             background: #000; border: none !important; color: #ccc; font-size: 16px !important; 
-            flex: 1; overflow: hidden; display: flex; flex-direction: column; /* 关键：撑满剩余空间 */
+            flex: 1; overflow: hidden; /* 关键：让容器占满剩余空间 */
         }
         .ql-editor { 
-            flex: 1; overflow-y: auto; padding: 30px; /* 关键：启用内部滚动 */
+            height: 100%; overflow-y: auto !important; padding: 30px; /* 关键：强制开启滚动条 */
         }
         .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
@@ -182,7 +190,7 @@
         <aside :class="['fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-border-dim flex flex-col justify-between z-40 transition-transform duration-300 md:relative md:translate-x-0', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full']">
             <div>
                 <div class="h-20 flex items-center px-8 border-b border-border-dim">
-                    <span class="text-xl font-black tracking-tighter cyber-text">MindForge OS <span class="text-white text-[10px] align-top font-normal opacity-50 not-italic">BETA</span></span>
+                    <span class="text-xl font-black tracking-tighter cyber-text">MindForge OS <span class="text-[10px] opacity-70 ml-1">BETA</span></span>
                 </div>
                 
                 <nav class="p-4 space-y-8">
@@ -255,7 +263,7 @@
                         <div class="relative z-10 flex flex-col md:flex-row gap-10 items-start">
                             <div class="w-24 h-24 bg-white flex items-center justify-center text-5xl shadow-2xl shrink-0 text-black rounded-lg">🧠</div>
                             <div class="flex-1">
-                                <h1 class="text-4xl font-black mb-4 cyber-text tracking-tighter">MindForge OS <span class="text-[14px] text-white/50 not-italic align-middle">BETA</span></h1>
+                                <h1 class="text-4xl font-black mb-4 cyber-text tracking-tighter">MindForge OS <span class="text-[14px] text-white/50 align-middle">BETA</span></h1>
                                 <div class="text-gray-400 text-sm leading-loose border-l-4 border-white pl-6 font-serif italic max-w-2xl">{{ systemConfig.bio }}</div>
                             </div>
                         </div>
@@ -337,7 +345,7 @@
             <div class="w-full max-w-3xl bg-sidebar border border-border-dim p-16 relative z-10 shadow-2xl flex flex-col items-center text-center">
                 <div class="relative group mb-10">
                     <img :src="profile.avatar" class="w-40 h-40 border border-white/20 shadow-2xl object-cover grayscale group-hover:grayscale-0 transition duration-500">
-                    <button v-if="!isEditingProfile" @click="isEditingProfile = true" class="absolute -bottom-4 -right-4 bg-white text-black px-3 py-1 text-xs font-bold shadow-lg hover:scale-110 transition border border-black uppercase">Edit</button>
+                    <button v-if="!isEditingProfile" @click="isEditingProfile = true" class="absolute -bottom-4 -right-4 bg-white text-black w-10 h-10 flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 transition border border-black">E</button>
                 </div>
                 <div v-if="isEditingProfile" class="w-full space-y-6 animate-fade-in">
                     <input v-model="tempProfile.name" class="w-full bg-black border border-white/20 p-4 text-center font-bold text-2xl text-white outline-none focus:border-white" placeholder="ID Name">
@@ -389,14 +397,14 @@
                 <div class="prose prose-invert max-w-4xl mx-auto text-gray-300 leading-loose" v-html="currentNote.content"></div>
             </div>
 
-            <div v-show="isEditing" class="flex-1 bg-black flex flex-col relative">
-                <div v-if="form.category === 'link'" class="p-6 border-b border-border-dim">
+            <div v-show="isEditing" class="flex-1 bg-black flex flex-col relative overflow-hidden">
+                <div v-if="form.category === 'link'" class="p-6 border-b border-border-dim shrink-0">
                     <input v-model="form.link_url" placeholder="ENTER URL LINK HERE..." class="w-full bg-[#0a0a0a] border border-gray-800 text-blue-400 p-4 outline-none font-mono text-sm">
                 </div>
-                <div id="editor-container" class="h-full"></div>
+                <div id="editor-container" class="flex-1 overflow-hidden"></div>
             </div>
             
-            <div v-if="!isEditing" class="h-16 border-t border-border-dim bg-[#0a0a0a] flex justify-between items-center px-8">
+            <div v-if="!isEditing" class="h-16 border-t border-border-dim bg-[#0a0a0a] flex justify-between items-center px-8 shrink-0">
                 <span class="text-[10px] text-gray-600 font-mono">UUID: {{ currentNote.id }}</span>
                 <button @click="deleteNote(currentNote.id)" class="btn-danger">
                     DELETE ENTRY 删除
