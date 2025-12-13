@@ -290,10 +290,13 @@
     const { createClient } = window.supabase || {}
 
     // ==========================================
-    // 🔴 必填区 (填你的 eyJ... Key)
+    // 🔴 最终填空：Key 
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入 eyJ... Key
+    
+    // 👇 务必填入你的 Legacy Anon Key (eyJ...)
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
+    
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
     // 初始化客户端
@@ -309,7 +312,9 @@
                 auth: { persistSession: true },
                 global: { fetch: (...args) => fetch(...args) }
             });
-        } catch (e) { console.error("Key Error", e); }
+        } catch (e) {
+            console.error("Key Error", e);
+        }
     }
     _supabase = initSupabase();
 
@@ -338,13 +343,14 @@
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            const currentL1 = ref('profile')
+            const currentL1 = ref('profile') // 默认首页
             const currentL2 = ref('全部')
             const showModal = ref(false)
             const isEditing = ref(false)
             const currentNote = ref({})
             const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
+            // 本地分类配置
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
                 'idea': ['全部', '待办事项', '突发奇想'],
@@ -352,6 +358,7 @@
                 'file': ['全部', '素材', '归档']
             })
 
+            const categoryNames = { 'wiki': 'Wiki', 'idea': 'Ideas', 'blog': 'Blog', 'file': 'Files' }
             let quill = null
 
             const initQuill = (initialContent = '') => {
