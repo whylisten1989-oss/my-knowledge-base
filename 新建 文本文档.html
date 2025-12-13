@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的私密空间</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center font-sans text-gray-800">
+
+<div id="app" class="w-full max-w-md p-6 bg-white rounded-xl shadow-lg border border-gray-200">
+    
+    <div class="mb-8 text-center">
+        <h1 class="text-2xl font-bold text-gray-900">🔒 个人私密空间</h1>
+        <p v-if="user" class="text-sm text-green-600 mt-2">已安全连接: {{ user.email }}</p>
+        <p v-else class="text-sm text-gray-500 mt-2">请登录以访问加密数据</p>
+    </div>
+
+    <div v-if="!user" class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700">邮箱</label>
+            <input v-model="email" type="email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="your@email.com">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700">密码</label>
+            <input v-model="password" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="********">
+        </div>
+        <div class="flex gap-2">
+            <button @click="handleLogin" class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition">登录</button>
+            <button @click="handleSignUp" class="flex-1 bg-white text-indigo-600 border border-indigo-600 py-2 px-4 rounded-md hover:bg-gray-50 transition">注册</button>
+        </div>
+        <p class="text-xs text-center text-gray-400">首次使用请点击“注册”<br>数据将通过 HTTPS 加密传输</p>
+    </div>
+
+    <div v-else>
+        <div class="flex gap-2 mb-6">
+            <input v-model="newTask" @keyup.enter="addTask" type="text" placeholder="记录一个新的想法..." class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
+            <button @click="addTask" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">+</button>
+        </div>
+
+        <div class="space-y-2 max-h-96 overflow-y-auto">
+            <div v-for="todo in todos" :key="todo.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" :checked="todo.is_complete" @change="toggleTodo(todo)" class="h-4 w-4 text-indigo-600 rounded border-gray-300">
+                    <span :class="{'line-through text-gray-400': todo.is_complete}">{{ todo.task }}</span>
+                </div>
+                <button @click="deleteTodo(todo.id)" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition text-sm">删除</button>
+            </div>
+            <p v-if="todos.length === 0" class="text-center text-gray-400 py-4">这里空空如也，开始记录吧</p>
+        </div>
+
+        <button @click="handleLogout" class="mt-8 w-full text-sm text-gray-500 hover:text-gray-800 underline">退出安全连接</button>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, onMounted } = Vue
+    const { createClient } = supabase
+
+    // ==========================================
+    // 🔴 请替换为你自己的 Supabase 配置 !!!
+    // ==========================================
+    const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
+    const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'
+
+    const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+    createApp({
+        setup() {
+            const user = ref(null)
+            const email = ref('')
+            const password = ref('')
+            const todos = ref([])
+            const newTask = ref('')
+
+            // 1. 检查当前是否已登录
+            onMounted(async () => {
+                const { data: { session } } = await _supabase.auth.getSession()
+                if (session) {
+                    user.value = session.user
+                    fetchTodos()
+                }
+
+                // 监听登录状态变化
+                _supabase.auth.onAuthStateChange((_event, session) => {
+                    user.value = session?.user || null
+                    if (user.value) fetchTodos()
+                    else todos.value = []
+                })
+            })
+
+            // 2. 注册
+            const handleSignUp = async () => {
+                const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value })
+                if (error) alert(error.message)
+                else alert('注册成功！请检查你的邮箱确认链接（如果是真邮箱的话），或者去 Supabase 后台关闭“邮箱验证”选项直接登录。')
+            }
+
+            // 3. 登录
+            const handleLogin = async () => {
+                const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value })
+                if (error) alert(error.message)
+            }
+
+            // 4. 登出
+            const handleLogout = async () => {
+                await _supabase.auth.signOut()
+            }
+
+            // 5. 获取数据 (Read)
+            const fetchTodos = async () => {
+                const { data, error } = await _supabase
+                    .from('todos')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                if (error) console.error(error)
+                else todos.value = data
+            }
+
+            // 6. 添加数据 (Create)
+            const addTask = async () => {
+                if (!newTask.value.trim()) return
+                const { error } = await _supabase
+                    .from('todos')
+                    .insert({ task: newTask.value, user_id: user.value.id })
+                
+                if (error) console.error(error)
+                else {
+                    newTask.value = ''
+                    fetchTodos()
+                }
+            }
+
+            // 7. 更新状态 (Update)
+            const toggleTodo = async (todo) => {
+                const { error } = await _supabase
+                    .from('todos')
+                    .update({ is_complete: !todo.is_complete })
+                    .eq('id', todo.id)
+                if (error) console.error(error)
+                else fetchTodos() // 刷新一下
+            }
+
+            // 8. 删除数据 (Delete)
+            const deleteTodo = async (id) => {
+                const { error } = await _supabase.from('todos').delete().eq('id', id)
+                if (error) console.error(error)
+                else fetchTodos()
+            }
+
+            return {
+                user, email, password, todos, newTask,
+                handleLogin, handleSignUp, handleLogout, addTask, toggleTodo, deleteTodo
+            }
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>
