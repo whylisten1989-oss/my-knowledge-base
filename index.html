@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (V9.0 Fixed)</title>
+    <title>MindForge OS (Cloud Online)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.staticfile.org/vue/3.3.4/vue.global.prod.min.js"></script>
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
         tailwind.config = {
@@ -25,7 +26,7 @@
     <style>
         body { background-color: #050505; color: #e4e4e7; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
         
-        /* === 1. 极光背景 (保留你觉得不错的) === */
+        /* === 1. 极光背景 === */
         .aurora-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; overflow: hidden; z-index: 0; }
         .aurora-blob { position: absolute; filter: blur(90px); opacity: 0.3; animation: float 15s infinite ease-in-out alternate; }
         .blob-1 { top: -10%; left: -10%; width: 60vw; height: 60vw; background: #222; animation-duration: 20s; }
@@ -40,7 +41,7 @@
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* === 3. 高级机械开关 (重绘) === */
+        /* === 3. 高级机械开关 === */
         .toggle-checkbox { display: none; }
         .toggle-label {
             width: 40px; height: 20px; background-color: #222; border: 1px solid #333;
@@ -69,12 +70,19 @@
 
         [v-cloak] { display: none !important; }
         
-        /* 列表卡片悬停效果 */
+        /* 列表卡片 */
         .note-card { transition: all 0.3s ease; border: 1px solid #222; }
         .note-card:hover { border-color: #555; transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8); }
+        
+        /* 状态条 */
+        #status-bar { display: none; position: fixed; top: 0; left: 0; width: 100%; padding: 8px; text-align: center; font-size: 12px; z-index: 9999; }
+        .status-err { background: #7f1d1d; color: #fecaca; }
+        .status-ok { background: #064e3b; color: #a7f3d0; }
     </style>
 </head>
 <body class="bg-void h-screen flex flex-col">
+
+<div id="status-bar"></div>
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
@@ -83,9 +91,16 @@
         <div class="relative z-10 w-full max-w-sm p-8 bg-black/40 backdrop-blur-2xl border border-white/5 rounded-none shadow-2xl animate-fade-in text-center">
             <div class="w-12 h-12 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-xl mb-6">K</div>
             <h1 class="text-2xl font-bold text-white tracking-widest uppercase mb-8">MindForge OS</h1>
-            <button @click="mockLogin" class="w-full btn-black py-3 text-sm font-bold uppercase tracking-widest rounded-none">
-                Enter System
-            </button>
+            
+            <div class="space-y-4">
+                <input v-model="email" type="email" placeholder="Email" class="w-full bg-black/50 border border-white/10 p-3 text-white text-sm outline-none focus:border-white transition font-mono">
+                <input v-model="password" type="password" placeholder="Password" class="w-full bg-black/50 border border-white/10 p-3 text-white text-sm outline-none focus:border-white transition font-mono">
+                
+                <div class="flex gap-2">
+                    <button @click="handleLogin" class="flex-1 btn-black py-3 text-sm font-bold uppercase tracking-widest rounded-none">Login</button>
+                    <button @click="handleRegister" class="flex-1 btn-black py-3 text-sm font-bold uppercase tracking-widest rounded-none opacity-50 hover:opacity-100">Sign Up</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -106,7 +121,7 @@
             </div>
             
             <div class="p-6 border-t border-border-dim">
-                <div class="text-xs text-gray-500 mb-2 font-mono">ADMIN_USER</div>
+                <div class="text-xs text-gray-500 mb-2 font-mono truncate">{{ user.email }}</div>
                 <button @click="handleLogout" class="text-xs text-red-500 hover:text-red-400 hover:underline transition">
                     [ 退出系统 ]
                 </button>
@@ -135,17 +150,18 @@
                         
                         <div class="flex justify-between items-start mb-4">
                             <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
-                            <span v-if="!note.isPublic" class="text-[10px] text-gray-500 border border-gray-800 px-1.5 py-0.5 rounded">私密</span>
+                            <span v-if="!note.is_public" class="text-[10px] text-gray-500 border border-gray-800 px-1.5 py-0.5 rounded">私密</span>
                         </div>
                         
                         <div class="flex-1 overflow-hidden">
-                            <p class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">
+                            <div v-if="note.category === 'link'" class="text-blue-500 underline text-xs break-all">{{ note.link_url }}</div>
+                            <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">
                                 {{ stripHtml(note.content) || '暂无内容...' }}
                             </p>
                         </div>
                         
                         <div class="mt-4 pt-3 border-t border-border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
-                            <span>🕒 {{ formatTime(note.updatedAt || note.date) }}</span>
+                            <span>🕒 {{ formatTime(note.created_at) }}</span>
                             <span class="opacity-0 group-hover:opacity-100 transition text-white">查看 -></span>
                         </div>
                     </div>
@@ -157,7 +173,7 @@
             </div>
         </main>
     </template>
-<div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6 backdrop-blur-sm animate-fade-in">
+    <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6 backdrop-blur-sm animate-fade-in">
         <div class="bg-black border border-border-dim w-full max-w-5xl h-full rounded-lg flex flex-col shadow-2xl overflow-hidden">
             
             <div class="h-16 border-b border-border-dim flex justify-between items-center px-6 bg-[#0a0a0a] shrink-0">
@@ -168,13 +184,13 @@
 
                 <div class="flex items-center gap-6">
                     <div v-if="isEditing" class="flex items-center gap-3">
-                        <span class="text-xs text-gray-500 font-bold uppercase">{{ form.isPublic ? 'Public' : 'Private' }}</span>
-                        <input type="checkbox" id="toggle" class="toggle-checkbox" v-model="form.isPublic">
+                        <span class="text-xs text-gray-500 font-bold uppercase">{{ form.is_public ? 'Public' : 'Private' }}</span>
+                        <input type="checkbox" id="toggle" class="toggle-checkbox" v-model="form.is_public">
                         <label for="toggle" class="toggle-label"></label>
                     </div>
 
                     <template v-if="isEditing">
-                        <button @click="saveNote" class="bg-white text-black px-6 py-1.5 rounded text-xs font-bold hover:bg-gray-200 transition">保存</button>
+                        <button @click="saveNote" class="bg-white text-black px-6 py-1.5 rounded text-xs font-bold hover:bg-gray-200 transition">保存到云端</button>
                         <button @click="cancelEdit" class="text-gray-500 hover:text-white px-2 text-xs">取消</button>
                     </template>
                     <template v-else>
@@ -185,10 +201,16 @@
             </div>
 
             <div v-show="!isEditing" class="flex-1 overflow-y-auto p-10 bg-[#050505]">
+                <div v-if="currentNote.category === 'link'" class="mb-6 p-4 border border-blue-900/30 bg-blue-900/10 rounded text-blue-400 break-all">
+                    🔗 链接: <a :href="currentNote.link_url" target="_blank" class="underline">{{ currentNote.link_url }}</a>
+                </div>
                 <div class="prose prose-invert max-w-none text-gray-300 leading-loose" v-html="currentNote.content"></div>
             </div>
 
             <div v-show="isEditing" class="flex-1 bg-black flex flex-col relative">
+                <div v-if="form.category === 'link'" class="p-4 border-b border-border-dim">
+                    <input v-model="form.link_url" placeholder="在此输入 URL 链接..." class="w-full bg-[#111] border border-gray-800 text-blue-400 p-2 rounded outline-none">
+                </div>
                 <div id="editor-container" class="h-full"></div>
             </div>
             
@@ -203,20 +225,55 @@
 
 <script>
     const { createApp, ref, computed, onMounted, reactive, nextTick } = Vue
+    const { createClient } = supabase
+
+    // ==========================================
+    // 🔴 必填：请填入你的 eyJ... Key
+    // ==========================================
+    const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
+    
+    // 👇 填入你的 eyJ... Key (Legacy Anon Key)
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' 
+    
+    const ADMIN_EMAIL = '1493694948@qq.com' 
+
+    // 初始化客户端 (强制绑定 Fetch，解决兼容性)
+    let _supabase = null
+    function initSupabase() {
+        if (typeof supabase === 'undefined') return showStatus('Supabase 库加载失败', true);
+        try {
+            return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                auth: { persistSession: true },
+                global: { fetch: (...args) => fetch(...args) }
+            });
+        } catch (e) {
+            showStatus('Key 错误: ' + e.message, true);
+        }
+    }
+    _supabase = initSupabase();
+
+    function showStatus(msg, isErr) {
+        const el = document.getElementById('status-bar');
+        el.style.display = 'block';
+        el.innerText = msg;
+        el.className = isErr ? 'status-err' : 'status-ok';
+        setTimeout(() => el.style.display = 'none', 3000);
+    }
 
     createApp({
         setup() {
-            // --- 状态数据 ---
             const user = ref(null)
+            const email = ref('')
+            const password = ref('')
             const notes = ref([])
             const currentL1 = ref('wiki')
             const currentL2 = ref('全部')
             const showModal = ref(false)
             const isEditing = ref(false)
             const currentNote = ref({})
-            const form = reactive({ id: null, title: '', content: '', isPublic: false })
+            const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
-            // 目录配置
+            // 本地模拟二级目录 (因为数据库没字段)
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
                 'idea': ['全部', '待办事项', '突发奇想'],
@@ -224,19 +281,17 @@
                 'file': ['全部', '素材', '归档']
             })
 
-            // Quill 实例缓存
             let quill = null
 
-            // --- 核心修复：Quill 初始化逻辑 ---
+            // Quill 初始化修复
             const initQuill = (initialContent = '') => {
                 nextTick(() => {
                     const container = document.getElementById('editor-container');
                     if (container) {
-                        // 如果实例不存在，创建它
                         if (!quill) {
                             quill = new Quill('#editor-container', {
                                 theme: 'snow',
-                                placeholder: '开始输入内容...',
+                                placeholder: '开始记录...',
                                 modules: {
                                     toolbar: [
                                         [{ 'header': [1, 2, false] }],
@@ -248,111 +303,128 @@
                                 }
                             });
                         }
-                        // 🟢 关键修复：每次打开编辑器，必须重新赋值内容
-                        // 即使 Quill 实例还在，内容也可能因为切换笔记而变了
                         quill.root.innerHTML = initialContent;
                     }
                 })
             }
 
-            // --- 业务逻辑 ---
-            onMounted(() => {
-                const saved = localStorage.getItem('mf_notes_v9')
-                if(saved) notes.value = JSON.parse(saved)
-                else notes.value = [
-                    { id: 1, l1: 'wiki', l2: '全部', title: '欢迎使用 MindForge', content: '<h1>Hello World</h1><p>这是一个<strong>本地测试版</strong>。</p>', isPublic: false, date: Date.now(), updatedAt: Date.now() }
-                ]
+            // 初始化加载
+            onMounted(async () => {
+                if(!_supabase) return;
+                const { data: { session } } = await _supabase.auth.getSession()
+                if(session) { user.value = session.user; fetchNotes(); }
+                
+                _supabase.auth.onAuthStateChange((_, session) => {
+                    user.value = session?.user || null
+                    if(user.value) fetchNotes()
+                })
             })
 
-            const mockLogin = () => user.value = { email: 'admin@local' }
-            const handleLogout = () => user.value = null
-            
-            const l1Class = (k) => currentL1.value === k ? 'text-white font-bold bg-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'
-            const switchL1 = (k) => { currentL1.value = k; currentL2.value = '全部'; }
-            const addCategory = () => { const n = prompt("新分类名称:"); if(n) categories[currentL1.value].push(n); }
-
-            // 过滤逻辑
-            const filteredNotes = computed(() => notes.value.filter(n => 
-                n.l1 === currentL1.value && (currentL2.value === '全部' || n.l2 === currentL2.value)
-            ))
-
-            // 新建笔记
-            const createNote = () => {
-                currentNote.value = {} // 清空当前查看对象
-                Object.assign(form, { id: null, title: '', content: '', isPublic: false })
-                isEditing.value = true
-                showModal.value = true
-                initQuill('') // 初始化空编辑器
+            // 获取数据 (云端)
+            const fetchNotes = async () => {
+                const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
+                if (error) showStatus(error.message, true)
+                else notes.value = data
             }
 
-            // 查看笔记
+            const handleLogin = async () => {
+                const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value })
+                if (error) alert(error.message)
+            }
+            const handleRegister = async () => {
+                const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value })
+                if (error) alert(error.message)
+                else alert('注册成功，请登录')
+            }
+            const handleLogout = async () => { await _supabase.auth.signOut(); user.value = null; notes.value = []; }
+
+            const l1Class = (k) => currentL1.value === k ? 'text-white font-bold bg-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'
+            const switchL1 = (k) => { currentL1.value = k; currentL2.value = '全部'; }
+            const addCategory = () => { const n = prompt("添加标签:"); if(n) categories[currentL1.value].push(n); }
+
+            const filteredNotes = computed(() => notes.value.filter(n => 
+                n.category === currentL1.value && 
+                (currentL2.value === '全部' || (n.sub_category === currentL2.value)) // 如果没加 sub_category 字段，这里过滤会失效，但不报错
+            ))
+
+            const createNote = () => {
+                currentNote.value = {}
+                Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentL1.value, sub_category: currentL2.value, link_url: '' })
+                isEditing.value = true
+                showModal.value = true
+                initQuill('')
+            }
+
             const viewNote = (note) => {
                 currentNote.value = note
                 isEditing.value = false
                 showModal.value = true
             }
 
-            // 开始编辑 (从查看切换到编辑)
             const startEdit = () => {
                 Object.assign(form, currentNote.value)
                 isEditing.value = true
-                // 🟢 把当前查看的内容塞进编辑器
                 initQuill(currentNote.value.content)
             }
 
-            // 取消编辑
             const cancelEdit = () => {
-                if(!form.id) closeModal(); // 如果是新建还没保存，直接关掉
-                else isEditing.value = false; // 如果是修改，回到查看模式
+                if(!form.id) closeModal();
+                else isEditing.value = false;
             }
-
             const closeModal = () => { showModal.value = false; isEditing.value = false; }
 
-            // 保存笔记
-            const saveNote = () => {
+            // 保存到云端
+            const saveNote = async () => {
                 if(!form.title) return alert('请输入标题')
                 const content = quill.root.innerHTML
-                const now = Date.now()
-
+                
+                // 构造数据 (自动带上当前选中的二级分类)
+                const payload = { 
+                    user_id: user.value.id,
+                    title: form.title,
+                    content: content,
+                    category: currentL1.value,
+                    link_url: form.link_url,
+                    is_public: form.is_public,
+                    // 如果你没运行那个 alter table SQL，这一行存不进去，但不影响其他数据
+                    sub_category: form.sub_category === '全部' ? '默认' : form.sub_category 
+                };
+                
+                let error;
                 if(form.id) {
-                    const idx = notes.value.findIndex(n => n.id === form.id)
-                    if(idx !== -1) {
-                        notes.value[idx] = { ...notes.value[idx], ...form, content, updatedAt: now }
-                        currentNote.value = notes.value[idx] // 更新查看视图
-                    }
+                    delete payload.user_id; // 更新时不改作者
+                    const res = await _supabase.from('notes').update(payload).eq('id', form.id)
+                    error = res.error
                 } else {
-                    const newNote = {
-                        id: now,
-                        l1: currentL1.value,
-                        l2: currentL2.value,
-                        title: form.title,
-                        content,
-                        isPublic: form.isPublic,
-                        date: now,
-                        updatedAt: now
-                    }
-                    notes.value.unshift(newNote)
-                    currentNote.value = newNote
+                    const res = await _supabase.from('notes').insert(payload)
+                    error = res.error
                 }
-                localStorage.setItem('mf_notes_v9', JSON.stringify(notes.value))
-                isEditing.value = false // 保存后自动回到阅读模式
-            }
 
-            const deleteNote = () => {
-                if(confirm('Delete?')) {
-                    notes.value = notes.value.filter(n => n.id !== currentNote.value.id)
-                    localStorage.setItem('mf_notes_v9', JSON.stringify(notes.value))
-                    closeModal()
+                if(error) alert('保存失败: ' + error.message)
+                else { 
+                    showStatus('保存成功'); 
+                    isEditing.value = false; 
+                    fetchNotes(); 
+                    // 临时更新本地视图，优化体验
+                    if(form.id) currentNote.value = { ...currentNote.value, ...payload }
                 }
             }
 
-            // 工具函数
+            const deleteNote = async () => {
+                if(confirm('确定删除?')) {
+                    await _supabase.from('notes').delete().eq('id', form.id)
+                    showStatus('已删除');
+                    closeModal();
+                    fetchNotes();
+                }
+            }
+
             const stripHtml = (html) => { const tmp = document.createElement("DIV"); tmp.innerHTML = html; return tmp.textContent || tmp.innerText || ""; }
-            const formatTime = (ts) => new Date(ts).toLocaleString()
+            const formatTime = (ts) => new Date(ts).toLocaleDateString()
 
             return { 
-                user, notes, currentL1, currentL2, categories, showModal, isEditing, currentNote, form, currentSubCategories, filteredNotes,
-                mockLogin, handleLogout, l1Class, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
+                user, email, password, notes, currentL1, currentL2, categories, showModal, isEditing, currentNote, form, currentSubCategories, filteredNotes,
+                mockLogin, handleLogin, handleRegister, handleLogout, l1Class, switchL1, addCategory, createNote, viewNote, startEdit, cancelEdit, closeModal, saveNote, deleteNote, stripHtml, formatTime
             }
         }
     }).mount('#app')
