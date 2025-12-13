@@ -3,40 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS Beta</title>
+    <title>MindForge OS (CN Final)</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧠</text></svg>">
     
-    <script src="https://cdn.bootcdn.net/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
+    <link href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     
-    <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+    <script src="https://cdn.staticfile.org/vue/3.3.4/vue.global.prod.min.js"></script>
     
-    <script src="https://cdn.bootcdn.net/ajax/libs/marked/5.1.0/marked.min.js"></script>
+    <script src="https://cdn.staticfile.org/marked/5.1.0/marked.min.js"></script>
     
-    <link href="https://cdn.bootcdn.net/ajax/libs/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
-    <script src="https://cdn.bootcdn.net/ajax/libs/quill/1.3.7/quill.min.js"></script>
+    <link href="https://cdn.staticfile.org/quill/1.3.7/quill.snow.min.css" rel="stylesheet">
+    <script src="https://cdn.staticfile.org/quill/1.3.7/quill.min.js"></script>
     
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { 'void': '#050505', 'sidebar': '#0a0a0a', 'border-dim': '#222' },
-                    fontFamily: { sans: ['"Microsoft YaHei"', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
+    <script src="https://npm.elemecdn.com/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
 
     <style>
-        body { background-color: #050505; color: #e4e4e7; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; }
+        /* --- 核心主题定义 (替代 tailwind.config) --- */
+        :root {
+            --bg-void: #050505;
+            --bg-sidebar: #0a0a0a;
+            --border-dim: #222;
+            --color-text: #e4e4e7;
+            --font-main: "Microsoft YaHei", sans-serif;
+        }
+
+        body { 
+            background-color: var(--bg-void); 
+            color: var(--color-text); 
+            font-family: var(--font-main); 
+            overflow: hidden; 
+        }
+
+        /* 强制覆盖 Tailwind 默认边框色 */
+        *, ::before, ::after { border-color: var(--border-dim); }
         
-        /* 1. 登录页：全屏居中修复 + 磨砂玻璃 */
-        .login-container { display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; z-index: 50; }
+        /* 1. 登录页：磨砂玻璃 */
         .glass-panel {
             background: rgba(20, 20, 20, 0.65);
-            backdrop-filter: blur(25px);
+            backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
         }
@@ -44,45 +48,47 @@
         /* 2. 极光背景 */
         .aurora-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #000; }
         .aurora-blob { position: absolute; filter: blur(100px); opacity: 0.35; animation: float 12s infinite ease-in-out alternate; }
-        .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #172554; animation-duration: 15s; } /* 蓝 */
-        .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #312e81; animation-duration: 20s; } /* 紫 */
+        .blob-1 { top: -20%; left: -10%; width: 60vw; height: 60vw; background: #172554; animation-duration: 15s; }
+        .blob-2 { bottom: -20%; right: -10%; width: 70vw; height: 70vw; background: #312e81; animation-duration: 20s; }
         @keyframes float { 0% { transform: translate(0, 0); } 100% { transform: translate(30px, -30px); } }
 
-        /* 3. Logo 橙蓝流光动画 */
-        .logo-glow {
-            background: linear-gradient(to right, #3b82f6, #f97316, #3b82f6);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: shine 5s linear infinite;
-            font-weight: 900; letter-spacing: -0.05em;
+        /* 3. Logo 光效 */
+        .cyber-text {
+            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite alternate;
+            font-weight: 900;
         }
         @keyframes shine { to { background-position: 200% center; } }
 
-        /* 4. 黑白按钮 (去蓝) */
+        /* 4. 黑白按钮 */
         .btn-black {
             background: #000; border: 1px solid #333; color: white; transition: all 0.2s;
         }
-        .btn-black:hover { border-color: #fff; box-shadow: 0 0 12px rgba(255,255,255,0.15); transform: translateY(-1px); }
+        .btn-black:hover { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.15); }
 
-        /* 5. 侧边栏菜单项 */
-        .nav-item { transition: all 0.2s; border-left: 2px solid transparent; color: #888; font-size: 14px; font-weight: 500; }
-        .nav-item:hover { color: white; background: rgba(255,255,255,0.03); padding-left: 12px; }
-        .nav-item.active { color: white; border-left-color: #fff; background: rgba(255,255,255,0.05); padding-left: 12px; font-weight: bold; }
-
-        /* 开关样式 */
+        /* 5. 胶囊开关 */
         .toggle-checkbox { display: none; }
         .toggle-label { width: 36px; height: 20px; background: #333; border-radius: 99px; position: relative; cursor: pointer; transition: 0.3s; }
         .toggle-label::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #888; border-radius: 50%; transition: 0.3s; }
         .toggle-checkbox:checked + .toggle-label { background: #fff; }
         .toggle-checkbox:checked + .toggle-label::after { transform: translateX(16px); background: #000; }
 
-        /* Quill 暗黑化 */
-        .ql-toolbar { background: #0a0a0a; border-color: #222 !important; }
-        .ql-container { background: #000; border-color: #222 !important; color: #ccc; font-size: 15px !important; }
+        /* 6. Quill 暗黑适配 */
+        .ql-toolbar { background: var(--bg-sidebar); border-color: var(--border-dim) !important; }
+        .ql-container { background: var(--bg-void); border-color: var(--border-dim) !important; color: #ccc; font-size: 15px !important; font-family: var(--font-main) !important; }
         .ql-stroke { stroke: #666 !important; } .ql-fill { fill: #666 !important; } .ql-picker { color: #666 !important; }
 
+        /* 自定义工具类 (替代 tailwind config) */
+        .bg-void { background-color: var(--bg-void); }
+        .bg-sidebar { background-color: var(--bg-sidebar); }
+        .border-dim { border-color: var(--border-dim); }
+        .text-dim { color: #888; }
+
         [v-cloak] { display: none !important; }
+        .note-card { transition: all 0.3s ease; border: 1px solid #222; }
+        .note-card:hover { border-color: #555; transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.8); }
+        
         #error-bar { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #991b1b; color: white; text-align: center; padding: 8px; z-index: 99999; font-size: 12px; }
     </style>
 </head>
@@ -92,24 +98,24 @@
 
 <div id="app" v-cloak class="h-full w-full flex relative">
 
-    <div v-if="!user" class="login-container">
+    <div v-if="!user" class="absolute inset-0 z-50 flex items-center justify-center">
         <div class="aurora-bg"><div class="aurora-blob blob-1"></div><div class="aurora-blob blob-2"></div></div>
         
         <div class="glass-panel w-full max-w-sm p-10 rounded-xl relative z-10 animate-fade-in shadow-2xl">
             <div class="text-center mb-10">
-                <div class="w-14 h-14 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-2xl mb-5 shadow-lg shadow-white/10">K</div>
+                <div class="w-14 h-14 bg-white rounded-xl mx-auto flex items-center justify-center text-black font-bold text-2xl mb-4 shadow-lg shadow-white/10">K</div>
                 <h1 class="text-3xl font-bold text-white tracking-tighter mb-1">MindForge OS</h1>
-                <p class="text-gray-500 text-xs font-mono tracking-widest uppercase">Identity Verification</p>
+                <p class="text-gray-400 text-xs font-mono tracking-widest uppercase">Identity Verification</p>
             </div>
 
             <div class="space-y-5">
                 <div>
                     <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Access ID</label>
-                    <input v-model="email" type="email" class="w-full bg-black/40 border border-white/10 p-3 rounded text-white text-sm outline-none focus:border-white/40 transition font-mono">
+                    <input v-model="email" type="email" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition font-mono">
                 </div>
                 <div>
                     <label class="text-[10px] text-gray-500 uppercase tracking-wider mb-1 block">Passkey</label>
-                    <input v-model="password" type="password" class="w-full bg-black/40 border border-white/10 p-3 rounded text-white text-sm outline-none focus:border-white/40 transition font-mono">
+                    <input v-model="password" type="password" class="w-full bg-black/40 border border-white/10 p-3 rounded-lg text-white text-sm outline-none focus:border-white/40 transition font-mono">
                 </div>
                 
                 <div class="flex gap-3 pt-3">
@@ -121,33 +127,33 @@
     </div>
 
     <template v-else>
-        <aside class="w-60 bg-sidebar border-r border-border-dim flex flex-col justify-between shrink-0 z-20">
+        <aside class="w-64 bg-sidebar border-r border-dim flex flex-col justify-between shrink-0 z-20">
             <div>
-                <div class="h-20 flex items-center px-6 border-b border-border-dim/50">
-                    <span class="text-lg logo-glow">MindForge OS Beta</span>
+                <div class="h-20 flex items-center px-6 border-b border-dim">
+                    <span class="text-lg font-black tracking-tight cyber-text">MindForge OS Beta</span>
                 </div>
                 
                 <nav class="p-6 space-y-6">
                     <div>
-                        <div class="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-3">Core</div>
-                        <button @click="switchL1('profile')" :class="['nav-item w-full text-left py-1', currentL1 === 'profile' ? 'active' : '']">
+                        <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Core</div>
+                        <button @click="switchL1('profile')" :class="['w-full text-left py-1 text-sm font-medium transition', currentL1 === 'profile' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                             Overview 系统概览
                         </button>
                     </div>
                     
                     <div>
-                        <div class="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-3">Modules</div>
+                        <div class="text-[10px] font-bold text-dim uppercase tracking-widest mb-3">Modules</div>
                         <div class="space-y-3">
-                            <button @click="switchL1('wiki')" :class="['nav-item w-full text-left py-1', currentL1 === 'wiki' ? 'active' : '']">
+                            <button @click="switchL1('wiki')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'wiki' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                                 Wiki 知识库
                             </button>
-                            <button @click="switchL1('idea')" :class="['nav-item w-full text-left py-1', currentL1 === 'idea' ? 'active' : '']">
+                            <button @click="switchL1('idea')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'idea' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                                 Ideas 灵感
                             </button>
-                            <button @click="switchL1('blog')" :class="['nav-item w-full text-left py-1', currentL1 === 'blog' ? 'active' : '']">
+                            <button @click="switchL1('blog')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'blog' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                                 Blog 博客
                             </button>
-                            <button @click="switchL1('file')" :class="['nav-item w-full text-left py-1', currentL1 === 'file' ? 'active' : '']">
+                            <button @click="switchL1('file')" :class="['w-full text-left py-1 text-sm transition', currentL1 === 'file' ? 'text-white border-l-2 border-white pl-3' : 'text-gray-500 hover:text-white hover:pl-1']">
                                 Files 文件
                             </button>
                         </div>
@@ -155,7 +161,7 @@
                 </nav>
             </div>
             
-            <div class="p-6 border-t border-border-dim/50">
+            <div class="p-6 border-t border-dim">
                 <div class="text-xs text-gray-600 mb-2 font-mono truncate">{{ user.email }}</div>
                 <button @click="handleLogout" class="text-xs font-bold text-red-600 hover:text-red-400 hover:underline transition">
                     Logout 退出登录
@@ -164,24 +170,22 @@
         </aside>
 
         <main class="flex-1 flex flex-col bg-void relative overflow-hidden">
-            <header class="h-20 flex items-center justify-between px-8 border-b border-border-dim bg-void/80 backdrop-blur shrink-0 z-10">
+            <header class="h-20 flex items-center justify-between px-8 border-b border-dim bg-void/80 backdrop-blur shrink-0 z-10">
                 <div class="flex items-center gap-3 overflow-x-auto no-scrollbar">
                     <button v-for="sub in currentSubCategories" :key="sub" @click="currentL2 = sub"
-                        :class="['px-4 py-1.5 rounded-full text-xs font-bold transition border', currentL2 === sub ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-500 hover:text-white']">
+                        :class="['px-4 py-1.5 rounded-full text-xs font-bold transition border', currentL2 === sub ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-dim hover:border-gray-500 hover:text-white']">
                         {{ sub }}
                     </button>
                     <button @click="addCategory" class="w-7 h-7 rounded-full border border-dashed border-gray-700 text-gray-500 hover:text-white hover:border-white flex items-center justify-center transition">+</button>
                 </div>
-
                 <button v-if="currentCategory !== 'profile'" @click="createNote" class="btn-black px-5 py-2 rounded text-xs font-bold flex items-center gap-2">
                     + 新建文档
                 </button>
             </header>
 
             <div class="flex-1 overflow-y-auto p-8">
-                
                 <div v-if="currentCategory === 'profile'" class="max-w-4xl mx-auto space-y-6 animate-fade-in">
-                    <div class="border border-white/10 bg-sidebar p-8 rounded-xl relative overflow-hidden">
+                    <div class="border border-dim bg-sidebar p-8 rounded-xl relative overflow-hidden">
                         <div class="relative z-10 flex flex-col md:flex-row gap-6 items-start">
                             <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl">🧠</div>
                             <div>
@@ -191,18 +195,18 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="border border-white/10 bg-sidebar p-6 rounded-xl">
+                        <div class="border border-dim bg-sidebar p-6 rounded-xl">
                             <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-4">Hardware</h3>
                             <ul class="space-y-2 text-sm text-gray-300">
-                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-white/5 pb-2 last:border-0">
+                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-dim pb-2 last:border-0">
                                     <span>{{ item.name }}</span><span class="text-[10px] text-green-500 font-mono">{{ item.status }}</span>
                                 </li>
                             </ul>
                         </div>
-                        <div class="border border-white/10 bg-sidebar p-6 rounded-xl">
+                        <div class="border border-dim bg-sidebar p-6 rounded-xl">
                             <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-4">Stack</h3>
                             <div class="flex flex-wrap gap-2">
-                                <span v-for="skill in systemConfig.skills" :key="skill" class="px-2 py-1 border border-white/10 text-[10px] text-gray-400 hover:text-white transition">{{ skill }}</span>
+                                <span v-for="skill in systemConfig.skills" :key="skill" class="px-2 py-1 border border-dim text-[10px] text-gray-400 hover:text-white transition">{{ skill }}</span>
                             </div>
                         </div>
                     </div>
@@ -211,7 +215,7 @@
                 <div v-else>
                     <div v-if="filteredNotes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         <div v-for="note in filteredNotes" :key="note.id" @click="viewNote(note)" 
-                             class="group bg-sidebar border border-white/10 p-6 rounded-xl hover:border-white/30 hover:bg-white/[0.02] transition cursor-pointer relative h-60 flex flex-col shadow-lg">
+                             class="note-card bg-sidebar p-6 rounded-xl relative h-60 flex flex-col cursor-pointer group">
                             
                             <div class="flex justify-between items-start mb-4">
                                 <h3 class="text-base font-bold text-gray-200 line-clamp-1 group-hover:text-white transition">{{ note.title }}</h3>
@@ -220,12 +224,10 @@
                             
                             <div class="flex-1 overflow-hidden">
                                 <div v-if="note.category === 'link'" class="text-blue-500 underline text-xs break-all">{{ note.link_url }}</div>
-                                <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">
-                                    {{ stripHtml(note.content) || '暂无内容...' }}
-                                </p>
+                                <p v-else class="text-xs text-gray-500 leading-relaxed line-clamp-4 font-mono opacity-80">{{ stripHtml(note.content) || '暂无内容...' }}</p>
                             </div>
                             
-                            <div class="mt-4 pt-3 border-t border-border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
+                            <div class="mt-4 pt-3 border-t border-dim flex justify-between items-center text-[10px] text-gray-600 font-mono">
                                 <span>🕒 {{ formatTime(note.created_at) }}</span>
                                 <span class="opacity-0 group-hover:opacity-100 transition text-white">查看 -></span>
                             </div>
@@ -240,8 +242,8 @@
     </template>
 
     <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-6 backdrop-blur-sm animate-fade-in">
-        <div class="bg-black border border-border-dim w-full max-w-5xl h-full rounded-lg flex flex-col shadow-2xl overflow-hidden">
-            <div class="h-16 border-b border-border-dim flex justify-between items-center px-6 bg-[#0a0a0a] shrink-0">
+        <div class="bg-black border border-dim w-full max-w-5xl h-full rounded-lg flex flex-col shadow-2xl overflow-hidden">
+            <div class="h-16 border-b border-dim flex justify-between items-center px-6 bg-sidebar shrink-0">
                 <div v-if="isEditing" class="flex-1 mr-6">
                     <input v-model="form.title" placeholder="输入标题..." class="w-full bg-transparent text-lg font-bold text-white outline-none placeholder-gray-700 font-mono">
                 </div>
@@ -269,12 +271,12 @@
                 <div class="prose prose-invert max-w-none text-gray-300 leading-loose" v-html="currentNote.content"></div>
             </div>
             <div v-show="isEditing" class="flex-1 bg-black flex flex-col relative">
-                <div v-if="form.category === 'link'" class="p-4 border-b border-border-dim">
-                    <input v-model="form.link_url" placeholder="在此输入 URL 链接..." class="w-full bg-[#111] border border-gray-800 text-blue-400 p-2 rounded outline-none">
+                <div v-if="form.category === 'link'" class="p-4 border-b border-dim">
+                    <input v-model="form.link_url" placeholder="在此输入 URL 链接..." class="w-full bg-sidebar border border-gray-800 text-blue-400 p-2 rounded outline-none">
                 </div>
                 <div id="editor-container" class="h-full"></div>
             </div>
-            <div v-if="!isEditing" class="h-10 border-t border-border-dim bg-[#0a0a0a] flex justify-between items-center px-6 text-[10px] text-gray-600 font-mono">
+            <div v-if="!isEditing" class="h-10 border-t border-dim bg-sidebar flex justify-between items-center px-6 text-[10px] text-gray-600 font-mono">
                 <span>ID: {{ currentNote.id }}</span>
                 <button @click="deleteNote" class="text-red-900 hover:text-red-500 transition">DELETE_ENTRY</button>
             </div>
@@ -288,18 +290,18 @@
     const { createClient } = window.supabase || {}
 
     // ==========================================
-    // 🔴 最终填空：Key 
+    // 🔴 必填区 (填你的 eyJ... Key)
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入你的 eyJ... Key
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZqdXh0bHpiZWVleHljemZycXNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU1ODQ0MTAsImV4cCI6MjA4MTE2MDQxMH0.TaaEJpNcDIWyVbpxKZpcy23cjFvns8InmMQ2TISA9pI' // 👈 填入 eyJ... Key
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 初始化客户端 (检测库是否加载)
+    // 初始化客户端
     let _supabase = null
     function initSupabase() {
-        if (typeof createClient !== 'function' || typeof Vue === 'undefined') {
+        if (typeof createClient !== 'function') {
             document.getElementById('error-bar').style.display = 'block';
-            document.getElementById('error-bar').innerText = '⚠️ 核心库未加载，可能是网络问题。请刷新页面重试。';
+            document.getElementById('error-bar').innerText = '⚠️ 网络错误：核心库加载失败，请刷新页面。';
             return null;
         }
         try {
@@ -336,14 +338,13 @@
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            const currentL1 = ref('profile') // 默认首页
+            const currentL1 = ref('profile')
             const currentL2 = ref('全部')
             const showModal = ref(false)
             const isEditing = ref(false)
             const currentNote = ref({})
             const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '', sub_category: '全部' })
             
-            // 本地分类配置
             const categories = reactive({
                 'wiki': ['全部', '工作文档', '技术沉淀'],
                 'idea': ['全部', '待办事项', '突发奇想'],
@@ -351,7 +352,6 @@
                 'file': ['全部', '素材', '归档']
             })
 
-            const categoryNames = { 'wiki': 'Wiki', 'idea': 'Ideas', 'blog': 'Blog', 'file': 'Files' }
             let quill = null
 
             const initQuill = (initialContent = '') => {
