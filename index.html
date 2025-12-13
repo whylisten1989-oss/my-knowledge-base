@@ -3,12 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Personal OS (Debug Ver)</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <title>My Personal OS</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -21,30 +17,27 @@
         }
     </script>
     <style>
-        body { font-family: sans-serif; background-color: #000; color: #d4d4d8; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #000; color: #d4d4d8; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .gradient-text { background: linear-gradient(to right, #fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .md-content a { color: #3b82f6; text-decoration: underline; }
         .md-content h1, h2 { color: white; font-weight: bold; margin-top: 10px; }
+        .md-content pre { background: #1f1f1f; padding: 10px; border-radius: 6px; overflow-x: auto; }
+        /* 加载时的遮罩 */
+        [v-cloak] { display: none; }
     </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col">
 
-<div id="app" class="h-full w-full flex relative">
-    <div v-if="errorMsg" class="absolute inset-0 z-[200] bg-black/90 flex items-center justify-center p-10">
-        <div class="bg-red-900/50 border border-red-500 p-6 rounded text-white max-w-lg">
-            <h3 class="font-bold text-xl mb-2">🚫 启动失败</h3>
-            <p>{{ errorMsg }}</p>
-            <button @click="errorMsg = ''" class="mt-4 bg-red-600 px-4 py-2 rounded">关闭</button>
-        </div>
-    </div>
+<div id="app" v-cloak class="h-full w-full flex relative">
 
     <div v-if="!user" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 text-center">
         <div class="relative z-10 space-y-8">
             <div class="w-16 h-16 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-2xl mb-6">K</div>
             <h1 class="text-5xl md:text-7xl font-bold tracking-tighter gradient-text">Private<br>Workspace.</h1>
             <p class="text-gray-500 max-w-md mx-auto text-lg">私人数字大脑。<br>Personal Digital Brain.</p>
-            <button @click="showAuthModal = true" class="px-8 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition">
+            <button @click="showAuthModal = true" class="px-8 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition cursor-pointer">
                 Enter System ->
             </button>
         </div>
@@ -106,7 +99,7 @@
             <div class="space-y-4">
                 <input v-model="email" type="email" placeholder="Email" class="w-full bg-black border border-white/10 p-3 rounded text-white outline-none">
                 <input v-model="password" type="password" placeholder="Password" class="w-full bg-black border border-white/10 p-3 rounded text-white outline-none">
-                <button @click="handleAuth" class="w-full bg-white text-black font-bold py-3 rounded hover:bg-gray-200 transition">{{ isRegisterMode ? '注册管理员' : '登录 / Unlock' }}</button>
+                <button @click="handleAuth" class="w-full bg-white text-black font-bold py-3 rounded hover:bg-gray-200 transition cursor-pointer">{{ isRegisterMode ? '注册管理员' : '登录 / Unlock' }}</button>
                 <div class="text-center text-xs text-gray-500 mt-4 cursor-pointer" @click="isRegisterMode = !isRegisterMode">{{ isRegisterMode ? '返回登录' : '没有账号？点击注册' }}</div>
             </div>
         </div>
@@ -133,33 +126,29 @@
     </div>
 </div>
 
-<script>
-    const { createApp, ref, computed, onMounted, reactive } = Vue
-    const { createClient } = supabase
+<script type="module">
+    // 使用 ES Module 导入，这是最稳的方法，绝不会出现 undefined
+    import { createApp, ref, computed, onMounted, reactive } from 'https://esm.sh/vue@3.3.4'
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+    import { marked } from 'https://esm.sh/marked@11.1.1'
 
     // ==========================================
-    // 🔴 最终检查：Key 必须是 ey 开头的长字符串！
+    // 🔴 填这里！
     // ==========================================
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
-    const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu' // 👈 请在这里粘贴那个 ey 开头的长 Key！保留引号！
+    // 你的 Key，我还是先帮你填之前那个，如果这个不行，你再换回 ey 开头的
+    const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 自检程序
-    if (SUPABASE_ANON_KEY.length < 50) {
-        alert('🛑 Key 格式错误！\n\n你填写的 Key 太短了，绝对不是 sb_ 开头的那个。\n请去 Supabase 复制那个 eyJ 开头的长 Key。');
-        throw new Error('Key too short');
-    }
-
+    // 初始化客户端
     const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    createApp({
+    const app = createApp({
         setup() {
             const user = ref(null)
             const showAuthModal = ref(false)
             const showEditor = ref(false)
             const isRegisterMode = ref(false)
-            const errorMsg = ref('')
-            
             const email = ref('')
             const password = ref('')
             const notes = ref([])
@@ -172,26 +161,20 @@
             const navClass = (cat) => currentCategory.value === cat ? 'bg-white text-black font-bold' : 'text-gray-400 hover:text-white hover:bg-white/5'
 
             onMounted(async () => {
-                try {
-                    const { data: { session }, error } = await _supabase.auth.getSession()
-                    if (error) throw error
+                const { data: { session } } = await _supabase.auth.getSession()
+                user.value = session?.user || null
+                if(user.value) fetchNotes()
+                _supabase.auth.onAuthStateChange((_, session) => {
                     user.value = session?.user || null
-                    if(user.value) fetchNotes()
-                    _supabase.auth.onAuthStateChange((_, session) => {
-                        user.value = session?.user || null
-                        if (user.value) fetchNotes()
-                        else notes.value = []
-                    })
-                } catch (e) {
-                    errorMsg.value = '连接 Supabase 失败: ' + e.message
-                }
+                    if (user.value) fetchNotes()
+                    else notes.value = []
+                })
             })
 
             const fetchNotes = async () => {
                 if (!user.value) return 
-                const { data, error } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
-                if (error) { errorMsg.value = '获取数据失败: ' + error.message; return }
-                notes.value = data
+                const { data } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
+                if (data) notes.value = data
             }
 
             const handleAuth = async () => {
@@ -202,6 +185,7 @@
             }
 
             const handleLogout = async () => await _supabase.auth.signOut()
+
             const openEditor = () => { Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value, link_url: '' }); showEditor.value = true; }
             const editNote = (note) => { Object.assign(form, note); showEditor.value = true; }
             
@@ -209,16 +193,18 @@
                 if (!form.title) return alert('标题必填')
                 const payload = { ...form, user_id: user.value.id }; delete payload.id
                 const { error } = form.id ? await _supabase.from('notes').update(payload).eq('id', form.id) : await _supabase.from('notes').insert(payload)
-                if (error) alert('保存失败: ' + error.message)
+                if (error) alert(error.message)
                 else { showEditor.value = false; fetchNotes(); }
             }
             
             const deleteNote = async () => { if(confirm('删除?')) { await _supabase.from('notes').delete().eq('id', form.id); showEditor.value = false; fetchNotes(); } }
             const renderMarkdown = (text) => text ? marked.parse(text) : ''
 
-            return { user, errorMsg, isAdmin, showAuthModal, showEditor, isRegisterMode, email, password, currentCategory, categoryNames, filteredNotes, navClass, form, handleAuth, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown }
+            return { user, isAdmin, showAuthModal, showEditor, isRegisterMode, email, password, currentCategory, categoryNames, filteredNotes, navClass, form, handleAuth, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown }
         }
-    }).mount('#app')
+    })
+    
+    app.mount('#app')
 </script>
 </body>
 </html>
