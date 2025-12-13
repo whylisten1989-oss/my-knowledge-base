@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Personal OS</title>
+    <title>My Digital Workspace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -15,199 +15,119 @@
             theme: {
                 extend: {
                     colors: {
-                        'void': '#000000',      // 纯黑背景
-                        'sidebar': '#09090b',   // 侧边栏深灰
-                        'card': '#121212',      // 卡片黑
-                        'accent': '#3b82f6',    // 科技蓝
+                        'void': '#09090b', 'surface': '#18181b', 'accent': '#fafafa', 
                     },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #000; color: #d4d4d8; }
-        
-        /* 隐藏滚动条但保留功能 */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* 登录页的流光文字 */
-        .gradient-text {
-            background: linear-gradient(to right, #fff, #666);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .md-content a { color: #3b82f6; text-decoration: underline; }
-        .md-content h1, h2 { color: white; font-weight: bold; margin-top: 10px; }
-        .md-content pre { background: #1f1f1f; padding: 10px; border-radius: 6px; overflow-x: auto; }
+        body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #a1a1aa; }
+        .glass { background: rgba(24, 24, 27, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+        .md-content h1, .md-content h2 { color: #fafafa; font-weight: 700; margin-bottom: 0.5rem; }
+        .md-content p { margin-bottom: 0.8rem; line-height: 1.6; }
+        .md-content a { color: #38bdf8; text-decoration: underline; }
+        .md-content pre { background: #27272a; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
     </style>
 </head>
-<body class="h-screen overflow-hidden flex flex-col">
+<body class="antialiased min-h-screen flex flex-col">
 
-<div id="app" class="h-full w-full flex relative">
+<div id="app" class="flex-1 flex flex-col relative">
 
-    <div v-if="!user" class="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-6 text-center">
-        <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-        <div class="absolute w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] top-1/4"></div>
-
-        <div class="relative z-10 space-y-8 animate-fade-in">
-            <div class="w-16 h-16 bg-white rounded-full mx-auto flex items-center justify-center text-black font-bold text-2xl mb-6">K</div>
-            <h1 class="text-5xl md:text-7xl font-bold tracking-tighter gradient-text">
-                Private<br>Workspace.
-            </h1>
-            <p class="text-gray-500 max-w-md mx-auto text-lg">
-                私人数字大脑。未经授权禁止访问。<br>
-                Personal Digital Brain. Access Restricted.
-            </p>
-            
-            <button @click="showAuthModal = true" class="group relative px-8 py-3 bg-white text-black font-bold rounded-full overflow-hidden transition-all hover:scale-105 hover:shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]">
-                <span class="relative z-10">Verify Identity -></span>
+    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-black font-bold text-lg">K</div>
+            <span class="font-semibold text-white tracking-tight">Knowledge_Base</span>
+        </div>
+        <div class="flex items-center gap-4 text-sm">
+            <div v-if="user" class="flex items-center gap-3">
+                <span v-if="isAdmin" class="text-green-500 flex items-center gap-1 bg-green-900/20 px-2 py-1 rounded">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> ADMIN
+                </span>
+                <span v-else class="text-gray-500 border border-gray-700 px-2 py-1 rounded">VISITOR</span>
+                <button v-if="isAdmin" @click="openEditor()" class="text-white hover:text-gray-300 transition font-bold">+ 新建</button>
+                <button @click="handleLogout" class="text-gray-500 hover:text-white transition">退出</button>
+            </div>
+            <button v-else @click="showAuthModal = true" class="px-4 py-2 border border-white/20 rounded-full hover:bg-white hover:text-black transition duration-300">
+                登录 / 注册
             </button>
         </div>
-    </div>
+    </nav>
 
+    <main class="flex-1 max-w-5xl mx-auto w-full p-6">
+        <header class="py-20 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tighter">
+                Thinking in <span class="text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-600">Public</span>.
+            </h1>
+            <p class="text-gray-400 max-w-xl mx-auto text-lg">
+                {{ isAdmin ? '欢迎回来，主人。' : '欢迎参观我的数字花园。' }}
+            </p>
+        </header>
 
-    <template v-else>
-        
-        <aside class="w-20 md:w-64 bg-sidebar border-r border-white/5 flex flex-col justify-between p-4 transition-all shrink-0">
-            <div>
-                <div class="flex items-center gap-3 mb-8 px-2 text-white">
-                    <div class="w-8 h-8 bg-white rounded flex items-center justify-center text-black font-bold">K</div>
-                    <span class="hidden md:block font-bold text-lg tracking-tight">OS v3.0</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-for="note in notes" :key="note.id" class="group relative bg-surface border border-white/5 rounded-2xl p-6 hover:border-white/20 transition duration-300 flex flex-col h-64">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="bg-white/10 text-gray-400 px-2 py-1 rounded text-xs font-mono uppercase">{{ note.type || 'note' }}</span>
+                    <span v-if="!note.is_public && isAdmin" class="text-yellow-500 text-xs">🔒 私密</span>
                 </div>
-
-                <nav class="space-y-1">
-                    <button @click="currentCategory = 'wiki'" :class="navClass('wiki')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all">
-                        <span>📚</span> <span class="hidden md:block">知识文档 (Wiki)</span>
-                    </button>
-                    <button @click="currentCategory = 'snippet'" :class="navClass('snippet')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all">
-                        <span>⚡</span> <span class="hidden md:block">灵感/代码 (Ideas)</span>
-                    </button>
-                    <button @click="currentCategory = 'link'" :class="navClass('link')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all">
-                        <span>🔗</span> <span class="hidden md:block">书签导航 (Links)</span>
-                    </button>
-                    <button @click="currentCategory = 'file'" :class="navClass('file')" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all">
-                        <span>🗄️</span> <span class="hidden md:block">文件归档 (Files)</span>
-                    </button>
-                </nav>
-            </div>
-
-            <div class="border-t border-white/10 pt-4">
-                <div class="flex items-center gap-3 px-2 mb-3">
-                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500"></div>
-                    <div class="hidden md:block overflow-hidden">
-                        <p class="text-xs text-white font-bold truncate">Admin</p>
-                        <p class="text-[10px] text-green-500">● Online</p>
-                    </div>
+                <h3 class="text-xl font-bold text-gray-100 mb-2 group-hover:text-white transition">{{ note.title }}</h3>
+                <div class="flex-1 overflow-hidden text-sm text-gray-500 md-content relative">
+                    <div v-html="renderMarkdown(note.content)"></div>
+                    <div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-surface to-transparent"></div>
                 </div>
-                <button @click="handleLogout" class="w-full text-left text-xs text-gray-500 hover:text-white px-2 py-1 transition">退出登录</button>
-            </div>
-        </aside>
-
-
-        <main class="flex-1 flex flex-col bg-void overflow-hidden">
-            
-            <header class="h-16 border-b border-white/5 flex justify-between items-center px-6 shrink-0">
-                <h2 class="text-xl font-bold text-white capitalize">{{ categoryNames[currentCategory] }}</h2>
-                <button v-if="isAdmin" @click="openEditor" class="bg-white text-black px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200 transition">
-                    + 新建内容
-                </button>
-            </header>
-
-            <div class="flex-1 overflow-y-auto p-6">
-                <div v-if="currentCategory === 'link'" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <a v-for="note in filteredNotes" :key="note.id" :href="note.link_url" target="_blank" 
-                       class="group bg-card border border-white/5 hover:border-blue-500/50 p-4 rounded-xl transition flex items-center gap-4 relative">
-                        <div class="w-10 h-10 rounded bg-white/5 flex items-center justify-center text-xl group-hover:bg-blue-500 group-hover:text-white transition">🔗</div>
-                        <div class="flex-1 min-w-0">
-                            <h3 class="font-bold text-gray-200 truncate group-hover:text-white">{{ note.title }}</h3>
-                            <p class="text-xs text-gray-600 truncate">{{ note.link_url }}</p>
-                        </div>
-                        <button v-if="isAdmin" @click.prevent="editNote(note)" class="absolute top-2 right-2 text-gray-600 hover:text-white opacity-0 group-hover:opacity-100 px-2">✎</button>
-                    </a>
-                </div>
-
-                <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div v-for="note in filteredNotes" :key="note.id" 
-                         class="group bg-card border border-white/5 rounded-2xl p-6 hover:border-white/20 transition flex flex-col h-64 relative">
-                        <h3 class="text-lg font-bold text-gray-200 mb-2 group-hover:text-white">{{ note.title }}</h3>
-                        <div class="flex-1 overflow-hidden text-sm text-gray-500 md-content relative">
-                            <div v-html="renderMarkdown(note.content)"></div>
-                            <div class="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-card to-transparent"></div>
-                        </div>
-                        <div class="mt-4 flex justify-between items-center border-t border-white/5 pt-3">
-                            <span class="text-xs text-gray-600 font-mono">{{ new Date(note.created_at).toLocaleDateString() }}</span>
-                            <span v-if="!note.is_public" class="text-xs text-yellow-900 bg-yellow-900/20 px-2 py-0.5 rounded">Private</span>
-                        </div>
-                        <button v-if="isAdmin" @click="editNote(note)" class="absolute top-4 right-4 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 p-2 bg-black/50 rounded backdrop-blur">✎ 编辑</button>
-                    </div>
-                </div>
-
-                <div v-if="filteredNotes.length === 0" class="text-center text-gray-700 py-20 flex flex-col items-center">
-                    <div class="text-4xl mb-4 opacity-20">📂</div>
-                    <p>这个分类下还没有内容</p>
+                <div v-if="isAdmin" class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition">
+                    <button @click="editNote(note)" class="p-2 bg-white text-black rounded-full hover:scale-110 transition shadow-lg">✎</button>
                 </div>
             </div>
-        </main>
-    </template>
+        </div>
+    </main>
 
-
-    <div v-if="showAuthModal && !user" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div class="bg-card border border-white/10 p-8 rounded-2xl w-full max-w-sm relative">
+    <div v-if="showAuthModal && !user" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="glass p-8 rounded-2xl w-full max-w-md relative animate-fade-in-up">
             <button @click="showAuthModal = false" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
-            <h2 class="text-2xl font-bold text-white mb-6 text-center">身份验证</h2>
+            <h2 class="text-2xl font-bold text-white mb-6 text-center">{{ isRegisterMode ? '加入社区' : '身份验证' }}</h2>
             <div class="space-y-4">
-                <input v-model="email" type="email" placeholder="Email" class="w-full bg-black border border-white/10 p-3 rounded text-white outline-none focus:border-white/30">
-                <input v-model="password" type="password" placeholder="Password" class="w-full bg-black border border-white/10 p-3 rounded text-white outline-none focus:border-white/30">
-                <button @click="handleAuth" class="w-full bg-white text-black font-bold py-3 rounded hover:bg-gray-200 transition">
-                    {{ isRegisterMode ? '注册管理员' : '登录 Unlock' }}
+                <input v-model="email" type="email" placeholder="Email" class="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-white/50 outline-none">
+                <input v-model="password" type="password" placeholder="Password" class="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-white/50 outline-none">
+                <button @click="handleAuth" class="w-full bg-white text-black font-bold py-3 rounded-lg hover:bg-gray-200 transition">
+                    {{ isRegisterMode ? '立即注册' : '登录 / Unlock' }}
                 </button>
                 <div class="text-center text-xs text-gray-500 mt-4 cursor-pointer hover:text-white" @click="isRegisterMode = !isRegisterMode">
-                    {{ isRegisterMode ? '返回登录' : '没有账号？点击注册' }}
+                    {{ isRegisterMode ? '已有账号？去登录' : '没有账号？点击注册' }}
                 </div>
             </div>
         </div>
     </div>
 
-
-    <div v-if="showEditor" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div class="bg-card w-full max-w-4xl h-[85vh] rounded-2xl border border-white/10 flex flex-col shadow-2xl overflow-hidden">
-            <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-sidebar">
+    <div v-if="showEditor && isAdmin" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
+        <div class="bg-surface w-full max-w-4xl h-[80vh] rounded-2xl border border-white/10 flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-void">
                 <h3 class="text-white font-bold">{{ form.id ? '编辑' : '新建' }}</h3>
-                <div class="flex gap-4 items-center">
-                    <select v-model="form.category" class="bg-black text-gray-300 text-sm border border-white/10 rounded px-2 py-1 outline-none focus:border-white">
-                        <option value="wiki">📚 知识文档</option>
-                        <option value="snippet">⚡ 灵感/代码</option>
-                        <option value="link">🔗 书签链接</option>
-                        <option value="file">🗄️ 文件归档</option>
-                    </select>
-
-                    <label class="flex items-center gap-2 text-sm cursor-pointer select-none text-gray-400">
-                        <input type="checkbox" v-model="form.is_public">
-                        <span>{{ form.is_public ? '🟢 公开' : '🔒 私密' }}</span>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" v-model="form.is_public" class="w-4 h-4">
+                        <span :class="form.is_public ? 'text-green-400' : 'text-gray-500'">{{ form.is_public ? '🟢 公开' : '🔒 私密' }}</span>
                     </label>
-                    <button @click="saveNote" class="bg-white text-black px-4 py-1.5 rounded text-sm font-bold hover:bg-gray-200">保存</button>
-                    <button @click="showEditor = false" class="text-gray-500 hover:text-white">✕</button>
+                    <button @click="closeEditor" class="text-gray-400 hover:text-white">取消</button>
+                    <button @click="saveNote" class="bg-white text-black px-6 py-1.5 rounded-full font-bold hover:bg-gray-200 transition">保存</button>
                 </div>
             </div>
-
-            <div class="flex-1 flex flex-col p-6 gap-4">
-                <input v-model="form.title" placeholder="输入标题..." class="bg-transparent text-2xl font-bold text-white outline-none placeholder-gray-700">
-                
-                <div v-if="form.category === 'link'" class="flex gap-2 items-center bg-black/30 p-2 rounded border border-white/5">
-                    <span class="text-gray-500">🔗 URL:</span>
-                    <input v-model="form.link_url" placeholder="https://example.com" class="flex-1 bg-transparent text-blue-400 outline-none">
+            <div class="flex-1 flex flex-col md:flex-row">
+                <div class="flex-1 p-6 flex flex-col gap-4 border-r border-white/5">
+                    <input v-model="form.title" placeholder="输入标题..." class="bg-transparent text-2xl font-bold text-white outline-none">
+                    <textarea v-model="form.content" placeholder="支持 Markdown..." class="flex-1 bg-void/50 p-4 rounded-lg text-gray-300 font-mono outline-none resize-none border border-white/5 focus:border-white/20"></textarea>
                 </div>
-
-                <textarea v-model="form.content" placeholder="输入内容 (Markdown)..." class="flex-1 bg-black/20 p-4 rounded text-gray-300 font-mono outline-none resize-none border border-white/5 focus:border-white/20"></textarea>
-                
-                <div v-if="form.id" class="flex justify-between items-center">
-                    <span class="text-xs text-gray-600">ID: {{ form.id }}</span>
-                    <button @click="deleteNote" class="text-xs text-red-500 hover:text-red-300">删除此条目</button>
+                <div class="flex-1 p-6 bg-black/20 overflow-y-auto">
+                    <div class="md-content text-gray-300" v-html="renderMarkdown(form.content)"></div>
                 </div>
+            </div>
+            <div v-if="form.id" class="p-4 bg-red-900/10 border-t border-red-900/20 flex justify-between items-center">
+                <span class="text-xs text-red-400">危险区域</span>
+                <button @click="deleteNote" class="text-xs text-red-500 hover:text-red-300 underline">删除此条目</button>
             </div>
         </div>
     </div>
@@ -215,21 +135,43 @@
 </div>
 
 <script>
-    const { createApp, ref, computed, onMounted, reactive, watch } = Vue
-    const { createClient } = supabase // 👈 这里是解构库
+    // 0. 自检逻辑：防止 Vue 和 Supabase 没加载导致白屏
+    if (typeof Vue === 'undefined') alert('❌ Vue 加载失败，请检查网络！');
+    if (typeof supabase === 'undefined') alert('❌ Supabase 库加载失败，请检查网络！');
+
+    const { createApp, ref, computed, onMounted, reactive } = Vue
+    const { createClient } = supabase
 
     // ==========================================
-    // 🔴 检查这里！一定要有引号！
+    // 🔴 必填区：请务必保留引号！不要删！
     // ==========================================
+    
+    // 1. 你的项目地址 (保留单引号)
     const SUPABASE_URL = 'https://fjuxtlzbeeexyczfrqsq.supabase.co'
+    
+    // 2. 你的 Key (保留单引号，不要有空格)
     const SUPABASE_ANON_KEY = 'sb_publishable_1Q5sjgjl5Fmd4-nDlhrFWA_wWYgAUDu'
+
+    // 3. 你的邮箱 (保留单引号)
     const ADMIN_EMAIL = '1493694948@qq.com' 
 
-    // 👇 这里的变量名不要动
-    const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    // ==========================================
+    // 🛑 安全检查：如果你忘了填，我会弹窗提醒你
+    // ==========================================
+    if (SUPABASE_URL.includes('你的项目ID') || SUPABASE_ANON_KEY.includes('你的那一长串')) {
+        alert('🛑 停一下！\n\n你忘记在代码底部填入你自己的 Supabase URL 和 Key 了！\n\n请修改代码最下方的配置。');
+    }
+
+    // 初始化客户端
+    let _supabase = null;
+    try {
+        _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    } catch (e) {
+        alert('❌ 初始化失败：请检查 Key 是否填对了？\n错误信息：' + e.message)
+    }
+
     createApp({
         setup() {
-            // 状态
             const user = ref(null)
             const showAuthModal = ref(false)
             const showEditor = ref(false)
@@ -237,48 +179,22 @@
             const email = ref('')
             const password = ref('')
             const notes = ref([])
-            
-            // 当前选中的分类
-            const currentCategory = ref('wiki') 
-            
-            const categoryNames = {
-                'wiki': '知识文档',
-                'snippet': '灵感与代码',
-                'link': '常用书签',
-                'file': '文件归档'
-            }
-
-            const form = reactive({ id: null, title: '', content: '', is_public: false, category: 'wiki', link_url: '' })
+            const form = reactive({ id: null, title: '', content: '', is_public: false, type: 'note' })
 
             const isAdmin = computed(() => user.value && user.value.email === ADMIN_EMAIL)
 
-            // 计算属性：只显示当前分类下的笔记
-            const filteredNotes = computed(() => {
-                return notes.value.filter(n => n.category === currentCategory.value)
-            })
-
-            // 样式辅助
-            const navClass = (cat) => {
-                return currentCategory.value === cat 
-                    ? 'bg-white text-black font-bold shadow-lg shadow-white/10' 
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
-            }
-
             onMounted(async () => {
+                if(!_supabase) return; // 如果初始化挂了，就不跑了
                 const { data: { session } } = await _supabase.auth.getSession()
                 user.value = session?.user || null
-                if(user.value) fetchNotes()
-
+                fetchNotes()
                 _supabase.auth.onAuthStateChange((_, session) => {
                     user.value = session?.user || null
-                    if (user.value) fetchNotes() // 登录后才拉取数据
-                    else notes.value = []        // 登出后清空数据
+                    fetchNotes()
                 })
             })
 
-            // 核心逻辑：登录后才去拉数据
             const fetchNotes = async () => {
-                if (!user.value) return 
                 const { data } = await _supabase.from('notes').select('*').order('created_at', { ascending: false })
                 if (data) notes.value = data
             }
@@ -290,42 +206,33 @@
                 else showAuthModal.value = false
             }
 
-            const handleLogout = async () => await _supabase.auth.signOut()
+            const handleLogout = async () => { await _supabase.auth.signOut() }
 
-            const openEditor = () => {
-                // 新建时，默认分类为当前所在的分类
-                Object.assign(form, { id: null, title: '', content: '', is_public: false, category: currentCategory.value, link_url: '' })
-                showEditor.value = true
-            }
-
+            const openEditor = () => { Object.assign(form, { id: null, title: '', content: '', is_public: false, type: 'note' }); showEditor.value = true; }
             const editNote = (note) => { Object.assign(form, note); showEditor.value = true; }
+            const closeEditor = () => showEditor.value = false
 
             const saveNote = async () => {
                 if (!form.title) return alert('标题必填')
                 const payload = { ...form, user_id: user.value.id }
                 delete payload.id
-                
                 if (form.id) await _supabase.from('notes').update(payload).eq('id', form.id)
                 else await _supabase.from('notes').insert(payload)
-                
                 showEditor.value = false; fetchNotes();
             }
 
             const deleteNote = async () => {
-                if(confirm('确定删除?')) { await _supabase.from('notes').delete().eq('id', form.id); showEditor.value = false; fetchNotes(); }
+                if(confirm('删除?')) { await _supabase.from('notes').delete().eq('id', form.id); showEditor.value = false; fetchNotes(); }
             }
 
             const renderMarkdown = (text) => text ? marked.parse(text) : ''
 
             return {
-                user, isAdmin, showAuthModal, showEditor, isRegisterMode, email, password, 
-                currentCategory, categoryNames, filteredNotes, navClass,
-                form, handleAuth, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown
+                user, isAdmin, showAuthModal, showEditor, isRegisterMode, email, password, notes, form,
+                handleAuth, handleLogout, openEditor, editNote, saveNote, deleteNote, renderMarkdown, closeEditor
             }
         }
     }).mount('#app')
 </script>
 </body>
 </html>
-
-
