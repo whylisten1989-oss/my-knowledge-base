@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindForge Knowledge Base</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+
+    <link rel="stylesheet" href="css/global.css">
+    
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' } } } }
+    </script>
+
+    <style>
+        /* 1. 分类胶囊导航 */
+        .category-pill {
+            padding: 6px 20px; border-radius: 99px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s;
+            cursor: pointer; border: 1px solid transparent;
+        }
+        .dark .category-pill.inactive { color: #666; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); }
+        .dark .category-pill.inactive:hover { color: #fff; border-color: rgba(255,255,255,0.2); }
+        .dark .category-pill.active { color: #000; background: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.3); font-weight: 900; }
+        
+        html:not(.dark) .category-pill.inactive { color: #888; background: #f1f1f1; }
+        html:not(.dark) .category-pill.active { color: #fff; background: #000; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        /* 2. Quill.js 沉浸式样式重写 */
+        .ql-container {
+            font-family: 'Microsoft YaHei', sans-serif !important;
+            font-size: 16px !important;
+            border: none !important; 
+        }
+        .ql-toolbar {
+            border: none !important;
+            border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+            padding: 12px 24px !important;
+        }
+        .dark .ql-toolbar { background: #0a0a0a !important; }
+        html:not(.dark) .ql-toolbar { border-bottom: 1px solid rgba(0,0,0,0.05) !important; background: #fff !important; }
+        
+        .ql-editor {
+            padding: 40px 60px !important; 
+            line-height: 1.8 !important; 
+            color: #e5e7eb;
+            min-height: 80vh; 
+            background-color: transparent !important; 
+            text-align: left !important;
+        }
+        .dark .ql-editor { color: #e5e7eb; }
+        html:not(.dark) .ql-editor { color: #1f2937; }
+
+        /* 标题和代码块美化 (增强块级感) */
+        .ql-editor h1 { font-size: 2em; font-weight: 800; margin-top: 2em; margin-bottom: 0.5em; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .ql-editor h2 { font-size: 1.5em; font-weight: 700; margin-top: 1.5em; margin-bottom: 0.5em; color: #3b82f6; }
+        .ql-syntax {
+            background: #1e1e1e !important; color: #d4d4d4 !important;
+            border-radius: 8px; padding: 15px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 13px;
+            margin-top: 1em; margin-bottom: 1em;
+        }
+
+        /* 查看模式的排版容器 */
+        .read-mode-content {
+            padding: 40px 60px;
+            line-height: 1.8;
+            color: #e5e7eb;
+            text-align: left; /* 强制左对齐 */
+        }
+        .dark .read-mode-content { color: #e5e7eb; }
+        html:not(.dark) .read-mode-content { color: #1f2937; }
+        .read-mode-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0; }
+
+        /* 🟢 修复 1: Private Toggle 居中 */
+        .toggle-label {
+            top: 1px !important; /* 强制下移，解决被遮挡的问题 */
+        }
+        
+        /* 3. 全屏抽屉 (保持 V6.x 架构) */
+        .editor-drawer {
+            position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: 1000px;
+            z-index: 100; transform: translateX(100%); 
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; flex-direction: column;
+            box-shadow: -20px 0 50px rgba(0,0,0,0.5);
+        }
+        .dark .editor-drawer { background: #0a0a0a; border-left: 1px solid rgba(255,255,255,0.1); }
+        .editor-drawer.open { transform: translateX(0); }
+
+        /* 4. 标题输入 */
+        .doc-title-input {
+            font-size: 36px; font-weight: 900; background: transparent; border: none; outline: none;
+            width: 100%; margin-bottom: 30px; line-height: 1.2; letter-spacing: -1px;
+        }
+        .dark .doc-title-input { color: white; } .dark .doc-title-input::placeholder { color: #333; }
+        
+        /* 列表卡片 (恢复 Hover 光效) */
+        .wiki-card {
+            border-radius: 16px; position: relative; overflow: hidden; cursor: pointer; transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        .dark .wiki-card { background: rgba(20,20,20,0.6); border-color: rgba(255,255,255,0.05); }
+        .dark .wiki-card:hover { transform: translateY(-4px); border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 15px 40px rgba(59, 130, 246, 0.2); }
+        html:not(.dark) .wiki-card { background: #fff; border-color: rgba(0,0,0,0.05); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        html:not(.dark) .wiki-card:hover { transform: translateY(-4px); border-color: rgba(0,0,0,0.1); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+    
+        /* 修复 4: 返回/编辑按钮 (主题蓝底色) */
+        .btn-nav-action {
+            display: flex; align-items: center; justify-content: center;
+            padding: 8px 16px; border-radius: 99px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; background: transparent;
+        }
+        .btn-nav-action:hover {
+            color: #000; background: #fff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+        .btn-nav-action.edit-mode {
+            background: #3b82f6; border-color: #3b82f6; color: white;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+        }
+        html:not(.dark) .btn-nav-action.edit-mode {
+            background: #3b82f6; color: white;
+        }
+    </style>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200">
+
+<script src="js/config.js"></script>
+
+<div id="app" v-cloak class="h-full w-full flex relative z-10">
+
+    <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+        <div>
+            <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
+                <span class="text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">WIKI</span></span>
+            </div>
+            <nav class="p-4 space-y-6">
+                <div>
+                    <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">System Core</div>
+                    <a href="index.html" class="nav-item w-full text-left block p-3 mb-1 text-xs">System Home 主页</a>
+                    <a href="finance.html" class="nav-item w-full text-left block p-3 mb-1 text-xs">Finance 金融</a>
+                    <button class="nav-item w-full text-left block p-3 text-xs active">Knowledge Base 知识库</button>
+                </div>
+                <div>
+                    <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">Tags / 标签</div>
+                    <div class="space-y-1 pl-2">
+                        <template v-for="tag in currentSubCategories" :key="tag">
+                            <div :class="['flex items-center justify-between p-2 rounded-md transition cursor-pointer text-xs group', currentSub === tag ? 'bg-gray-200 dark:bg-white/20 text-black dark:text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10']">
+                                <span @click="currentSub = tag">
+                                    {{ tag === '默认' ? '主文档' : tag }}
+                                </span>
+                                <button v-if="tag !== '全部' && tag !== '默认'" @click.stop="deleteCategory(tag)" class="text-red-500 opacity-70 group-hover:opacity-100 text-[10px] ml-2">Delete</button>
+                            </div>
+                        </template>
+                        <button @click="addCategory" class="w-full text-left text-[10px] text-gray-500 hover:text-black dark:hover:text-white py-2 px-2 border-dashed border-gray-400 dark:border-gray-600 rounded-md transition">+ Add New Tag 新建标签</button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+        <div class="p-6 border-t border-gray-200 dark:border-white/5">
+            <div class="text-[10px] text-gray-500 font-mono">ENCRYPTED STORAGE</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col bg-transparent relative overflow-hidden w-full pl-4 pt-4 no-scroll-x">
+        
+        <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 cyber-card z-50 sticky top-0 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg !overflow-visible">
+            <div class="flex items-center gap-6 overflow-hidden">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-2xl">☰</button>
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-[0.2em] whitespace-nowrap">Knowledge Center 知识中心</span>
+            </div>
+
+            <div class="flex items-center gap-4 shrink-0">
+                <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                    <span v-if="isDark">☀</span><span v-else>☾</span>
+                </button>
+                <button @click="createNote" class="btn-cyber text-black dark:text-white border-gray-300 dark:border-white/20 rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black">
+                    + New Doc 新建
+                </button>
+            </div>
+        </header>
+
+        <div class="flex justify-center gap-3 mb-6 shrink-0 animate-fade-in">
+            <button @click="switchCategory('wiki')" :class="['category-pill', currentCategory === 'wiki' ? 'active' : 'inactive']">Wiki 知识库</button>
+            <button @click="switchCategory('idea')" :class="['category-pill', currentCategory === 'idea' ? 'active' : 'inactive']">Idea 灵感</button>
+            <button @click="switchCategory('blog')" :class="['category-pill', currentCategory === 'blog' ? 'active' : 'inactive']">Blog 博客</button>
+            <button @click="switchCategory('file')" :class="['category-pill', currentCategory === 'file' ? 'active' : 'inactive']">File 文件</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto pr-4 pb-4 relative z-10 custom-scroll">
+            <div v-if="filteredNotes.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-2">
+                <div v-for="note in filteredNotes" :key="note.id" @click="viewNote(note)" class="wiki-card p-6 flex flex-col h-64 group">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-[10px] font-mono text-gray-400 uppercase tracking-widest bg-gray-100 dark:bg-white/5 px-2 py-1 rounded">{{ note.sub_category === '默认' ? '主文档' : note.sub_category }}</span>
+                        <span v-if="!note.is_public" class="w-2 h-2 rounded-full bg-red-500"></span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white line-clamp-2 mb-3 leading-tight group-hover:text-blue-500 transition">{{ note.title }}</h3>
+                    <div class="flex-1 overflow-hidden relative">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-4 opacity-80">{{ getSummary(note.content) }}</p>
+                        <div class="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white dark:from-[#141414] to-transparent"></div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-200 dark:border-white/5 flex justify-between items-center text-[10px] text-gray-400">
+                        <span>{{ formatTime(note.updated_at || note.created_at) }}</span>
+                        <span class="group-hover:translate-x-1 transition">OPEN →</span>
+                    </div>
+                </div>
+            </div>
+            <div v-else class="flex flex-col items-center justify-center h-64 text-gray-400 dark:text-gray-700 opacity-50">
+                <p class="text-xs font-bold tracking-[0.2em] uppercase">No Documents Found</p>
+            </div>
+        </div>
+    </main>
+
+    <div :class="['editor-drawer', isEditing ? 'open' : '']">
+        <div class="h-16 flex justify-between items-center px-8 border-b border-gray-200 dark:border-white/10 shrink-0 bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur">
+            <button @click="closeEditor" class="btn-nav-action flex items-center gap-2 group">
+                <span class="text-lg group-hover:-translate-x-1 transition">←</span> <span class="uppercase">Back 返回</span>
+            </button>
+            
+            <div class="flex items-center gap-6">
+                <span v-if="saveStatus" class="text-[10px] text-green-500 font-mono animate-pulse">{{ saveStatus }}</span>
+                
+                <div class="flex items-center gap-3 border-r border-gray-200 dark:border-white/10 pr-6">
+                    <span :class="['text-[10px] font-bold uppercase tracking-wider', form.is_public ? 'text-green-500' : 'text-red-500']">{{ form.is_public ? 'Public 公开' : 'Private 私密' }}</span>
+                    <div class="relative inline-block w-8 h-4 align-middle select-none">
+                        <input type="checkbox" v-model="form.is_public" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                        <label @click="form.is_public = !form.is_public" class="toggle-label block overflow-hidden h-4 rounded-full bg-gray-700 cursor-pointer w-8"></label>
+                    </div>
+                </div>
+
+                <button v-if="editorMode === 'view'" @click="startEdit" :class="['btn-nav-action', 'edit-mode']">
+                    Edit Doc 编辑
+                </button>
+                <button v-if="editorMode === 'edit' || editorMode === 'new'" @click="saveNote" class="btn-cyber bg-black text-white dark:bg-white dark:text-black shadow-lg">
+                    Save 保存
+                </button>
+                <button v-if="editorMode === 'edit'" @click="cancelEdit" class="text-gray-500 hover:text-black dark:hover:text-white text-xs font-bold uppercase">
+                    Cancel 取消
+                </button>
+
+                <button v-if="form.id && editorMode === 'view'" @click="deleteNote(form.id)" class="text-red-500 hover:text-red-400 text-xs font-bold uppercase">Delete 删除</button>
+
+            </div>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto custom-scroll bg-gray-50 dark:bg-[#0a0a0a]">
+            <div class="max-w-4xl mx-auto py-20 px-8 md:px-12">
+                <input v-model="form.title" class="doc-title-input" placeholder="Untitled Document..." :disabled="editorMode === 'view'">
+                
+                <div class="mb-8 p-4 rounded-lg bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                    <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Document Tag / 文档标签</div>
+                    <div class="flex flex-wrap gap-2">
+                        <span :class="['px-3 py-1 rounded-full text-xs font-bold transition', currentSub === '全部' || currentSub === '主文档' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-black dark:text-white']">
+                            {{ currentCategory }} / {{ form.sub_category === '默认' ? '主文档' : form.sub_category }}
+                        </span>
+                        <select v-if="editorMode !== 'view'" v-model="form.sub_category" class="text-xs py-1 px-2 rounded-lg bg-white dark:bg-gray-800 border dark:border-gray-700 outline-none cursor-pointer">
+                            <option v-for="tag in currentSubCategories" :value="tag === '主文档' ? '默认' : tag">
+                                {{ tag === '默认' ? '主文档' : tag }}
+                            </option>
+                        </select>
+                        <span v-else class="text-xs text-gray-400 mt-1"> (切换模式以修改)</span>
+                    </div>
+                </div>
+
+                <div v-if="editorMode === 'view'" class="read-mode-content" v-html="initialContentToLoad"></div>
+                
+                <div v-if="editorMode === 'edit' || editorMode === 'new'" id="editorjs"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted, reactive, nextTick, watch } = Vue
+
+    createApp({
+        setup() {
+            if (!window._supabase) { console.error("Config Error"); return {}; }
+            const _supabase = window._supabase; 
+            
+            const isDark = ref(true)
+            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
+            const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
+
+            const mobileMenuOpen = ref(false)
+            const user = ref(null)
+            const notes = ref([])
+            const currentCategory = ref('wiki')
+            const currentSub = ref('全部')
+            // 🟢 修复 6: 标签管理 (将 '默认' 标签放入数组中，方便显示 '主文档')
+            const categories = reactive({ 'wiki': ['全部', '主文档'], 'idea': ['全部', '主文档'], 'blog': ['全部', '主文档'], 'file': ['全部', '主文档'] })
+            
+            const isEditing = ref(false) 
+            const editorMode = ref('view'); 
+            const form = reactive({ id: null, title: '', is_public: false, sub_category: '默认' }); // 确保 form 有 sub_category
+            const saveStatus = ref('');
+            
+            let quill = null; 
+            const initialContentToLoad = ref(''); 
+
+            // 🟢 Quill 初始化逻辑
+            const initQuill = (content = '') => {
+                if (quill) {
+                    quill = null;
+                    document.getElementById('editorjs').innerHTML = '';
+                }
+
+                nextTick(() => {
+                    const container = document.getElementById('editorjs');
+                    if (container) {
+                        const editorDiv = document.createElement('div');
+                        container.appendChild(editorDiv);
+                        
+                        quill = new Quill(editorDiv, {
+                            theme: 'snow',
+                            placeholder: 'Start writing...',
+                            modules: {
+                                toolbar: [
+                                    [{ 'header': [1, 2, 3, false] }],
+                                    ['bold', 'italic', 'underline', 'strike', 'blockquote', 'code-block'],
+                                    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }], 
+                                    [{ 'color': [] }, { 'background': [] }],
+                                    ['link', 'image', 'video', 'clean']
+                                ]
+                            }
+                        });
+
+                        // 加载内容
+                        try {
+                            const delta = JSON.parse(content);
+                            if (delta.ops) { 
+                                quill.setContents(delta);
+                            } else {
+                                quill.root.innerHTML = content; 
+                            }
+                        } catch (e) {
+                            quill.root.innerHTML = content; 
+                        }
+                    }
+                });
+            }
+
+            // 🟢 Watcher 驱动 Quill 初始化
+            watch(editorMode, (newMode) => {
+                if (newMode === 'edit' || newMode === 'new') {
+                    isEditing.value = true;
+                    initQuill(initialContentToLoad.value);
+                } else {
+                    if (quill) {
+                        document.getElementById('editorjs').innerHTML = '';
+                        quill = null;
+                    }
+                }
+            });
+
+
+            const fetchNotes = async () => {
+                const { data } = await _supabase.from('notes').select('*').neq('category', 'profile').neq('category', 'changelog').order('created_at', { ascending: false });
+                if (data) {
+                    notes.value = data;
+                    // 🟢 修复 6: 动态填充标签列表
+                    const subs = {};
+                    data.forEach(n => {
+                        if (n.sub_category && n.sub_category !== '默认' && !subs[n.category]) {
+                            subs[n.category] = new Set();
+                        }
+                        if (n.sub_category && n.sub_category !== '默认') {
+                            subs[n.category].add(n.sub_category);
+                        }
+                    });
+
+                    Object.keys(categories).forEach(cat => {
+                        categories[cat] = ['全部', '主文档'];
+                        if (subs[cat]) {
+                            subs[cat].forEach(tag => categories[cat].push(tag));
+                        }
+                    });
+                }
+            }
+
+            onMounted(async () => {
+                const { data: { session } } = await _supabase.auth.getSession();
+                if(session) { user.value = session.user; fetchNotes(); }
+                else { window.location.href = 'login.html'; }
+            })
+
+            const switchCategory = (cat) => { currentCategory.value = cat; currentSub.value = '全部'; mobileMenuOpen.value = false; }
+            // 🟢 修复 6: 列表只显示非 '全部' 和 '主文档' 的标签
+            const currentSubCategories = computed(() => categories[currentCategory.value].filter(tag => tag !== '全部'))
+            
+            const filteredNotes = computed(() => notes.value.filter(n => {
+                const matchesCategory = n.category === currentCategory.value;
+                if (!matchesCategory) return false;
+                
+                if (currentSub.value === '全部') return true;
+                
+                // 过滤主文档
+                if (currentSub.value === '主文档') return n.sub_category === '默认';
+                
+                return n.sub_category === currentSub.value;
+            }))
+
+            // 🟢 流程：新建 -> 开启编辑模式
+            const createNote = () => { 
+                Object.assign(form, { id: null, title: '', is_public: false, sub_category: '默认' }); // 新建默认主文档
+                initialContentToLoad.value = ''; 
+                editorMode.value = 'new';
+            }
+
+            // 🟢 流程：列表点击 -> 开启查看模式
+            const viewNote = (note) => { 
+                Object.assign(form, { id: note.id, title: note.title, is_public: note.is_public, sub_category: note.sub_category || '默认' });
+                initialContentToLoad.value = note.content; 
+                editorMode.value = 'view';
+                isEditing.value = true;
+            }
+            
+            // 🟢 流程：查看页面点击 Edit -> 开启编辑模式
+            const startEdit = () => {
+                editorMode.value = 'edit';
+            }
+            
+            // 🟢 流程：取消编辑 -> 回到查看模式 (如果 ID 存在)
+            const cancelEdit = () => {
+                if (form.id) {
+                    editorMode.value = 'view';
+                    // 重新加载原始内容以覆盖未保存的编辑
+                    const note = notes.value.find(n => n.id === form.id);
+                    if (note) initialContentToLoad.value = note.content;
+                } else {
+                    closeEditor(); // 新建文档取消，直接关闭
+                }
+            }
+
+            // 🟢 流程：关闭抽屉 -> 返回列表 (不区分模式)
+            const closeEditor = () => { 
+                isEditing.value = false; 
+                editorMode.value = 'view'; 
+                saveStatus.value = ''; 
+            }
+            
+            const saveNote = async () => {
+                if(!form.title) return alert('Please enter a title'); 
+                saveStatus.value = 'Saving...';
+                
+                if (!quill) {
+                    saveStatus.value = 'Error: Editor not initialized.';
+                    console.error("Quill not initialized. Cannot save.");
+                    return;
+                }
+                
+                const contentStr = quill.root.innerHTML; 
+                
+                // 🟢 修复 2: 如果内容为空 HTML，强制存为空字符串
+                const finalContent = contentStr === '<p><br></p>' ? '' : contentStr;
+
+                const payload = { 
+                    user_id: user.value.id, 
+                    title: form.title, 
+                    content: finalContent, 
+                    category: currentCategory.value, 
+                    is_public: form.is_public, 
+                    // 存储 sub_category: 如果是 '主文档' 则存为 '默认'，否则存入实际标签
+                    sub_category: form.sub_category === '主文档' ? '默认' : form.sub_category 
+                };
+
+                if(form.id) { 
+                    delete payload.user_id; 
+                    await _supabase.from('notes').update(payload).eq('id', form.id) 
+                } else { 
+                    const { data } = await _supabase.from('notes').insert(payload).select();
+                    if(data && data.length > 0) form.id = data[0].id; 
+                } 
+                
+                saveStatus.value = 'Saved';
+                setTimeout(() => saveStatus.value = '', 2000);
+                fetchNotes();
+                
+                // 🟢 修复 5: 保存后自动跳转回查看模式
+                editorMode.value = 'view';
+                initialContentToLoad.value = finalContent; // 更新查看内容
+            }
+
+            const deleteNote = async (id) => { 
+                if (!id) return alert('Error: No document ID to delete.');
+                if(confirm('Delete this document?')) { 
+                    await _supabase.from('notes').delete().eq('id', id); 
+                    closeEditor(); 
+                    fetchNotes(); 
+                } 
+            }
+            
+            const addCategory = () => { 
+                const n = prompt("New Tag Name:"); 
+                if(n && n.trim() !== '' && !categories[currentCategory.value].includes(n.trim())) {
+                    categories[currentCategory.value].push(n.trim());
+                    // 立即将新标签添加到当前文档
+                    form.sub_category = n.trim();
+                }
+            }
+            
+            // 🟢 修复 6: 删除标签逻辑
+            const deleteCategory = async (tag) => {
+                 if (tag === '全部' || tag === '主文档') return;
+                if(confirm(`Confirm deletion of tag "${tag}"?`)) { 
+                    // 1. 从 Vue 列表中移除
+                    const idx = categories[currentCategory.value].indexOf(tag); 
+                    if (idx > -1) categories[currentCategory.value].splice(idx, 1);
+                    
+                    // 2. 检查数据库中是否有文档使用该标签，并将其重置为 '默认'
+                    const { data, error } = await _supabase.from('notes')
+                        .update({ sub_category: '默认' })
+                        .eq('category', currentCategory.value)
+                        .eq('sub_category', tag);
+                        
+                    if (!error) {
+                         fetchNotes();
+                         // 如果当前选中的标签被删除了，切换回 '全部'
+                         if (currentSub.value === tag) currentSub.value = '全部';
+                    } else {
+                        console.error("Error updating notes:", error);
+                    }
+                } 
+            }
+            
+            const getSummary = (content) => {
+                if (!content) return 'Empty Doc';
+                const tmp = document.createElement("DIV"); 
+                tmp.innerHTML = content; 
+                return tmp.textContent || tmp.innerText || "Empty Doc";
+            }
+            const formatTime = (ts) => new Date(ts).toLocaleDateString()
+
+            return { 
+                user, notes, currentCategory, currentSub, mobileMenuOpen, isEditing, editorMode, form, saveStatus,
+                currentSubCategories, filteredNotes, isDark, toggleTheme,
+                createNote, viewNote, closeEditor, saveNote, deleteNote, addCategory, deleteCategory, getSummary, formatTime, switchCategory, startEdit, cancelEdit, initialContentToLoad
+            }
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>

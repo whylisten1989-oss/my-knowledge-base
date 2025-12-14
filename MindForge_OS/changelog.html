@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MindForge Changelog</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="css/global.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' },
+                    // 🟢 核心修改：将微软雅黑设为首选，并移除了 JetBrains Mono
+                    fontFamily: { 
+                        sans: ['"Microsoft YaHei"', '"PingFang SC"', 'sans-serif'],
+                        mono: ['"Microsoft YaHei"', 'monospace'] // 即使写了 font-mono 也强制用雅黑，保持统一
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 胶囊时间轴 */
+        .log-capsule { display: flex; gap: 24px; position: relative; padding-bottom: 48px; }
+        .log-capsule::before {
+            content: ''; position: absolute; left: 40px; top: 40px; bottom: 0; width: 2px;
+            background: linear-gradient(to bottom, rgba(59, 130, 246, 0.3), transparent); z-index: 0;
+        }
+        .log-capsule:last-child::before { display: none; }
+
+        /* 左侧日期胶囊 */
+        .date-pill {
+            flex-shrink: 0; width: 80px; height: 80px; border-radius: 18px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; position: relative; transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(20, 20, 20, 0.8);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        html:not(.dark) .date-pill { background: #fff; border-color: rgba(0,0,0,0.1); }
+        .date-pill:hover { transform: scale(1.05); border-color: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+
+        .pill-month { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #3b82f6; letter-spacing: 1px; }
+        .pill-day { font-size: 32px; font-weight: 900; line-height: 1; margin: 2px 0; letter-spacing: -1px; }
+        .pill-year { font-size: 10px; color: #666; font-weight: 600; }
+
+        /* 右侧内容卡片 */
+        .content-box {
+            flex: 1; padding: 24px; border-radius: 18px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
+            transition: all 0.3s;
+        }
+        html:not(.dark) .content-box { background: #fff; border-color: rgba(0,0,0,0.05); box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+        .content-box:hover { transform: translateX(5px); border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.05); }
+
+        /* 版本标签 */
+        .version-tag {
+            display: inline-block; padding: 4px 12px; border-radius: 6px;
+            font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            background: #3b82f6; color: #fff; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200">
+
+<script src="js/config.js"></script>
+
+<div class="fixed inset-0 pointer-events-none z-0 transition-opacity duration-1000">
+    <div class="absolute inset-0 opacity-0 dark:opacity-100 transition-opacity duration-1000">
+        <div class="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-900/10 blur-[150px] rounded-full"></div>
+    </div>
+</div>
+
+<div id="app" v-cloak class="h-full w-full flex relative z-10">
+
+    <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+        <div>
+            <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
+                <span class="text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">DEV LOG</span></span>
+            </div>
+            <nav class="p-4 space-y-6">
+                <div>
+                    <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">Core</div>
+                    <a href="index.html" class="nav-item w-full text-left block p-3 mb-1 text-xs">System Home 主页</a>
+                    <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs">Finance 金融</a>
+                </div>
+            </nav>
+        </div>
+        <div class="p-6 border-t border-gray-200 dark:border-white/5">
+            <div class="text-[10px] text-gray-500 font-mono">SECURE CONNECTION</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col bg-transparent relative w-full pl-4 pt-4 no-scroll-x">
+        
+        <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 cyber-card z-50 sticky top-0 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
+            <div class="flex items-center gap-6">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-2xl">☰</button>
+                <span class="text-xs font-bold text-gray-500 uppercase tracking-[0.2em]">Development Timeline / 开发日志</span>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                    <span v-if="isDark">☀</span><span v-else>☾</span>
+                </button>
+                <button @click="openModal" class="btn-cyber text-black dark:text-white border-gray-300 dark:border-white/20 rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black">
+                    + New Log 新日志
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto pr-4 pb-4 relative z-10 custom-scroll">
+            <div class="max-w-4xl mx-auto pt-8 pb-20">
+                
+                <div v-if="logs.length === 0" class="text-center text-gray-500 py-20">INITIALIZING TIMELINE...</div>
+
+                <div v-for="log in logs" :key="log.id" class="log-capsule animate-slide-down">
+                    <div class="date-pill">
+                        <span class="pill-month">{{ new Date(log.created_at).toLocaleString('en-US', { month: 'short' }) }}</span>
+                        <span class="pill-day text-black dark:text-white">{{ new Date(log.created_at).getDate() }}</span>
+                        <span class="pill-year">{{ new Date(log.created_at).getFullYear() }}</span>
+                    </div>
+                    
+                    <div class="content-box">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="version-tag">{{ log.title }}</span>
+                            <span class="text-[10px] text-gray-400 font-bold bg-white/5 px-2 py-1 rounded">
+                                {{ log.sub_category || 'UPDATE' }}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-700 dark:text-gray-300 leading-loose tracking-wide whitespace-pre-wrap">
+                            {{ log.content }}
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 dark:bg-black/90 p-4 backdrop-blur-md animate-fade-in">
+        <div class="cyber-card w-full max-w-md p-8 shadow-2xl relative bg-white dark:bg-[#0a0a0a]">
+            <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white">✕</button>
+            <h2 class="text-xl font-black text-black dark:text-white mb-6 tracking-tighter">COMMIT NEW LOG <span class="text-xs font-normal text-gray-500 ml-2">发布新日志</span></h2>
+            
+            <div class="space-y-5">
+                <div class="space-y-1">
+                    <label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Version / Title (版本/标题)</label>
+                    <input v-model="form.title" type="text" placeholder="e.g. v5.2 Font Update" class="cyber-input">
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Tag (标签)</label>
+                    <input v-model="form.sub_category" type="text" placeholder="e.g. UI / FIX" class="cyber-input uppercase">
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Date (日期)</label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <select v-model="formYear" class="cyber-input p-2 text-xs text-center cursor-pointer appearance-none">
+                                <option v-for="y in 5" :key="y" :value="2023 + y">{{ 2023 + y }}</option>
+                            </select>
+                        </div>
+                        <div class="relative flex-1">
+                            <select v-model="formMonth" class="cyber-input p-2 text-xs text-center cursor-pointer appearance-none">
+                                <option v-for="m in 12" :key="m" :value="m">{{ m }}月</option>
+                            </select>
+                        </div>
+                        <div class="relative flex-1">
+                            <select v-model="formDay" class="cyber-input p-2 text-xs text-center cursor-pointer appearance-none">
+                                <option v-for="d in daysInFormMonth" :key="d" :value="d">{{ d }}日</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Details (详细内容)</label>
+                    <textarea v-model="form.content" class="cyber-input h-32" placeholder="Describe changes..."></textarea>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 mt-8"><button @click="saveLog" class="flex-1 btn-cyber rounded-lg w-full bg-black text-white dark:bg-white dark:text-black">PUSH TO DB 发布</button></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, onMounted, reactive, computed, watch } = Vue
+
+    createApp({
+        setup() {
+            if (!window._supabase) { console.error("Config Error"); return {}; }
+            const _supabase = window._supabase; 
+
+            // 日夜模式
+            const isDark = ref(true)
+            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
+            const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
+
+            const mobileMenuOpen = ref(false)
+            const showModal = ref(false)
+            const logs = ref([])
+            const user = ref(null)
+
+            // 日期逻辑
+            const now = new Date()
+            const formYear = ref(now.getFullYear())
+            const formMonth = ref(now.getMonth() + 1)
+            const formDay = ref(now.getDate())
+
+            const form = reactive({ title: '', content: '', sub_category: '' })
+
+            // 动态计算天数
+            const daysInFormMonth = computed(() => new Date(formYear.value, formMonth.value, 0).getDate())
+            watch([formYear, formMonth], () => { 
+                const max = new Date(formYear.value, formMonth.value, 0).getDate(); 
+                if(formDay.value > max) formDay.value = max; 
+            })
+
+            const fetchLogs = async () => {
+                const { data } = await _supabase
+                    .from('notes')
+                    .select('*')
+                    .eq('category', 'changelog')
+                    .order('created_at', { ascending: false });
+                if (data) logs.value = data;
+            }
+
+            const openModal = () => {
+                form.title = ''; form.content = ''; form.sub_category = 'UPDATE'; 
+                const d = new Date();
+                formYear.value = d.getFullYear(); formMonth.value = d.getMonth() + 1; formDay.value = d.getDate();
+                showModal.value = true;
+            }
+
+            const saveLog = async () => {
+                if (!form.title || !form.content) return alert('Please fill all fields 请填写完整');
+                
+                const dStr = `${formYear.value}-${formMonth.value<10?'0'+formMonth.value:formMonth.value}-${formDay.value<10?'0'+formDay.value:formDay.value}`;
+                const created_at = new Date(dStr).toISOString();
+
+                const { error } = await _supabase.from('notes').insert({
+                    user_id: user.value.id,
+                    title: form.title,
+                    content: form.content,
+                    sub_category: form.sub_category,
+                    category: 'changelog',
+                    created_at: created_at, 
+                    is_public: true
+                });
+
+                if (!error) { showModal.value = false; fetchLogs(); }
+                else alert(error.message);
+            }
+
+            onMounted(async () => {
+                const { data: { session } } = await _supabase.auth.getSession();
+                if(session) { user.value = session.user; fetchLogs(); }
+            })
+
+            return { 
+                mobileMenuOpen, logs, showModal, form, user,
+                formYear, formMonth, formDay, daysInFormMonth,
+                isDark, toggleTheme, openModal, saveLog
+            }
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>

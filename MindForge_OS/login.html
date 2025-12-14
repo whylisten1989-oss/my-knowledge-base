@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindForge Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/global.css">
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' } } } }
+    </script>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark h-screen flex items-center justify-center overflow-hidden transition-colors duration-500">
+
+<script src="js/config.js"></script>
+
+<div class="fixed inset-0 pointer-events-none z-0">
+    <div class="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-900/10 blur-[150px] rounded-full animate-pulse"></div>
+</div>
+
+<div id="app" v-cloak class="w-full max-w-sm px-4 relative z-10">
+    
+    <div class="cyber-card p-10 shadow-2xl relative bg-white dark:bg-[#0a0a0a]">
+        <div class="mb-10 text-center">
+            <h1 class="text-3xl font-black mb-2 text-black dark:text-white tracking-tighter cyber-logo">MindForge OS</h1>
+            <p class="text-gray-500 text-[10px] font-bold tracking-[0.4em] uppercase">System Access Control</p>
+        </div>
+        
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <label class="text-[10px] text-gray-500 uppercase font-bold">Identity</label>
+                <input v-model="email" type="email" class="cyber-input" placeholder="Email">
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] text-gray-500 uppercase font-bold">Passcode</label>
+                <input v-model="password" type="password" class="cyber-input" placeholder="Password">
+            </div>
+            
+            <button @click="handleLogin" class="w-full btn-cyber mt-4 bg-black text-white dark:bg-white dark:text-black rounded-lg">
+                <span v-if="loading">CONNECTING...</span>
+                <span v-else>LOGIN</span>
+            </button>
+            
+            <div class="text-center pt-2">
+                <button @click="handleRegister" class="text-[10px] font-bold text-gray-400 hover:text-black dark:hover:text-white uppercase transition">Register New ID</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, onMounted } = Vue
+
+    createApp({
+        setup() {
+            if (!window._supabase) return {};
+            const _supabase = window._supabase;
+            const email = ref('');
+            const password = ref('');
+            const loading = ref(false);
+
+            // 检查日夜模式
+            if (localStorage.getItem('theme') === 'light') document.documentElement.classList.remove('dark');
+
+            onMounted(async () => {
+                // 如果已登录，直接跳主页
+                const { data: { session } } = await _supabase.auth.getSession();
+                if(session) window.location.href = 'index.html';
+            });
+
+            const handleLogin = async () => {
+                loading.value = true;
+                const { error } = await _supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+                if (error) alert(error.message);
+                else window.location.href = 'index.html';
+                loading.value = false;
+            }
+
+            const handleRegister = async () => {
+                const { error } = await _supabase.auth.signUp({ email: email.value, password: password.value });
+                if (error) alert(error.message);
+                else alert('Registration successful! Please login.');
+            }
+
+            return { email, password, loading, handleLogin, handleRegister }
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>
