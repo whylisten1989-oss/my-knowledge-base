@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MindForge Finance (V5.0)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="css/global.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' },
+                    fontFamily: { sans: ['"JetBrains Mono"', '"Microsoft YaHei"', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 🆕 1. Log 列表新样式：悬浮胶囊 */
+        .log-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; margin-bottom: 8px;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        
+        /* 暗黑模式 Log */
+        .dark .log-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+        .dark .log-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.01);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* 日光模式 Log */
+        html:not(.dark) .log-item {
+            background: #fff;
+            border-color: rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        html:not(.dark) .log-item:hover {
+            border-color: rgba(0, 0, 0, 0.1);
+            transform: scale(1.01);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        /* 🆕 2. Log 图标底座 */
+        .log-icon-box {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: bold; margin-right: 12px;
+        }
+        .bg-inc { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .bg-exp { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    </style>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200">
+
+<script src="js/config.js"></script>
+
+<div class="fixed inset-0 pointer-events-none z-0 transition-opacity duration-1000">
+    <div class="absolute inset-0 opacity-0 dark:opacity-100 transition-opacity duration-1000">
+        <div class="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-900/10 blur-[150px] rounded-full"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-900/10 blur-[150px] rounded-full"></div>
+    </div>
+</div>
+
+<div id="app" v-cloak class="h-full w-full flex relative z-10">
+
+    <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+        <div>
+            <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
+                <span class="text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">FINANCE</span></span>
+            </div>
+            
+            <nav class="p-4 space-y-6">
+                <div>
+                    <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">Core</div>
+                    <a href="index.html" class="nav-item w-full text-left block p-3 mb-1 text-xs">System Home</a>
+                    <button class="nav-item w-full text-left block p-3 text-xs active">Finance 金融</button>
+                </div>
+            </nav>
+        </div>
+        <div class="p-6 border-t border-gray-200 dark:border-white/5">
+            <div class="text-[10px] text-gray-500 font-mono">SECURE CONNECTION</div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col bg-transparent relative w-full pl-4 pt-4 no-scroll-x">
+        
+        <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 cyber-card z-[60] sticky top-0 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg !overflow-visible">
+            <div class="flex items-center gap-6">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-2xl">☰</button>
+                <div class="flex flex-col relative justify-center">
+                    <span class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Financial Intelligence</span>
+                    
+                    <div class="relative">
+                        <button @click="showMonthPicker = !showMonthPicker" class="month-trigger-btn text-black dark:text-white text-xs font-bold">
+                            <span>{{ selectedYear }}</span><span class="text-gray-400">.</span><span>{{ selectedMonth < 10 ? '0'+selectedMonth : selectedMonth }}</span><span class="text-[8px] text-gray-400 ml-1">▼</span>
+                        </button>
+                        
+                        <div v-if="showMonthPicker" class="absolute top-full left-0 mt-2 w-56 p-3 bg-white/95 dark:bg-[#0a0a0a]/95 border border-gray-200 dark:border-white/20 rounded-xl shadow-2xl backdrop-blur-xl z-[70] animate-fade-in">
+                            <div class="flex justify-between items-center mb-3 border-b border-gray-200 dark:border-white/10 pb-2">
+                                <button @click="selectedYear--" class="text-gray-500 hover:text-black dark:hover:text-white px-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded">◀</button>
+                                <span class="text-black dark:text-white font-bold font-mono">{{ selectedYear }}</span>
+                                <button @click="selectedYear++" class="text-gray-500 hover:text-black dark:hover:text-white px-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded">▶</button>
+                            </div>
+                            <div class="grid grid-cols-4 gap-1">
+                                <button v-for="m in 12" :key="m" @click="setMonth(m)" :class="['text-[10px] py-1.5 rounded-md border transition', selectedMonth == m ? 'bg-black text-white dark:bg-white dark:text-black font-bold border-transparent' : 'text-gray-500 border-transparent hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10']">{{ m }}月</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                    <span v-if="isDark">☀</span><span v-else>☾</span>
+                </button>
+                <button @click="openAddModal" class="btn-cyber text-black dark:text-white border-gray-300 dark:border-white/20 rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black">
+                    + Record
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto pr-4 pb-4 relative z-10 custom-scroll h-[calc(100vh-80px)]">
+            
+            <div class="w-full space-y-6 animate-fade-in pt-2">
+                
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <div class="lg:col-span-1 cyber-card p-8 flex flex-col justify-center bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/20 dark:to-transparent">
+                        <div class="text-[10px] text-blue-500 font-bold uppercase tracking-widest mb-2">Lifetime Net Worth 历史净资产</div>
+                        <div class="text-3xl lg:text-4xl font-black text-black dark:text-white tracking-tight font-mono truncate">¥ {{ nFormatter(lifetimeStats.net) }}</div>
+                    </div>
+                    <div class="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="cyber-card p-5 flex flex-col justify-center">
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Income 收入</div>
+                            <div class="text-lg font-bold text-green-600 dark:text-green-400 truncate">+ {{ nFormatter(currentMonthStats.income) }}</div>
+                        </div>
+                        <div class="cyber-card p-5 flex flex-col justify-center">
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Expense 支出</div>
+                            <div class="text-lg font-bold text-red-500 dark:text-red-400 truncate">- {{ nFormatter(currentMonthStats.expense) }}</div>
+                        </div>
+                        <div class="cyber-card p-5 flex flex-col justify-center">
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Net 结余</div>
+                            <div class="text-lg font-bold text-black dark:text-white truncate">{{ nFormatter(currentMonthStats.net) }}</div>
+                        </div>
+                        <div class="cyber-card p-5 flex flex-col justify-center relative">
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Savings Rate 储蓄率</div>
+                            <div :class="['text-2xl font-black z-10', savingsRate >= 50 ? 'text-green-600 dark:text-green-400' : (savingsRate > 0 ? 'text-blue-500 dark:text-blue-400' : 'text-red-500')]">{{ savingsRate }}%</div>
+                            <div class="absolute bottom-0 left-0 h-1 bg-gray-200 dark:bg-white/5 w-full"><div class="h-full transition-all duration-1000" :style="{ width: Math.max(0, Math.min(100, savingsRate)) + '%', backgroundColor: savingsRate >= 50 ? '#10b981' : (savingsRate > 0 ? '#3b82f6' : '#ef4444') }"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cyber-card p-6 h-80 flex flex-col">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 flex justify-between">
+                        <span>Daily Trend ({{ selectedMonth }}月)</span>
+                        <span class="text-[10px] text-blue-500 font-mono">INTERACTIVE</span>
+                    </h3>
+                    <div id="chart-daily" class="flex-1 w-full"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-96 lg:h-80">
+                    <div class="cyber-card p-6 flex flex-col">
+                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Savings Trend ({{ selectedYear }})</h3>
+                        <div id="chart-history" class="flex-1 w-full"></div>
+                    </div>
+
+                    <div class="cyber-card p-6 flex flex-col">
+                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Structure 构成</h3>
+                        <div id="chart-pie" class="flex-1 w-full"></div>
+                    </div>
+
+                    <div class="cyber-card flex-1 flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-black/20 flex justify-between items-center">
+                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Log</h3>
+                            <span class="text-[10px] font-mono text-gray-400">{{ filteredTransactions.length }} ITEMS</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 p-3 custom-scroll">
+                            
+                            <div v-if="filteredTransactions.length === 0" class="p-8 text-center text-gray-400 text-xs font-mono">NO DATA STREAM...</div>
+                            
+                            <div v-for="item in filteredTransactions" :key="item.id" class="log-item group">
+                                <div class="flex items-center">
+                                    <div :class="['log-icon-box', item.type === 'expense' ? 'bg-exp' : 'bg-inc']">
+                                        {{ item.type === 'expense' ? 'OUT' : 'IN' }}
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-black dark:text-white mb-0.5">{{ item.title }}</div>
+                                        <div class="text-[9px] text-gray-400 font-mono flex items-center gap-2">
+                                            <span>{{ item.date }}</span>
+                                            <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
+                                            <span class="uppercase">{{ item.category }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div :class="['text-xs font-mono font-bold', item.type === 'expense' ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400']">
+                                        {{ item.type === 'expense' ? '-' : '+' }} {{ nFormatter(item.amount) }}
+                                    </div>
+                                    <button @click="deleteTransaction(item.id)" class="text-[9px] text-gray-400 hover:text-red-500 font-bold opacity-0 group-hover:opacity-100 transition mt-1 uppercase">Delete</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 dark:bg-black/90 p-4 backdrop-blur-md animate-fade-in">
+        <div class="cyber-card w-full max-w-md p-8 shadow-2xl relative bg-white dark:bg-[#0a0a0a]">
+            <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white">✕</button>
+            <h2 class="text-xl font-black text-black dark:text-white mb-6 tracking-tighter">NEW ENTRY</h2>
+            <div class="space-y-5">
+                <div class="flex p-1 bg-gray-100 dark:bg-black/50 rounded-lg border border-gray-200 dark:border-white/10">
+                    <button @click="form.type = 'expense'" :class="['flex-1 py-2 text-xs font-bold transition uppercase tracking-wider rounded-md', form.type === 'expense' ? 'bg-white dark:bg-red-900/20 text-red-500 border border-gray-200 dark:border-red-500/30 shadow-sm' : 'text-gray-400 hover:text-black dark:hover:text-white']">Expense</button>
+                    <button @click="form.type = 'income'" :class="['flex-1 py-2 text-xs font-bold transition uppercase tracking-wider rounded-md', form.type === 'income' ? 'bg-white dark:bg-green-900/20 text-green-500 border border-gray-200 dark:border-green-500/30 shadow-sm' : 'text-gray-400 hover:text-black dark:hover:text-white']">Income</button>
+                </div>
+                <div class="space-y-1"><label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Amount</label><input v-model="form.amount" type="number" placeholder="0.00" class="cyber-input"></div>
+                <div class="space-y-1"><label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Title</label><input v-model="form.title" type="text" placeholder="Detail..." class="cyber-input"></div>
+                <div class="space-y-1">
+                    <label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Date</label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1"><select v-model="formYear" class="cyber-input p-2 text-xs text-center cursor-pointer appearance-none"><option v-for="y in 5" :key="y" :value="2023 + y">{{ 2023 + y }}</option></select></div>
+                        <div class="relative flex-1"><select v-model="formMonth" class="cyber-input p-2 text-xs text-center cursor-pointer appearance-none"><option v-for="m in 12" :key="m" :value="m">{{ m }}月</option></select></div>
+                        <div class="relative flex-1"><select v-model="formDay" class="cyber-input p-2 text-xs text-center cursor-pointer appearance-none"><option v-for="d in daysInFormMonth" :key="d" :value="d">{{ d }}日</option></select></div>
+                    </div>
+                </div>
+                <div class="space-y-1"><label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Category</label><div class="grid grid-cols-4 gap-2"><button v-for="cat in currentCategories" :key="cat" @click="form.category = cat" :class="['py-2 text-[9px] font-bold border transition uppercase rounded-md', form.category === cat ? 'bg-black text-white dark:bg-white dark:text-black border-transparent' : 'bg-transparent text-gray-400 border-gray-200 dark:border-white/10 hover:border-black dark:hover:border-white/40 hover:text-black dark:hover:text-white']">{{ cat }}</button></div></div>
+            </div>
+            <div class="flex gap-4 mt-8"><button @click="saveTransaction" class="flex-1 btn-cyber rounded-lg w-full bg-black text-white dark:bg-white dark:text-black">CONFIRM</button></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, onMounted, reactive, computed, watch } = Vue
+
+    createApp({
+        setup() {
+            if (!window._supabase) { console.error("Config Error"); return {}; }
+            const _supabase = window._supabase; 
+
+            const isDark = ref(true)
+            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
+            const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
+
+            const mobileMenuOpen = ref(false)
+            const showModal = ref(false)
+            const showMonthPicker = ref(false)
+            const transactions = ref([])
+            
+            const now = new Date()
+            const selectedYear = ref(now.getFullYear())
+            const selectedMonth = ref(now.getMonth() + 1)
+            const formYear = ref(now.getFullYear())
+            const formMonth = ref(now.getMonth() + 1)
+            const formDay = ref(now.getDate())
+
+            const daysInFormMonth = computed(() => new Date(formYear.value, formMonth.value, 0).getDate())
+            watch([formYear, formMonth], () => { const max = new Date(formYear.value, formMonth.value, 0).getDate(); if(formDay.value > max) formDay.value = max; })
+
+            const expenseCategories = ['餐饮', '交通', '购物', '娱乐', '投资', '储蓄', '理财', '固定']
+            const incomeCategories = ['工资', '兼职', '理财收益', '奖金', '其他']
+            const form = reactive({ type: 'expense', amount: '', title: '', category: '' })
+            const currentCategories = computed(() => form.type === 'expense' ? expenseCategories : incomeCategories)
+
+            const currentMonthKey = computed(() => `${selectedYear.value}-${selectedMonth.value < 10 ? '0'+selectedMonth.value : selectedMonth.value}`)
+            const filteredTransactions = computed(() => transactions.value.filter(t => t.date.startsWith(currentMonthKey.value)))
+            
+            const lifetimeStats = computed(() => {
+                const inc = transactions.value.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
+                const exp = transactions.value.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
+                return { income: inc, expense: exp, net: inc - exp }
+            })
+            const currentMonthStats = computed(() => {
+                const inc = filteredTransactions.value.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
+                const exp = filteredTransactions.value.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
+                return { income: inc, expense: exp, net: inc - exp }
+            })
+            const savingsRate = computed(() => {
+                const inc = currentMonthStats.value.income
+                if (inc === 0) return 0
+                return (((inc - currentMonthStats.value.expense) / inc) * 100).toFixed(1)
+            })
+
+            const nFormatter = (num) => {
+                return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            }
+
+            let dailyChart = null, historyChart = null, pieChart = null;
+
+            const updateDailyChart = () => {
+                if (!dailyChart) return;
+                const data = filteredTransactions.value;
+                const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate();
+                const days = Array.from({length: daysInMonth}, (_, i) => (i + 1).toString());
+                const dailyTotal = new Array(daysInMonth).fill(0);
+                const categorySeries = {};
+
+                data.filter(t => t.type === 'expense').forEach(t => {
+                    if (t.category !== '储蓄' && t.category !== 'Savings') {
+                        const dayIndex = parseInt(t.date.split('-')[2]) - 1;
+                        const val = Number(t.amount);
+                        dailyTotal[dayIndex] += val;
+                        if(!categorySeries[t.category]) categorySeries[t.category] = new Array(daysInMonth).fill(0);
+                        categorySeries[t.category][dayIndex] += val;
+                    }
+                });
+
+                const isDarkTheme = document.documentElement.classList.contains('dark');
+                const axisColor = isDarkTheme ? '#333' : '#e5e7eb';
+                const textColor = isDarkTheme ? '#666' : '#9ca3af';
+
+                // 🟢 标签逻辑优化
+                const series = [{ 
+                    name: 'TOTAL (消费)', type: 'line', data: dailyTotal, smooth: true, 
+                    lineStyle: { width: 3, color: '#3b82f6' }, areaStyle: { opacity: 0.2, color: '#3b82f6' },
+                    // 🟢 总支出：显示大号标签
+                    label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: '{c}' }
+                }];
+                const colors = ['#f97316', '#10b981', '#ec4899', '#8b5cf6', '#eab308'];
+                let cIdx = 0;
+                Object.entries(categorySeries).forEach(([cat, vals]) => {
+                    series.push({ 
+                        name: cat, type: 'line', data: vals, smooth: true, 
+                        lineStyle: { width: 1.5, type: 'dashed' }, itemStyle: { color: colors[cIdx++ % colors.length] },
+                        // 🟢 分类线：显示小号标签，允许自动隐藏防止重叠
+                        label: { show: true, position: 'bottom', fontSize: 9, color: 'inherit' }
+                    })
+                });
+
+                dailyChart.setOption({
+                    backgroundColor: 'transparent', tooltip: { trigger: 'axis' },
+                    legend: { bottom: 0, icon: 'roundRect', itemGap: 15, textStyle: { color: textColor, padding: [4, 8], backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderRadius: 4 } },
+                    grid: { top: 30, right: 10, bottom: 40, left: 40 },
+                    xAxis: { type: 'category', data: days, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } },
+                    yAxis: { type: 'value', splitLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } },
+                    series: series
+                }, true);
+            }
+
+            const updateHistoryChart = () => {
+                if(!historyChart) return;
+                const monthlyData = {};
+                for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyData[k] = { inc: 0, exp: 0 }; }
+                transactions.value.forEach(t => { if (t.date.startsWith(selectedYear.value + '-')) { const k = t.date.slice(0, 7); if(monthlyData[k]) monthlyData[k][t.type === 'income' ? 'inc' : 'exp'] += Number(t.amount); } });
+                const monthsLabel = Array.from({length:12}, (_, i) => (i+1) + '月');
+                const rates = Object.keys(monthlyData).sort().map(m => { const d = monthlyData[m]; return d.inc > 0 ? ((d.inc - d.exp)/d.inc * 100).toFixed(1) : 0; });
+
+                const isDarkTheme = document.documentElement.classList.contains('dark');
+                const axisColor = isDarkTheme ? '#333' : '#e5e7eb';
+                const textColor = isDarkTheme ? '#666' : '#9ca3af';
+
+                historyChart.setOption({
+                    backgroundColor: 'transparent', tooltip: { trigger: 'axis', formatter: '{b}<br/>储蓄率: {c}%' },
+                    grid: { top: 20, right: 10, bottom: 20, left: 30 },
+                    xAxis: { type: 'category', data: monthsLabel, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 9 } },
+                    yAxis: { type: 'value', splitLine: { show: false }, axisLabel: { color: textColor, fontSize: 9 } },
+                    series: [{ type: 'line', data: rates, smooth: true, lineStyle: { width: 2, color: '#10b981' }, areaStyle: { opacity: 0.2, color: '#10b981' }, symbol: 'circle', symbolSize: 4, label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: '{c}%' } }]
+                });
+            }
+
+            const updatePieChart = () => {
+                if(!pieChart) return;
+                const map = {};
+                filteredTransactions.value.filter(t => t.type === 'expense' && t.category !== '储蓄').forEach(t => map[t.category] = (map[t.category] || 0) + Number(t.amount));
+                
+                const isDarkTheme = document.documentElement.classList.contains('dark');
+                const labelColor = isDarkTheme ? '#888' : '#666';
+                const valueColor = isDarkTheme ? '#fff' : '#000';
+
+                pieChart.setOption({
+                    backgroundColor: 'transparent', tooltip: { trigger: 'item' },
+                    series: [{ 
+                        type: 'pie', radius: ['40%', '65%'], itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 }, 
+                        labelLine: { length: 10, length2: 0, lineStyle: { color: labelColor } },
+                        label: { show: true, formatter: '{name|{b}}\n{rate|{d}%} {value|¥{c}}', rich: { name: { color: labelColor, fontSize: 10, padding: [0, 0, 2, 0] }, rate: { color: '#3b82f6', fontSize: 11, fontWeight: 'bold' }, value: { color: valueColor, fontSize: 10, padding: [0, 0, 0, 4] } } },
+                        data: Object.keys(map).map(k => ({ value: map[k], name: k })) 
+                    }]
+                });
+            }
+
+            const updateAllCharts = () => { updateDailyChart(); updateHistoryChart(); updatePieChart(); }
+            
+            const fetchTransactions = async () => {
+                const { data } = await _supabase.from('transactions').select('*').order('date', { ascending: true })
+                if (data) { transactions.value = data; updateAllCharts(); }
+            }
+            watch([selectedYear, selectedMonth, isDark], () => { setTimeout(updateAllCharts, 100); })
+
+            const setMonth = (m) => { selectedMonth.value = m; showMonthPicker.value = false; }
+            const openAddModal = () => {
+                form.amount = ''; form.title = ''; form.category = currentCategories.value[0]; 
+                const d = new Date(); formYear.value = d.getFullYear(); formMonth.value = d.getMonth()+1; formDay.value = d.getDate();
+                showModal.value = true;
+            }
+            const saveTransaction = async () => {
+                if (!form.amount || !form.title) return alert('Incomplete');
+                const dStr = `${formYear.value}-${formMonth.value<10?'0'+formMonth.value:formMonth.value}-${formDay.value<10?'0'+formDay.value:formDay.value}`;
+                const { error } = await _supabase.from('transactions').insert({ user_id: (await _supabase.auth.getUser()).data.user.id, title: form.title, amount: form.amount, type: form.type, category: form.category, date: dStr });
+                if (!error) { showModal.value = false; fetchTransactions(); }
+            }
+            const deleteTransaction = async (id) => { if(confirm('Delete?')) { await _supabase.from('transactions').delete().eq('id', id); fetchTransactions(); } }
+
+            onMounted(async () => {
+                const { data: { session } } = await _supabase.auth.getSession();
+                if(session) {
+                    dailyChart = echarts.init(document.getElementById('chart-daily'));
+                    historyChart = echarts.init(document.getElementById('chart-history'));
+                    pieChart = echarts.init(document.getElementById('chart-pie'));
+                    window.addEventListener('resize', () => { dailyChart.resize(); historyChart.resize(); pieChart.resize(); });
+                    fetchTransactions();
+                }
+            })
+
+            return { mobileMenuOpen, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, showModal, showMonthPicker, form, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, saveTransaction, deleteTransaction, nFormatter, isDark, toggleTheme }
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>
