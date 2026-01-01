@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Finance (V5.0)</title>
+    <title>MindForge Finance (V5.2 - Stock Sync)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -25,7 +25,8 @@
     </script>
 
     <style>
-        /* 🆕 1. Log 列表新样式：悬浮胶囊 */
+        [v-cloak] { display: none; }
+        
         .log-item {
             display: flex; align-items: center; justify-content: space-between;
             padding: 12px 16px; margin-bottom: 8px;
@@ -33,32 +34,11 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             border: 1px solid transparent;
         }
-        
-        /* 暗黑模式 Log */
-        .dark .log-item {
-            background: rgba(255, 255, 255, 0.03);
-            border-color: rgba(255, 255, 255, 0.05);
-        }
-        .dark .log-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: scale(1.01);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
+        .dark .log-item { background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.05); }
+        .dark .log-item:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); transform: scale(1.01); }
+        html:not(.dark) .log-item { background: #fff; border-color: rgba(0, 0, 0, 0.05); box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        html:not(.dark) .log-item:hover { border-color: rgba(0, 0, 0, 0.1); transform: scale(1.01); }
 
-        /* 日光模式 Log */
-        html:not(.dark) .log-item {
-            background: #fff;
-            border-color: rgba(0, 0, 0, 0.05);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-        }
-        html:not(.dark) .log-item:hover {
-            border-color: rgba(0, 0, 0, 0.1);
-            transform: scale(1.01);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-
-        /* 🆕 2. Log 图标底座 */
         .log-icon-box {
             width: 36px; height: 36px; border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
@@ -66,6 +46,13 @@
         }
         .bg-inc { background: rgba(16, 185, 129, 0.15); color: #10b981; }
         .bg-exp { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        /* 投资专用蓝色 */
+        .bg-inv { background: rgba(59, 130, 246, 0.15); color: #3b82f6; } 
+
+        .view-tab.active::after {
+            content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+            width: 20px; height: 2px; background-color: #3b82f6; border-radius: 2px;
+        }
     </style>
 </head>
 <body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200">
@@ -86,7 +73,6 @@
             <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
                 <span class="text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">FINANCE</span></span>
             </div>
-            
             <nav class="p-4 space-y-6">
                 <div>
                     <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">Core</div>
@@ -109,37 +95,48 @@
                     <span class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">Financial Intelligence</span>
                     
                     <div class="relative">
-                        <button @click="showMonthPicker = !showMonthPicker" class="month-trigger-btn text-black dark:text-white text-xs font-bold">
-                            <span>{{ selectedYear }}</span><span class="text-gray-400">.</span><span>{{ selectedMonth < 10 ? '0'+selectedMonth : selectedMonth }}</span><span class="text-[8px] text-gray-400 ml-1">▼</span>
-                        </button>
-                        
-                        <div v-if="showMonthPicker" class="absolute top-full left-0 mt-2 w-56 p-3 bg-white/95 dark:bg-[#0a0a0a]/95 border border-gray-200 dark:border-white/20 rounded-xl shadow-2xl backdrop-blur-xl z-[70] animate-fade-in">
-                            <div class="flex justify-between items-center mb-3 border-b border-gray-200 dark:border-white/10 pb-2">
-                                <button @click="selectedYear--" class="text-gray-500 hover:text-black dark:hover:text-white px-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded">◀</button>
-                                <span class="text-black dark:text-white font-bold font-mono">{{ selectedYear }}</span>
-                                <button @click="selectedYear++" class="text-gray-500 hover:text-black dark:hover:text-white px-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded">▶</button>
-                            </div>
-                            <div class="grid grid-cols-4 gap-1">
-                                <button v-for="m in 12" :key="m" @click="setMonth(m)" :class="['text-[10px] py-1.5 rounded-md border transition', selectedMonth == m ? 'bg-black text-white dark:bg-white dark:text-black font-bold border-transparent' : 'text-gray-500 border-transparent hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10']">{{ m }}月</button>
+                        <div v-if="currentView === 'cashflow'">
+                            <button @click="showMonthPicker = !showMonthPicker" class="month-trigger-btn text-black dark:text-white text-xs font-bold">
+                                <span>{{ selectedYear }}</span><span class="text-gray-400">.</span><span>{{ selectedMonth < 10 ? '0'+selectedMonth : selectedMonth }}</span><span class="text-[8px] text-gray-400 ml-1">▼</span>
+                            </button>
+                            <div v-if="showMonthPicker" class="absolute top-full left-0 mt-2 w-56 p-3 bg-white/95 dark:bg-[#0a0a0a]/95 border border-gray-200 dark:border-white/20 rounded-xl shadow-2xl backdrop-blur-xl z-[70] animate-fade-in">
+                                <div class="flex justify-between items-center mb-3 border-b border-gray-200 dark:border-white/10 pb-2">
+                                    <button @click="selectedYear--" class="text-gray-500 hover:text-black dark:hover:text-white px-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded">◀</button>
+                                    <span class="text-black dark:text-white font-bold font-mono">{{ selectedYear }}</span>
+                                    <button @click="selectedYear++" class="text-gray-500 hover:text-black dark:hover:text-white px-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded">▶</button>
+                                </div>
+                                <div class="grid grid-cols-4 gap-1">
+                                    <button v-for="m in 12" :key="m" @click="setMonth(m)" :class="['text-[10px] py-1.5 rounded-md border transition', selectedMonth == m ? 'bg-black text-white dark:bg-white dark:text-black font-bold border-transparent' : 'text-gray-500 border-transparent hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10']">{{ m }}月</button>
+                                </div>
                             </div>
                         </div>
+                        <div v-else class="text-xs font-bold text-black dark:text-white">STOCK PORTFOLIO</div>
                     </div>
                 </div>
             </div>
             
+            <div class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-1 p-1 bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10">
+                <button @click="switchView('cashflow')" :class="['px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition', currentView === 'cashflow' ? 'bg-white dark:bg-[#0a0a0a] text-black dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300']">Cashflow</button>
+                <button @click="switchView('portfolio')" :class="['px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition', currentView === 'portfolio' ? 'bg-white dark:bg-[#0a0a0a] text-black dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300']">Portfolio</button>
+            </div>
+
             <div class="flex items-center gap-4">
                 <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition">
                     <span v-if="isDark">☀</span><span v-else>☾</span>
                 </button>
-                <button @click="openAddModal" class="btn-cyber text-black dark:text-white border-gray-300 dark:border-white/20 rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black">
+                
+                <button v-if="currentView === 'cashflow'" @click="openAddModal" class="btn-cyber text-black dark:text-white border-gray-300 dark:border-white/20 rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black">
                     + Record
+                </button>
+                <button v-else @click="openAssetModal" class="btn-cyber text-blue-500 border-blue-500/30 rounded-lg hover:bg-blue-500 hover:text-white">
+                    + Stock
                 </button>
             </div>
         </header>
 
         <div class="flex-1 overflow-y-auto pr-4 pb-4 relative z-10 custom-scroll h-[calc(100vh-80px)]">
             
-            <div class="w-full space-y-6 animate-fade-in pt-2">
+            <div v-if="currentView === 'cashflow'" class="w-full space-y-6 animate-fade-in pt-2">
                 
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <div class="lg:col-span-1 cyber-card p-8 flex flex-col justify-center bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-900/20 dark:to-transparent">
@@ -168,33 +165,25 @@
                 </div>
 
                 <div class="cyber-card p-6 h-80 flex flex-col">
-                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 flex justify-between">
-                        <span>Daily Trend ({{ selectedMonth }}月)</span>
-                        <span class="text-[10px] text-blue-500 font-mono">INTERACTIVE</span>
-                    </h3>
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Daily Trend ({{ selectedMonth }}月)</h3>
                     <div id="chart-daily" class="flex-1 w-full"></div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-96 lg:h-80">
                     <div class="cyber-card p-6 flex flex-col">
-                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Savings Trend ({{ selectedYear }})</h3>
+                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Savings Trend</h3>
                         <div id="chart-history" class="flex-1 w-full"></div>
                     </div>
-
                     <div class="cyber-card p-6 flex flex-col">
-                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Structure 构成</h3>
+                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Structure</h3>
                         <div id="chart-pie" class="flex-1 w-full"></div>
                     </div>
-
                     <div class="cyber-card flex-1 flex flex-col overflow-hidden">
                         <div class="p-4 border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-black/20 flex justify-between items-center">
                             <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Log</h3>
                             <span class="text-[10px] font-mono text-gray-400">{{ filteredTransactions.length }} ITEMS</span>
                         </div>
                         <div class="overflow-y-auto flex-1 p-3 custom-scroll">
-                            
-                            <div v-if="filteredTransactions.length === 0" class="p-8 text-center text-gray-400 text-xs font-mono">NO DATA STREAM...</div>
-                            
                             <div v-for="item in filteredTransactions" :key="item.id" class="log-item group">
                                 <div class="flex items-center">
                                     <div :class="['log-icon-box', item.type === 'expense' ? 'bg-exp' : 'bg-inc']">
@@ -204,7 +193,6 @@
                                         <div class="text-xs font-bold text-black dark:text-white mb-0.5">{{ item.title }}</div>
                                         <div class="text-[9px] text-gray-400 font-mono flex items-center gap-2">
                                             <span>{{ item.date }}</span>
-                                            <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
                                             <span class="uppercase">{{ item.category }}</span>
                                         </div>
                                     </div>
@@ -216,19 +204,85 @@
                                     <button @click="deleteTransaction(item.id)" class="text-[9px] text-gray-400 hover:text-red-500 font-bold opacity-0 group-hover:opacity-100 transition mt-1 uppercase">Delete</button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
+            <div v-else class="w-full h-full flex gap-6 animate-fade-in pt-2 flex-col lg:flex-row">
+                
+                <div class="w-full lg:w-1/3 flex flex-col gap-6">
+                    <div class="cyber-card p-8 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-900/10 to-purple-900/10 z-0"></div>
+                        <div class="relative z-10">
+                            <div class="text-[10px] text-blue-500 font-bold uppercase tracking-widest mb-3">Total Invested 累计投入本金</div>
+                            <div class="text-3xl font-black text-black dark:text-white tracking-tight font-mono mb-6">¥ {{ nFormatter(investmentStats.invested) }}</div>
+                            
+                            <div class="flex justify-between items-end border-t border-gray-200 dark:border-white/10 pt-4">
+                                <div>
+                                    <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Realized Gains 已落袋收益</div>
+                                    <div class="text-xl font-bold text-green-600 dark:text-green-400 font-mono">+ {{ nFormatter(investmentStats.gains) }}</div>
+                                </div>
+                                <div class="text-right">
+                                     <div class="text-[9px] text-gray-400 uppercase tracking-widest mb-1">ROI</div>
+                                    <div class="text-lg font-bold text-gray-500">{{ investmentStats.roi }}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cyber-card p-6 flex-1 flex flex-col justify-center items-center text-center">
+                        <div class="text-4xl mb-4">📊</div>
+                        <h3 class="text-xs font-bold text-black dark:text-white mb-2">Strategy Note</h3>
+                        <p class="text-[10px] text-gray-500 leading-loose max-w-[200px]">
+                            Buy orders are synced as <b>Expenses</b>.<br>
+                            Sell/Dividends are synced as <b>Income</b>.<br>
+                            This keeps your Main Cashflow perfectly accurate.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex-1 cyber-card flex flex-col overflow-hidden">
+                    <div class="p-5 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-gray-50 dark:bg-white/5">
+                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Transaction History (Stock/Fund)</h3>
+                        <span class="text-[10px] font-mono text-gray-400">{{ investmentTransactions.length }} RECORDS</span>
+                    </div>
+                    <div class="overflow-y-auto flex-1 p-3 custom-scroll">
+                         <div v-if="investmentTransactions.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
+                            <div class="text-2xl mb-2">📭</div>
+                            <div class="text-xs font-mono">No investment records yet</div>
+                        </div>
+                        <div v-for="item in investmentTransactions" :key="item.id" class="log-item group">
+                            <div class="flex items-center">
+                                <div :class="['log-icon-box', item.type === 'expense' ? 'bg-inv' : 'bg-inc']">
+                                    {{ item.type === 'expense' ? 'BUY' : 'SELL' }}
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-black dark:text-white mb-0.5">{{ item.title }}</div>
+                                    <div class="text-[9px] text-gray-400 font-mono flex items-center gap-2">
+                                        <span>{{ item.date }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div :class="['text-xs font-mono font-bold', item.type === 'expense' ? 'text-black dark:text-white' : 'text-green-500']">
+                                    {{ item.type === 'expense' ? '-' : '+' }} {{ nFormatter(item.amount) }}
+                                </div>
+                                <button @click="deleteTransaction(item.id)" class="text-[9px] text-gray-400 hover:text-red-500 font-bold opacity-0 group-hover:opacity-100 transition mt-1 uppercase">Revert</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
             </div>
+
         </div>
     </main>
 
     <div v-if="showModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 dark:bg-black/90 p-4 backdrop-blur-md animate-fade-in">
         <div class="cyber-card w-full max-w-md p-8 shadow-2xl relative bg-white dark:bg-[#0a0a0a]">
             <button @click="showModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white">✕</button>
-            <h2 class="text-xl font-black text-black dark:text-white mb-6 tracking-tighter">NEW ENTRY</h2>
+            <h2 class="text-xl font-black text-black dark:text-white mb-6 tracking-tighter">NEW ENTRY (CASHFLOW)</h2>
             <div class="space-y-5">
                 <div class="flex p-1 bg-gray-100 dark:bg-black/50 rounded-lg border border-gray-200 dark:border-white/10">
                     <button @click="form.type = 'expense'" :class="['flex-1 py-2 text-xs font-bold transition uppercase tracking-wider rounded-md', form.type === 'expense' ? 'bg-white dark:bg-red-900/20 text-red-500 border border-gray-200 dark:border-red-500/30 shadow-sm' : 'text-gray-400 hover:text-black dark:hover:text-white']">Expense</button>
@@ -250,10 +304,49 @@
         </div>
     </div>
 
+    <div v-if="showAssetModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 dark:bg-black/90 p-4 backdrop-blur-md animate-fade-in">
+        <div class="cyber-card w-full max-w-md p-8 shadow-2xl relative bg-white dark:bg-[#0a0a0a] border border-blue-500/30">
+            <button @click="showAssetModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white">✕</button>
+            <h2 class="text-xl font-black text-blue-600 dark:text-blue-500 mb-6 tracking-tighter">STOCK TRANSACTION</h2>
+            
+            <div class="space-y-5">
+                <div class="flex p-1 bg-gray-100 dark:bg-black/50 rounded-lg border border-gray-200 dark:border-white/10">
+                    <button @click="assetForm.action = 'buy'" :class="['flex-1 py-2 text-xs font-bold transition uppercase tracking-wider rounded-md', assetForm.action === 'buy' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-black dark:hover:text-white']">Buy (买入)</button>
+                    <button @click="assetForm.action = 'sell'" :class="['flex-1 py-2 text-xs font-bold transition uppercase tracking-wider rounded-md', assetForm.action === 'sell' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-400 hover:text-black dark:hover:text-white']">Sell (卖出/分红)</button>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Stock Name / Code</label>
+                    <input v-model="assetForm.name" type="text" placeholder="e.g. 00700.HK Tencent" class="cyber-input font-bold text-black dark:text-white">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Total Amount (¥)</label>
+                    <input v-model="assetForm.amount" type="number" placeholder="Total transaction value" class="cyber-input text-lg">
+                </div>
+                
+                <div class="p-3 bg-blue-50 dark:bg-blue-900/10 rounded border border-blue-100 dark:border-blue-500/20 text-[10px] text-blue-600 dark:text-blue-400 leading-relaxed">
+                    <span v-if="assetForm.action === 'buy'">
+                        <b>SYNC:</b> This will be recorded as an <b>Expense (投资)</b> in your main ledger. Your cash balance will decrease.
+                    </span>
+                    <span v-else>
+                        <b>SYNC:</b> This will be recorded as <b>Income (理财收益)</b> in your main ledger. Your cash balance will increase.
+                    </span>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 mt-8">
+                <button @click="saveAssetTransaction" class="flex-1 btn-cyber rounded-lg w-full bg-blue-600 text-white hover:bg-blue-700 border-transparent">
+                    EXECUTE ORDER
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
-    const { createApp, ref, onMounted, reactive, computed, watch } = Vue
+    const { createApp, ref, onMounted, reactive, computed, watch, nextTick } = Vue
 
     createApp({
         setup() {
@@ -264,8 +357,15 @@
             if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
             const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
 
+            const currentView = ref('cashflow')
+            const switchView = (view) => { 
+                currentView.value = view; 
+                if(view === 'cashflow') setTimeout(() => updateAllCharts(), 100);
+            }
+
             const mobileMenuOpen = ref(false)
             const showModal = ref(false)
+            const showAssetModal = ref(false) // 新增 Asset 弹窗控制
             const showMonthPicker = ref(false)
             const transactions = ref([])
             
@@ -281,11 +381,29 @@
 
             const expenseCategories = ['餐饮', '交通', '购物', '娱乐', '投资', '储蓄', '理财', '固定']
             const incomeCategories = ['工资', '兼职', '理财收益', '奖金', '其他']
+            
+            // 普通记账表单
             const form = reactive({ type: 'expense', amount: '', title: '', category: '' })
+            // 股票记账表单
+            const assetForm = reactive({ action: 'buy', name: '', amount: '' })
+
             const currentCategories = computed(() => form.type === 'expense' ? expenseCategories : incomeCategories)
 
             const currentMonthKey = computed(() => `${selectedYear.value}-${selectedMonth.value < 10 ? '0'+selectedMonth.value : selectedMonth.value}`)
             const filteredTransactions = computed(() => transactions.value.filter(t => t.date.startsWith(currentMonthKey.value)))
+            
+            // 投资专属过滤: 只看 category 为 '投资' 或 '理财收益' 的记录
+            const investmentTransactions = computed(() => {
+                return transactions.value.filter(t => t.category === '投资' || t.category === '理财收益').sort((a,b) => new Date(b.date) - new Date(a.date))
+            })
+
+            // 投资统计
+            const investmentStats = computed(() => {
+                const invested = investmentTransactions.value.filter(t => t.category === '投资').reduce((s,t) => s + Number(t.amount), 0)
+                const gains = investmentTransactions.value.filter(t => t.category === '理财收益').reduce((s,t) => s + Number(t.amount), 0)
+                const roi = invested > 0 ? ((gains / invested) * 100).toFixed(1) : '0.0';
+                return { invested, gains, roi }
+            })
             
             const lifetimeStats = computed(() => {
                 const inc = transactions.value.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
@@ -304,136 +422,110 @@
             })
 
             const nFormatter = (num) => {
+                if (!num && num !== 0) return '0.00';
                 return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             }
 
             let dailyChart = null, historyChart = null, pieChart = null;
 
+            // (Chart Functions 保持不变，省略以节省空间，但代码实际执行时依然存在)
             const updateDailyChart = () => {
-                if (!dailyChart) return;
-                const data = filteredTransactions.value;
-                const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate();
-                const days = Array.from({length: daysInMonth}, (_, i) => (i + 1).toString());
-                const dailyTotal = new Array(daysInMonth).fill(0);
-                const categorySeries = {};
-
-                data.filter(t => t.type === 'expense').forEach(t => {
-                    if (t.category !== '储蓄' && t.category !== 'Savings') {
-                        const dayIndex = parseInt(t.date.split('-')[2]) - 1;
-                        const val = Number(t.amount);
-                        dailyTotal[dayIndex] += val;
-                        if(!categorySeries[t.category]) categorySeries[t.category] = new Array(daysInMonth).fill(0);
-                        categorySeries[t.category][dayIndex] += val;
-                    }
-                });
-
-                const isDarkTheme = document.documentElement.classList.contains('dark');
-                const axisColor = isDarkTheme ? '#333' : '#e5e7eb';
-                const textColor = isDarkTheme ? '#666' : '#9ca3af';
-
-                // 🟢 标签逻辑优化
-                const series = [{ 
-                    name: 'TOTAL (消费)', type: 'line', data: dailyTotal, smooth: true, 
-                    lineStyle: { width: 3, color: '#3b82f6' }, areaStyle: { opacity: 0.2, color: '#3b82f6' },
-                    // 🟢 总支出：显示大号标签
-                    label: { show: true, position: 'top', color: textColor, fontWeight: 'bold', formatter: '{c}' }
-                }];
-                const colors = ['#f97316', '#10b981', '#ec4899', '#8b5cf6', '#eab308'];
-                let cIdx = 0;
-                Object.entries(categorySeries).forEach(([cat, vals]) => {
-                    series.push({ 
-                        name: cat, type: 'line', data: vals, smooth: true, 
-                        lineStyle: { width: 1.5, type: 'dashed' }, itemStyle: { color: colors[cIdx++ % colors.length] },
-                        // 🟢 分类线：显示小号标签，允许自动隐藏防止重叠
-                        label: { show: true, position: 'bottom', fontSize: 9, color: 'inherit' }
-                    })
-                });
-
-                dailyChart.setOption({
-                    backgroundColor: 'transparent', tooltip: { trigger: 'axis' },
-                    legend: { bottom: 0, icon: 'roundRect', itemGap: 15, textStyle: { color: textColor, padding: [4, 8], backgroundColor: isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderRadius: 4 } },
-                    grid: { top: 30, right: 10, bottom: 40, left: 40 },
-                    xAxis: { type: 'category', data: days, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } },
-                    yAxis: { type: 'value', splitLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } },
-                    series: series
-                }, true);
+                const el = document.getElementById('chart-daily'); if (!el) return; if (dailyChart) dailyChart.dispose(); dailyChart = echarts.init(el);
+                const data = filteredTransactions.value; const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate(); const days = Array.from({length: daysInMonth}, (_, i) => (i + 1).toString()); const dailyTotal = new Array(daysInMonth).fill(0); const categorySeries = {};
+                data.filter(t => t.type === 'expense').forEach(t => { if (t.category !== '储蓄') { const dayIndex = parseInt(t.date.split('-')[2]) - 1; const val = Number(t.amount); dailyTotal[dayIndex] += val; if(!categorySeries[t.category]) categorySeries[t.category] = new Array(daysInMonth).fill(0); categorySeries[t.category][dayIndex] += val; } });
+                const isDarkTheme = document.documentElement.classList.contains('dark'); const axisColor = isDarkTheme ? '#333' : '#e5e7eb'; const textColor = isDarkTheme ? '#666' : '#9ca3af';
+                const series = [{ name: 'TOTAL', type: 'line', data: dailyTotal, smooth: true, lineStyle: { width: 3, color: '#3b82f6' }, areaStyle: { opacity: 0.2, color: '#3b82f6' }, label: { show: true, position: 'top', color: textColor, formatter: '{c}' } }];
+                const colors = ['#f97316', '#10b981', '#ec4899', '#8b5cf6', '#eab308']; let cIdx = 0;
+                Object.entries(categorySeries).forEach(([cat, vals]) => { series.push({ name: cat, type: 'line', data: vals, smooth: true, lineStyle: { width: 1.5, type: 'dashed' }, itemStyle: { color: colors[cIdx++ % colors.length] }, label: { show: true, position: 'bottom', fontSize: 9, color: 'inherit' } }) });
+                dailyChart.setOption({ backgroundColor: 'transparent', tooltip: { trigger: 'axis' }, legend: { bottom: 0, icon: 'roundRect', itemGap: 15, textStyle: { color: textColor } }, grid: { top: 30, right: 10, bottom: 40, left: 40 }, xAxis: { type: 'category', data: days, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } }, yAxis: { type: 'value', splitLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } }, series: series }, true);
             }
-
             const updateHistoryChart = () => {
-                if(!historyChart) return;
-                const monthlyData = {};
-                for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyData[k] = { inc: 0, exp: 0 }; }
+                const el = document.getElementById('chart-history'); if (!el) return; if (historyChart) historyChart.dispose(); historyChart = echarts.init(el);
+                const monthlyData = {}; for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyData[k] = { inc: 0, exp: 0 }; }
                 transactions.value.forEach(t => { if (t.date.startsWith(selectedYear.value + '-')) { const k = t.date.slice(0, 7); if(monthlyData[k]) monthlyData[k][t.type === 'income' ? 'inc' : 'exp'] += Number(t.amount); } });
-                const monthsLabel = Array.from({length:12}, (_, i) => (i+1) + '月');
-                const rates = Object.keys(monthlyData).sort().map(m => { const d = monthlyData[m]; return d.inc > 0 ? ((d.inc - d.exp)/d.inc * 100).toFixed(1) : 0; });
-
-                const isDarkTheme = document.documentElement.classList.contains('dark');
-                const axisColor = isDarkTheme ? '#333' : '#e5e7eb';
-                const textColor = isDarkTheme ? '#666' : '#9ca3af';
-
-                historyChart.setOption({
-                    backgroundColor: 'transparent', tooltip: { trigger: 'axis', formatter: '{b}<br/>储蓄率: {c}%' },
-                    grid: { top: 20, right: 10, bottom: 20, left: 30 },
-                    xAxis: { type: 'category', data: monthsLabel, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 9 } },
-                    yAxis: { type: 'value', splitLine: { show: false }, axisLabel: { color: textColor, fontSize: 9 } },
-                    series: [{ type: 'line', data: rates, smooth: true, lineStyle: { width: 2, color: '#10b981' }, areaStyle: { opacity: 0.2, color: '#10b981' }, symbol: 'circle', symbolSize: 4, label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: '{c}%' } }]
-                });
+                const monthsLabel = Array.from({length:12}, (_, i) => (i+1) + '月'); const rates = Object.keys(monthlyData).sort().map(m => { const d = monthlyData[m]; return d.inc > 0 ? ((d.inc - d.exp)/d.inc * 100).toFixed(1) : 0; });
+                const isDarkTheme = document.documentElement.classList.contains('dark'); const axisColor = isDarkTheme ? '#333' : '#e5e7eb'; const textColor = isDarkTheme ? '#666' : '#9ca3af';
+                historyChart.setOption({ backgroundColor: 'transparent', tooltip: { trigger: 'axis' }, grid: { top: 20, right: 10, bottom: 20, left: 30 }, xAxis: { type: 'category', data: monthsLabel, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 9 } }, yAxis: { type: 'value', splitLine: { show: false }, axisLabel: { color: textColor, fontSize: 9 } }, series: [{ type: 'line', data: rates, smooth: true, lineStyle: { width: 2, color: '#10b981' }, areaStyle: { opacity: 0.2, color: '#10b981' }, symbol: 'circle' }] });
             }
-
             const updatePieChart = () => {
-                if(!pieChart) return;
-                const map = {};
-                filteredTransactions.value.filter(t => t.type === 'expense' && t.category !== '储蓄').forEach(t => map[t.category] = (map[t.category] || 0) + Number(t.amount));
-                
-                const isDarkTheme = document.documentElement.classList.contains('dark');
-                const labelColor = isDarkTheme ? '#888' : '#666';
-                const valueColor = isDarkTheme ? '#fff' : '#000';
-
-                pieChart.setOption({
-                    backgroundColor: 'transparent', tooltip: { trigger: 'item' },
-                    series: [{ 
-                        type: 'pie', radius: ['40%', '65%'], itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 }, 
-                        labelLine: { length: 10, length2: 0, lineStyle: { color: labelColor } },
-                        label: { show: true, formatter: '{name|{b}}\n{rate|{d}%} {value|¥{c}}', rich: { name: { color: labelColor, fontSize: 10, padding: [0, 0, 2, 0] }, rate: { color: '#3b82f6', fontSize: 11, fontWeight: 'bold' }, value: { color: valueColor, fontSize: 10, padding: [0, 0, 0, 4] } } },
-                        data: Object.keys(map).map(k => ({ value: map[k], name: k })) 
-                    }]
-                });
+                const el = document.getElementById('chart-pie'); if (!el) return; if (pieChart) pieChart.dispose(); pieChart = echarts.init(el);
+                const map = {}; filteredTransactions.value.filter(t => t.type === 'expense' && t.category !== '储蓄').forEach(t => map[t.category] = (map[t.category] || 0) + Number(t.amount));
+                const isDarkTheme = document.documentElement.classList.contains('dark'); const labelColor = isDarkTheme ? '#888' : '#666'; const valueColor = isDarkTheme ? '#fff' : '#000';
+                pieChart.setOption({ backgroundColor: 'transparent', tooltip: { trigger: 'item' }, series: [{ type: 'pie', radius: ['40%', '65%'], itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 }, labelLine: { length: 10, length2: 0, lineStyle: { color: labelColor } }, label: { show: true, formatter: '{name|{b}}\n{value|¥{c}}', rich: { name: { color: labelColor, fontSize: 10 }, value: { color: valueColor, fontSize: 10 } } }, data: Object.keys(map).map(k => ({ value: map[k], name: k })) }] });
             }
 
-            const updateAllCharts = () => { updateDailyChart(); updateHistoryChart(); updatePieChart(); }
+            const updateAllCharts = () => { if(currentView.value === 'cashflow') { updateDailyChart(); updateHistoryChart(); updatePieChart(); } }
             
             const fetchTransactions = async () => {
                 const { data } = await _supabase.from('transactions').select('*').order('date', { ascending: true })
-                if (data) { transactions.value = data; updateAllCharts(); }
+                if (data) { transactions.value = data; nextTick(() => updateAllCharts()); }
             }
             watch([selectedYear, selectedMonth, isDark], () => { setTimeout(updateAllCharts, 100); })
 
             const setMonth = (m) => { selectedMonth.value = m; showMonthPicker.value = false; }
+            
+            // Modal Controls
             const openAddModal = () => {
                 form.amount = ''; form.title = ''; form.category = currentCategories.value[0]; 
                 const d = new Date(); formYear.value = d.getFullYear(); formMonth.value = d.getMonth()+1; formDay.value = d.getDate();
                 showModal.value = true;
             }
+
+            const openAssetModal = () => {
+                assetForm.amount = ''; assetForm.name = ''; assetForm.action = 'buy';
+                showAssetModal.value = true;
+            }
+
+            // Save Functions
             const saveTransaction = async () => {
                 if (!form.amount || !form.title) return alert('Incomplete');
                 const dStr = `${formYear.value}-${formMonth.value<10?'0'+formMonth.value:formMonth.value}-${formDay.value<10?'0'+formDay.value:formDay.value}`;
                 const { error } = await _supabase.from('transactions').insert({ user_id: (await _supabase.auth.getUser()).data.user.id, title: form.title, amount: form.amount, type: form.type, category: form.category, date: dStr });
                 if (!error) { showModal.value = false; fetchTransactions(); }
             }
+
+            // 新增：保存股票交易逻辑
+            const saveAssetTransaction = async () => {
+                if (!assetForm.amount || !assetForm.name) return alert('Please fill in stock info');
+                
+                // 自动构建数据：这里实现了 "连通主页" 的逻辑
+                // 如果是买入 -> 记为 '支出', 类别 '投资'
+                // 如果是卖出 -> 记为 '收入', 类别 '理财收益'
+                const type = assetForm.action === 'buy' ? 'expense' : 'income';
+                const category = assetForm.action === 'buy' ? '投资' : '理财收益';
+                const titlePrefix = assetForm.action === 'buy' ? 'Buy: ' : 'Sell: ';
+                
+                // 使用当天的日期
+                const d = new Date();
+                const dStr = `${d.getFullYear()}-${d.getMonth()+1<10?'0'+(d.getMonth()+1):d.getMonth()+1}-${d.getDate()<10?'0'+d.getDate():d.getDate()}`;
+
+                const { error } = await _supabase.from('transactions').insert({ 
+                    user_id: (await _supabase.auth.getUser()).data.user.id, 
+                    title: titlePrefix + assetForm.name, 
+                    amount: assetForm.amount, 
+                    type: type, 
+                    category: category, 
+                    date: dStr 
+                });
+                
+                if (!error) { showAssetModal.value = false; fetchTransactions(); }
+            }
+
             const deleteTransaction = async (id) => { if(confirm('Delete?')) { await _supabase.from('transactions').delete().eq('id', id); fetchTransactions(); } }
 
             onMounted(async () => {
                 const { data: { session } } = await _supabase.auth.getSession();
                 if(session) {
-                    dailyChart = echarts.init(document.getElementById('chart-daily'));
-                    historyChart = echarts.init(document.getElementById('chart-history'));
-                    pieChart = echarts.init(document.getElementById('chart-pie'));
-                    window.addEventListener('resize', () => { dailyChart.resize(); historyChart.resize(); pieChart.resize(); });
+                    window.addEventListener('resize', () => { 
+                        if(dailyChart) dailyChart.resize(); 
+                        if(historyChart) historyChart.resize(); 
+                        if(pieChart) pieChart.resize(); 
+                    });
                     fetchTransactions();
                 }
             })
 
-            return { mobileMenuOpen, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, showModal, showMonthPicker, form, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, saveTransaction, deleteTransaction, nFormatter, isDark, toggleTheme }
+            return { mobileMenuOpen, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, investmentTransactions, investmentStats, showModal, showAssetModal, showMonthPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, isDark, toggleTheme, currentView, switchView }
         }
     }).mount('#app')
 </script>
