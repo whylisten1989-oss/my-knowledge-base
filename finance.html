@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Finance (V5.4 - Pro)</title>
+    <title>MindForge Finance (V5.5 - Ultimate)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -27,15 +27,9 @@
     <style>
         [v-cloak] { display: none; }
         
-        /* 隐藏数字输入框的上下小箭头 */
         input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type=number] {
-            -moz-appearance: textfield;
-        }
+        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
 
         .log-item {
             display: flex; align-items: center; justify-content: space-between;
@@ -62,6 +56,19 @@
             content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
             width: 20px; height: 2px; background-color: #3b82f6; border-radius: 2px;
         }
+
+        /* 仿主页下拉菜单的样式 */
+        .custom-select-btn {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 100%; padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px; font-size: 12px; font-weight: bold;
+            color: white; cursor: pointer; transition: all 0.2s;
+        }
+        .custom-select-btn:hover { border-color: rgba(255, 255, 255, 0.3); }
+        .light .custom-select-btn { background: #f3f4f6; border-color: #e5e7eb; color: #111827; }
+        .light .custom-select-btn:hover { border-color: #9ca3af; }
     </style>
 </head>
 <body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200">
@@ -226,7 +233,7 @@
                             <div class="flex items-center gap-3">
                                 <span class="text-[10px] text-gray-400 uppercase">Realized Gains [已落袋]</span>
                                 <span class="text-xs font-bold text-green-600 dark:text-green-400 font-mono">+ {{ nFormatter(investmentStats.gains) }}</span>
-                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 font-bold">[{{ investmentStats.roi }}%]</span>
+                                <span :class="['text-[9px] px-1.5 py-0.5 rounded font-bold', parseFloat(investmentStats.roi) >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500']">[{{ investmentStats.roi }}%]</span>
                             </div>
                         </div>
                     </div>
@@ -326,14 +333,22 @@
                     </div>
                 </div>
 
-                <div v-else class="space-y-1 animate-fade-in">
+                <div v-else class="space-y-1 animate-fade-in relative">
                     <label class="text-[9px] text-gray-400 uppercase font-bold pl-1">Select Holding [选择持仓]</label>
-                    <select v-model="selectedHolding" class="cyber-input font-bold text-sm bg-transparent">
-                        <option value="" disabled selected>Select from Portfolio...</option>
-                        <option v-for="h in currentHoldings" :key="h.name" :value="h">
-                            {{ h.name }} [Cost: ¥{{ nFormatter(h.cost) }}]
-                        </option>
-                    </select>
+                    <div class="relative">
+                        <button @click="showHoldingPicker = !showHoldingPicker" class="custom-select-btn">
+                            <span>{{ selectedHolding ? selectedHolding.name : 'Select from Portfolio...' }}</span>
+                            <span class="text-[9px] opacity-60">▼</span>
+                        </button>
+                        
+                        <div v-if="showHoldingPicker" class="absolute top-full left-0 mt-2 w-full max-h-48 overflow-y-auto p-1 bg-white/95 dark:bg-[#0a0a0a]/95 border border-gray-200 dark:border-white/20 rounded-xl shadow-2xl backdrop-blur-xl z-[70] animate-fade-in custom-scroll">
+                            <div v-if="currentHoldings.length === 0" class="p-3 text-center text-[10px] text-gray-500">No Holdings Available</div>
+                            <button v-for="h in currentHoldings" :key="h.name" @click="selectHoldingItem(h)" class="w-full text-left p-3 text-xs hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg flex justify-between group">
+                                <span class="font-bold">{{ h.name }}</span>
+                                <span class="font-mono text-gray-500 group-hover:text-black dark:group-hover:text-white">Cost: ¥{{ nFormatter(h.cost) }}</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="space-y-1">
@@ -393,6 +408,7 @@
             const showModal = ref(false)
             const showAssetModal = ref(false)
             const showMonthPicker = ref(false)
+            const showHoldingPicker = ref(false) // 新增：控制持仓选择器显隐
             const transactions = ref([])
             
             const now = new Date()
@@ -420,6 +436,7 @@
                 return transactions.value.filter(t => t.category === '投资' || t.category === '理财收益').sort((a,b) => new Date(b.date) - new Date(a.date))
             })
 
+            // 核心逻辑: 计算持仓 (买入 - 卖出本金)
             const currentHoldings = computed(() => {
                 const map = {}; 
                 transactions.value.filter(t => t.type === 'expense' && t.category === '投资').forEach(t => {
@@ -464,36 +481,55 @@
             let dailyChart = null, historyChart = null, pieChart = null;
             let stockTrendChart = null, stockAllocChart = null;
 
+            // 1. Daily Trend (修复：恢复分类折线，0值标签隐藏)
             const updateDailyChart = () => {
                 const el = document.getElementById('chart-daily'); if (!el) return; if (dailyChart) dailyChart.dispose(); dailyChart = echarts.init(el);
                 const data = filteredTransactions.value; 
                 const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate(); 
                 const days = Array.from({length: daysInMonth}, (_, i) => (i + 1).toString()); 
                 const dailyTotal = new Array(daysInMonth).fill(0);
-                
+                const categorySeries = {};
+
                 data.filter(t => t.type === 'expense').forEach(t => { 
                     if (t.category !== '储蓄') { 
                         const dayIndex = parseInt(t.date.split('-')[2]) - 1; 
-                        dailyTotal[dayIndex] += Number(t.amount); 
+                        const val = Number(t.amount);
+                        dailyTotal[dayIndex] += val;
+                        // 记录分类数据
+                        if(!categorySeries[t.category]) categorySeries[t.category] = new Array(daysInMonth).fill(0);
+                        categorySeries[t.category][dayIndex] += val;
                     } 
                 });
 
                 const isDarkTheme = document.documentElement.classList.contains('dark'); 
                 const axisColor = isDarkTheme ? '#333' : '#e5e7eb'; const textColor = isDarkTheme ? '#666' : '#9ca3af';
                 
+                const series = [{ 
+                    name: 'TOTAL', type: 'line', data: dailyTotal, smooth: true, 
+                    lineStyle: { width: 3, color: '#3b82f6' }, areaStyle: { opacity: 0.2, color: '#3b82f6' }, 
+                    label: { show: true, position: 'top', color: textColor, formatter: (p) => p.value > 0 ? p.value : '' } 
+                }];
+                // 恢复分类折线
+                const colors = ['#f97316', '#10b981', '#ec4899', '#8b5cf6', '#eab308']; let cIdx = 0;
+                Object.entries(categorySeries).forEach(([cat, vals]) => { 
+                    series.push({ 
+                        name: cat, type: 'line', data: vals, smooth: true, 
+                        lineStyle: { width: 1.5, type: 'dashed' }, itemStyle: { color: colors[cIdx++ % colors.length] }, 
+                        label: { show: false } // 分类线不显示数字，避免杂乱
+                    }) 
+                });
+
                 dailyChart.setOption({ 
                     backgroundColor: 'transparent', tooltip: { trigger: 'axis' }, 
-                    grid: { top: 30, right: 10, bottom: 20, left: 40 }, 
+                    legend: { bottom: 0, icon: 'roundRect', itemGap: 15, textStyle: { color: textColor } },
+                    grid: { top: 30, right: 10, bottom: 40, left: 40 }, 
                     xAxis: { type: 'category', data: days, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } }, 
                     yAxis: { type: 'value', splitLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } }, 
-                    series: [{ 
-                        name: 'TOTAL', type: 'line', data: dailyTotal, smooth: true, 
-                        lineStyle: { width: 3, color: '#3b82f6' }, areaStyle: { opacity: 0.2, color: '#3b82f6' }, 
-                        label: { show: true, position: 'top', color: textColor, formatter: (p) => p.value > 0 ? p.value : '' } 
-                    }] 
+                    series: series 
                 }, true);
             }
 
+            // 2. Savings Trend (修复：显示百分比，空值不显示)
             const updateHistoryChart = () => {
                 const el = document.getElementById('chart-history'); if (!el) return; if (historyChart) historyChart.dispose(); historyChart = echarts.init(el);
                 const monthlyData = {}; for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyData[k] = { inc: 0, exp: 0 }; }
@@ -511,11 +547,12 @@
                     series: [{ 
                         type: 'line', data: rates, smooth: true, 
                         lineStyle: { width: 2, color: '#10b981' }, areaStyle: { opacity: 0.2, color: '#10b981' }, symbol: 'circle',
-                        label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: '[{c}%]' }
+                        label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: (p) => p.value ? `[${p.value}%]` : '' } 
                     }] 
                 });
             }
 
+            // 3. Structure (修复：显示百分比)
             const updatePieChart = () => {
                 const el = document.getElementById('chart-pie'); if (!el) return; if (pieChart) pieChart.dispose(); pieChart = echarts.init(el);
                 const map = {}; filteredTransactions.value.filter(t => t.type === 'expense' && t.category !== '储蓄').forEach(t => map[t.category] = (map[t.category] || 0) + Number(t.amount));
@@ -533,38 +570,82 @@
                 });
             }
 
+            // 4. Stock Trend (修复：显示收益率)
             const updateStockTrendChart = () => {
                 const el = document.getElementById('chart-stock-trend'); if (!el) return; if (stockTrendChart) stockTrendChart.dispose(); stockTrendChart = echarts.init(el);
-                const monthlyProfit = {}; for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyProfit[k] = 0; }
-                investmentTransactions.value.filter(t => t.category === '理财收益').forEach(t => { if (t.date.startsWith(selectedYear.value + '-')) { const k = t.date.slice(0, 7); monthlyProfit[k] += Number(t.amount); } });
-                const months = Array.from({length:12}, (_, i) => (i+1) + '月'); const values = Object.keys(monthlyProfit).sort().map(k => monthlyProfit[k]);
+                const monthlyProfit = {}; 
+                const monthlyCost = {}; // 需统计每月卖出的对应成本来算 ROI
+
+                for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyProfit[k] = 0; monthlyCost[k] = 0; }
+                
+                investmentTransactions.value.forEach(t => {
+                    if (t.date.startsWith(selectedYear.value + '-')) {
+                        const k = t.date.slice(0, 7);
+                        if (t.category === '理财收益') monthlyProfit[k] += Number(t.amount);
+                        // Principal = Cost (用于分母计算)
+                        if (t.category === '投资' && t.type === 'income') monthlyCost[k] += Number(t.amount);
+                    }
+                });
+                
+                const months = Array.from({length:12}, (_, i) => (i+1) + '月'); 
+                const data = Object.keys(monthlyProfit).sort().map(k => {
+                    const p = monthlyProfit[k];
+                    const c = monthlyCost[k];
+                    const roi = c > 0 ? (p / c * 100).toFixed(1) : 0;
+                    return { value: p, roi: roi };
+                });
+                
                 const isDarkTheme = document.documentElement.classList.contains('dark'); const axisColor = isDarkTheme ? '#333' : '#e5e7eb'; const textColor = isDarkTheme ? '#666' : '#9ca3af';
                 
                 stockTrendChart.setOption({
-                    backgroundColor: 'transparent', tooltip: { trigger: 'axis' },
+                    backgroundColor: 'transparent', tooltip: { trigger: 'axis', formatter: (params) => `${params[0].name}<br/>盈亏: ¥${params[0].value}<br/>收益率: [${params[0].data.roi}%]` },
                     grid: { top: 20, right: 10, bottom: 20, left: 30 },
                     xAxis: { type: 'category', data: months, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 9 } },
                     yAxis: { type: 'value', splitLine: { lineStyle: { color: axisColor, type: 'dashed' } }, axisLabel: { color: textColor, fontSize: 9 } },
-                    series: [{ type: 'bar', data: values, barWidth: '40%', itemStyle: { color: (p) => p.value >= 0 ? '#10b981' : '#ef4444', borderRadius: [4, 4, 0, 0] } }]
+                    series: [{ 
+                        type: 'bar', data: data, barWidth: '40%', 
+                        itemStyle: { color: (p) => p.value >= 0 ? '#10b981' : '#ef4444', borderRadius: [4, 4, 0, 0] },
+                        // 显示金额 + 收益率
+                        label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: (p) => p.value != 0 ? `¥${p.value}\n[${p.data.roi}%]` : '' }
+                    }]
                 });
             }
 
+            // 5. Stock Allocation (修复：显示收益率)
             const updateStockAllocationChart = () => {
                 const el = document.getElementById('chart-stock-allocation'); if (!el) return; if (stockAllocChart) stockAllocChart.dispose(); stockAllocChart = echarts.init(el);
-                const map = {};
-                investmentTransactions.value.filter(t => t.category === '理财收益').forEach(t => {
-                    let name = t.title.replace('Sell: ', '').trim();
-                    if(name.includes(' ')) name = name.split(' ')[0];
-                    map[name] = (map[name] || 0) + Number(t.amount);
+                
+                const mapProfit = {};
+                const mapCost = {};
+
+                investmentTransactions.value.forEach(t => {
+                    let name = '';
+                    if (t.category === '理财收益') { // Profit
+                        name = t.title.replace('Sell: ', '').trim();
+                        if(name.includes(' ')) name = name.split(' ')[0];
+                        mapProfit[name] = (mapProfit[name] || 0) + Number(t.amount);
+                    } else if (t.category === '投资' && t.type === 'income') { // Cost
+                        name = t.title.replace('Principal: ', '').trim();
+                        if(name.includes(' ')) name = name.split(' ')[0];
+                        mapCost[name] = (mapCost[name] || 0) + Number(t.amount);
+                    }
                 });
+                
                 const isDarkTheme = document.documentElement.classList.contains('dark'); const labelColor = isDarkTheme ? '#888' : '#666';
+                const chartData = Object.keys(mapProfit).map(k => {
+                    const p = mapProfit[k];
+                    const c = mapCost[k] || 0;
+                    const roi = c > 0 ? (p / c * 100).toFixed(1) : 0;
+                    return { value: p, name: k, roi: roi };
+                });
+
                 stockAllocChart.setOption({
-                    backgroundColor: 'transparent', tooltip: { trigger: 'item' },
+                    backgroundColor: 'transparent', tooltip: { trigger: 'item', formatter: '{b}<br/>Profit: ¥{c}<br/>ROI: [{data.roi}%]' },
                     series: [{
-                        type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], roseType: 'radius',
+                        type: 'pie', radius: ['35%', '65%'], center: ['50%', '55%'], roseType: 'radius',
                         itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 },
-                        label: { show: true, fontSize: 9, color: labelColor, formatter: '{b}\n[¥{c}]' },
-                        data: Object.keys(map).map(k => ({ value: map[k], name: k }))
+                        label: { show: true, fontSize: 9, color: labelColor, formatter: '{b}\n¥{c}\n[{d}%]\n[{data.roi}%]' },
+                        data: chartData
                     }]
                 });
             }
@@ -594,8 +675,13 @@
                 showAssetModal.value = true;
             }
 
+            const selectHoldingItem = (h) => {
+                selectedHolding.value = h;
+                showHoldingPicker.value = false;
+            }
+
             const resetAssetForm = () => {
-                assetForm.amount = ''; assetForm.name = ''; assetForm.code = ''; selectedHolding.value = null;
+                assetForm.amount = ''; assetForm.name = ''; assetForm.code = ''; selectedHolding.value = null; showHoldingPicker.value = false;
             }
 
             const saveTransaction = async () => {
@@ -647,7 +733,7 @@
                 }
             })
 
-            return { mobileMenuOpen, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, investmentTransactions, investmentStats, showModal, showAssetModal, showMonthPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, isDark, toggleTheme, currentView, switchView, currentHoldings, selectedHolding, resetAssetForm }
+            return { mobileMenuOpen, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, investmentTransactions, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, isDark, toggleTheme, currentView, switchView, currentHoldings, selectedHolding, selectHoldingItem, resetAssetForm }
         }
     }).mount('#app')
 </script>
