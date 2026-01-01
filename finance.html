@@ -180,7 +180,7 @@
                         </div>
                     </div>
                     
-                    <div class="cyber-card flex-1 flex flex-col overflow-hidden h-96 lg:h-[41rem]">
+                    <div class="cyber-card flex-1 flex flex-col overflow-hidden h-[41.5rem]">
                         <div class="p-4 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-gray-50 dark:bg-black/20">
                             <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Cashflow Log</h3>
                             <span class="text-[10px] font-mono text-gray-400">{{ filteredTransactions.length }} ITEMS</span>
@@ -702,7 +702,7 @@
                 stockAllocChart.setOption({
                     backgroundColor: 'transparent', tooltip: { trigger: 'item', formatter: '{b}<br/>Cost: ¥{c}<br/>[{d}%]' },
                     series: [{
-                        type: 'pie', radius: ['60%', '90%'], center: ['50%', '50%'], 
+                        type: 'pie', radius: ['35%', '65%'], center: ['50%', '50%'],
                         itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 },
                         label: { 
                             show: true, 
@@ -788,3 +788,4 @@
 </script>
 </body>
 </html>
+
