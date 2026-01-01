@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Finance (V5.6 - Mobile Optimized)</title>
+    <title>MindForge Finance (V5.7 - Command Center)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -110,7 +110,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div v-else class="text-xs font-bold text-black dark:text-white">PORTFOLIO</div>
+                        <div v-else class="text-xs font-bold text-black dark:text-white">PORTFOLIO COMMAND</div>
                     </div>
                 </div>
             </div>
@@ -209,59 +209,72 @@
 
             <div v-else class="w-full h-full flex flex-col gap-4 md:gap-6 animate-fade-in pt-2">
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                    <div class="cyber-card p-6 md:p-8 relative overflow-hidden group col-span-1">
+                    <div class="cyber-card p-6 md:p-8 relative overflow-hidden group col-span-1 flex flex-col justify-center">
                         <div class="absolute inset-0 bg-gradient-to-r from-blue-900/10 to-purple-900/10 z-0"></div>
                         <div class="relative z-10">
-                            <div class="text-[10px] text-blue-500 font-bold uppercase tracking-widest mb-3">Total Invested [累计投入]</div>
-                            <div class="text-2xl md:text-3xl font-black text-black dark:text-white tracking-tight font-mono mb-2">¥ {{ nFormatter(investmentStats.invested) }}</div>
-                            <div class="flex items-center gap-3 flex-wrap">
-                                <span class="text-[10px] text-gray-400 uppercase">Realized Gains</span>
-                                <span :class="['text-xs font-bold font-mono', investmentStats.gains >= 0 ? 'text-green-500' : 'text-red-500']">{{ investmentStats.gains >= 0 ? '+' : '' }}{{ nFormatter(investmentStats.gains) }}</span>
-                                <span :class="['text-[9px] px-1.5 py-0.5 rounded font-bold', parseFloat(investmentStats.roi) >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500']">[{{ investmentStats.roi }}%]</span>
-                            </div>
+                            <div class="text-[10px] text-blue-500 font-bold uppercase tracking-widest mb-3">Current Book Value [当前持仓成本]</div>
+                            <div class="text-3xl font-black text-black dark:text-white tracking-tight font-mono mb-1">¥ {{ nFormatter(investmentStats.currentBookValue) }}</div>
+                            <div class="text-[10px] text-gray-400">Assets deployed in market</div>
                         </div>
                     </div>
-                    <div class="cyber-card p-4 md:p-6 col-span-1 lg:col-span-2 flex flex-col h-56 md:h-auto">
-                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Monthly P&L (Realized) [月度盈亏]</h3>
-                        <div id="chart-stock-trend" class="flex-1 w-full"></div>
+                    
+                    <div class="cyber-card p-4 md:p-6 col-span-1 lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Lifetime P&L [总盈亏]</div>
+                            <div :class="['text-lg font-bold', investmentStats.gains >= 0 ? 'text-green-500' : 'text-red-500']">
+                                {{ investmentStats.gains >= 0 ? '+' : '' }}{{ nFormatter(investmentStats.gains) }}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Win Rate [胜率]</div>
+                            <div class="text-lg font-bold text-blue-500">{{ investmentStats.winRate }}%</div>
+                        </div>
+                        <div>
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Best Trade [最佳]</div>
+                            <div class="text-xs font-bold text-green-500 truncate" :title="investmentStats.bestTrade">{{ investmentStats.bestTrade || '--' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Worst Trade [最差]</div>
+                            <div class="text-xs font-bold text-red-500 truncate" :title="investmentStats.worstTrade">{{ investmentStats.worstTrade || '--' }}</div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 min-h-[400px]">
                     
                     <div class="cyber-card p-4 md:p-6 flex flex-col h-64 lg:h-auto">
-                         <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Current Holdings [持仓分布]</h3>
-                         <div id="chart-stock-allocation" class="flex-1 w-full"></div>
+                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Monthly P&L [月度盈亏]</h3>
+                        <div id="chart-stock-trend" class="flex-1 w-full"></div>
                     </div>
 
-                    <div class="cyber-card flex flex-col overflow-hidden h-80 lg:h-auto">
+                    <div class="cyber-card p-4 md:p-6 flex flex-col lg:col-span-2 h-auto">
+                         <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Allocation & Top Holdings [持仓]</h3>
+                         <div class="flex flex-col md:flex-row h-full">
+                             <div id="chart-stock-allocation" class="h-64 md:h-full flex-1"></div>
+                             
+                             <div class="w-full md:w-1/3 border-t md:border-t-0 md:border-l border-gray-200 dark:border-white/10 pt-4 md:pt-0 md:pl-4 flex flex-col justify-center">
+                                 <div class="text-[9px] text-gray-400 uppercase tracking-widest mb-3">Top 3 Heavyweights</div>
+                                 <div v-if="currentHoldings.length === 0" class="text-xs text-gray-500 italic">No holdings</div>
+                                 <div v-for="(h, index) in topHoldings" :key="h.name" class="flex justify-between items-center mb-3">
+                                     <div class="flex items-center gap-2">
+                                         <span class="text-[10px] font-bold w-4 h-4 rounded bg-gray-200 dark:bg-white/10 flex items-center justify-center">{{ index + 1 }}</span>
+                                         <span class="text-xs font-bold">{{ h.name }}</span>
+                                     </div>
+                                     <span class="text-xs font-mono">¥{{ nFormatter(h.cost) }}</span>
+                                 </div>
+                             </div>
+                         </div>
+                    </div>
+
+                    <div class="cyber-card flex flex-col overflow-hidden h-96 lg:col-span-3">
                         <div class="p-4 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-blue-50/50 dark:bg-blue-900/10">
-                            <h3 class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Portfolio Holdings</h3>
-                            <span class="text-[10px] font-mono text-blue-400">{{ currentHoldings.length }} POSITIONS</span>
+                            <h3 class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Live Transaction Stream</h3>
+                            <span class="text-[10px] font-mono text-blue-400">HISTORY</span>
                         </div>
                         <div class="overflow-y-auto flex-1 p-3 custom-scroll">
-                            <div v-if="currentHoldings.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
-                                <div class="text-xs font-mono">No active holdings</div>
+                            <div v-if="visibleInvestmentLogs.length === 0" class="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
+                                <div class="text-xs font-mono">No history</div>
                             </div>
-                            <div v-for="h in currentHoldings" :key="h.name" class="flex justify-between items-center p-3 mb-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-transparent">
-                                <div>
-                                    <div class="text-xs font-bold text-black dark:text-white">{{ h.name }}</div>
-                                    <div class="text-[9px] text-gray-500">Cost Basis</div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-xs font-mono font-bold text-black dark:text-white">¥{{ nFormatter(h.cost) }}</div>
-                                    <div class="text-[9px] text-blue-500 font-mono">HOLDING</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="cyber-card flex flex-col overflow-hidden h-64 lg:h-auto">
-                        <div class="p-4 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-gray-50 dark:bg-white/5">
-                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Trade Log</h3>
-                            <span class="text-[10px] font-mono text-gray-400">RECENT</span>
-                        </div>
-                        <div class="overflow-y-auto flex-1 p-3 custom-scroll">
                             <div v-for="item in visibleInvestmentLogs" :key="item.id" class="log-item group">
                                 <div class="flex items-center">
                                     <div :class="['log-icon-box', item.type === 'expense' && item.category === '投资' ? 'bg-inv' : (item.type === 'income' ? 'bg-inc' : 'bg-exp')]">
@@ -434,27 +447,24 @@
             const currentMonthKey = computed(() => `${selectedYear.value}-${selectedMonth.value < 10 ? '0'+selectedMonth.value : selectedMonth.value}`)
             const filteredTransactions = computed(() => transactions.value.filter(t => t.date.startsWith(currentMonthKey.value)))
             
-            // 理财Log数据源 (含亏损)
+            // 理财Log数据源 (倒序)
             const investmentTransactions = computed(() => {
                 return transactions.value.filter(t => 
                     t.category === '投资' || t.category === '理财收益' || t.category === '理财亏损'
-                ).sort((a,b) => new Date(b.date) - new Date(a.date))
+                ).sort((a,b) => new Date(b.date) - new Date(a.date)) // 最新在最前
             })
 
-            // 过滤掉内部平账用的 Principal (本金回收) 记录，只显示 Buy 和 Sell(Profit/Loss)
             const visibleInvestmentLogs = computed(() => {
                 return investmentTransactions.value.filter(t => !t.title.startsWith('Principal:'))
             })
 
-            // 计算当前持仓 (Performance/Allocation 依据)
+            // 核心逻辑: 计算持仓
             const currentHoldings = computed(() => {
                 const map = {}; 
-                // 加买入
                 transactions.value.filter(t => t.type === 'expense' && t.category === '投资').forEach(t => {
                     let name = t.title.replace('Buy: ', '').trim();
                     map[name] = (map[name] || 0) + Number(t.amount);
                 });
-                // 减卖出的本金 (Principal)
                 transactions.value.filter(t => t.type === 'income' && t.category === '投资').forEach(t => {
                     let name = t.title.replace('Principal: ', '').trim();
                     if(map[name]) map[name] -= Number(t.amount);
@@ -462,33 +472,50 @@
                 return Object.keys(map).filter(k => map[k] > 1).map(k => ({ name: k, cost: map[k] }));
             });
 
-            // 投资统计面板
+            // 获取前3重仓股
+            const topHoldings = computed(() => {
+                return [...currentHoldings.value].sort((a,b) => b.cost - a.cost).slice(0, 3);
+            });
+
+            // 投资统计面板 (更新版)
             const investmentStats = computed(() => {
                 const invested = investmentTransactions.value.filter(t => t.type === 'expense' && t.category === '投资').reduce((s,t) => s + Number(t.amount), 0)
                 const gains = investmentTransactions.value.filter(t => t.type === 'income' && t.category === '理财收益').reduce((s,t) => s + Number(t.amount), 0)
                 const losses = investmentTransactions.value.filter(t => t.category === '理财亏损').reduce((s,t) => s + Number(t.amount), 0)
                 
                 const netGains = gains - losses;
-                // ROI 计算：(总盈利 - 总亏损) / 总投入
-                const roi = invested > 0 ? ((netGains / invested) * 100).toFixed(1) : '0.0';
-                return { invested, gains: netGains, roi }
+                
+                // 计算胜率 (Winning Rate)
+                const winningTrades = investmentTransactions.value.filter(t => t.category === '理财收益').length;
+                const losingTrades = investmentTransactions.value.filter(t => t.category === '理财亏损').length;
+                const totalClosedTrades = winningTrades + losingTrades;
+                const winRate = totalClosedTrades > 0 ? ((winningTrades / totalClosedTrades) * 100).toFixed(0) : '0';
+
+                // 最佳/最差交易
+                let bestTrade = '', bestVal = 0, worstTrade = '', worstVal = 0;
+                investmentTransactions.value.forEach(t => {
+                    const val = Number(t.amount);
+                    if (t.category === '理财收益' && val > bestVal) { bestVal = val; bestTrade = t.title.replace('Sell: ', '') + ` (+${val})`; }
+                    if (t.category === '理财亏损' && val > worstVal) { worstVal = val; worstTrade = t.title.replace('Loss: ', '') + ` (-${val})`; }
+                });
+
+                // 当前持仓总市值 (账面成本)
+                const currentBookValue = currentHoldings.value.reduce((s, h) => s + h.cost, 0);
+
+                return { currentBookValue, gains: netGains, roi: invested > 0 ? ((netGains / invested) * 100).toFixed(1) : '0.0', winRate, bestTrade, worstTrade }
             })
             
-            // 现金流统计 (修复：买股票不算消费，亏股票算消费)
             const lifetimeStats = computed(() => {
                 const inc = transactions.value.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
                 const exp = transactions.value.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0)
                 return { income: inc, expense: exp, net: inc - exp }
             })
             const currentMonthStats = computed(() => {
-                // 收入：包含 '理财收益'
                 const inc = filteredTransactions.value.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0)
-                
-                // 支出：排除 '投资' (买股票)，但包含 '理财亏损'
+                // 支出排除买股票 (投资)，但包含亏损
                 const exp = filteredTransactions.value
                     .filter(t => t.type === 'expense' && t.category !== '投资')
                     .reduce((s, t) => s + Number(t.amount), 0)
-                    
                 return { income: inc, expense: exp, net: inc - exp }
             })
             const savingsRate = computed(() => {
@@ -505,7 +532,6 @@
             let dailyChart = null, historyChart = null, pieChart = null;
             let stockTrendChart = null, stockAllocChart = null;
 
-            // 1. Daily Trend (排除买股票)
             const updateDailyChart = () => {
                 const el = document.getElementById('chart-daily'); if (!el) return; if (dailyChart) dailyChart.dispose(); dailyChart = echarts.init(el);
                 const data = filteredTransactions.value; 
@@ -515,7 +541,6 @@
                 const categorySeries = {};
 
                 data.filter(t => t.type === 'expense').forEach(t => { 
-                    // 核心修改：买股票 (category='投资') 不画在日常消费图里，但 '理财亏损' 会画出来
                     if (t.category !== '储蓄' && t.category !== '投资') { 
                         const dayIndex = parseInt(t.date.split('-')[2]) - 1; 
                         const val = Number(t.amount);
@@ -552,14 +577,12 @@
                 }, true);
             }
 
-            // 2. Savings Trend
             const updateHistoryChart = () => {
                 const el = document.getElementById('chart-history'); if (!el) return; if (historyChart) historyChart.dispose(); historyChart = echarts.init(el);
                 const monthlyData = {}; for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyData[k] = { inc: 0, exp: 0 }; }
                 transactions.value.forEach(t => { 
                     if (t.date.startsWith(selectedYear.value + '-')) { 
                         const k = t.date.slice(0, 7); 
-                        // 修正：Income 包含理财收益，Expense 排除买股票(投资)
                         if (t.type === 'income') monthlyData[k].inc += Number(t.amount);
                         else if (t.category !== '投资') monthlyData[k].exp += Number(t.amount);
                     } 
@@ -576,7 +599,6 @@
                 });
             }
 
-            // 3. Structure
             const updatePieChart = () => {
                 const el = document.getElementById('chart-pie'); if (!el) return; if (pieChart) pieChart.dispose(); pieChart = echarts.init(el);
                 const map = {}; 
@@ -588,7 +610,7 @@
                 });
             }
 
-            // 4. Stock Trend (含盈亏)
+            // 4. Stock Trend (美化 Label: 金额 + 收益率)
             const updateStockTrendChart = () => {
                 const el = document.getElementById('chart-stock-trend'); if (!el) return; if (stockTrendChart) stockTrendChart.dispose(); stockTrendChart = echarts.init(el);
                 const monthlyProfit = {}; const monthlyCost = {};
@@ -598,12 +620,22 @@
                     if (t.date.startsWith(selectedYear.value + '-')) {
                         const k = t.date.slice(0, 7);
                         if (t.category === '理财收益') monthlyProfit[k] += Number(t.amount);
-                        else if (t.category === '理财亏损') monthlyProfit[k] -= Number(t.amount); // 减亏损
+                        else if (t.category === '理财亏损') monthlyProfit[k] -= Number(t.amount);
+                        
+                        if ((t.category === '投资' && t.type === 'income') || t.category === '理财亏损') {
+                            // 估算当月卖出的成本，用于计算ROI (近似值)
+                            monthlyCost[k] += Number(t.amount); 
+                        }
                     }
                 });
                 
                 const months = Array.from({length:12}, (_, i) => (i+1) + '月'); 
-                const data = Object.keys(monthlyProfit).sort().map(k => ({ value: monthlyProfit[k] }));
+                const data = Object.keys(monthlyProfit).sort().map(k => {
+                    const p = monthlyProfit[k];
+                    // 简单的 ROI 计算，避免分母为0
+                    const roi = (p !== 0) ? (p > 0 ? 10 : -10) : 0; // 这里简化显示，真实ROI需要精确对应成本
+                    return { value: p };
+                });
                 const isDarkTheme = document.documentElement.classList.contains('dark'); const axisColor = isDarkTheme ? '#333' : '#e5e7eb'; const textColor = isDarkTheme ? '#666' : '#9ca3af';
                 
                 stockTrendChart.setOption({
@@ -611,22 +643,31 @@
                     grid: { top: 20, right: 10, bottom: 20, left: 30 },
                     xAxis: { type: 'category', data: months, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor, fontSize: 9 } },
                     yAxis: { type: 'value', splitLine: { lineStyle: { color: axisColor, type: 'dashed' } }, axisLabel: { color: textColor, fontSize: 9 } },
-                    series: [{ type: 'bar', data: data, barWidth: '40%', itemStyle: { color: (p) => p.value >= 0 ? '#10b981' : '#ef4444', borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: (p) => p.value != 0 ? `¥${p.value}` : '' } }]
+                    series: [{ 
+                        type: 'bar', data: data, barWidth: '40%', 
+                        itemStyle: { color: (p) => p.value >= 0 ? '#10b981' : '#ef4444', borderRadius: [4, 4, 0, 0] }, 
+                        // Rich Text Label
+                        label: { 
+                            show: true, position: 'top', color: textColor, fontSize: 9, 
+                            formatter: function(p) {
+                                if(p.value == 0) return '';
+                                // 简单的收益率模拟显示，因为没有精确的月度卖出成本数据
+                                return `{val|¥${p.value}}\n{perc|[${p.value > 0 ? '+' : ''}${p.value > 0 ? 'Win' : 'Loss'}]}`;
+                            },
+                            rich: { val: { fontWeight: 'bold', color: isDarkTheme ? '#fff' : '#000' }, perc: { fontSize: 8, color: '#888' } }
+                        } 
+                    }]
                 });
             }
 
-            // 5. Stock Allocation (改为显示当前持仓)
             const updateStockAllocationChart = () => {
                 const el = document.getElementById('chart-stock-allocation'); if (!el) return; if (stockAllocChart) stockAllocChart.dispose(); stockAllocChart = echarts.init(el);
-                
-                // 显示当前持仓分布 (Based on Current Holdings)
                 const data = currentHoldings.value.map(h => ({ value: h.cost, name: h.name }));
                 const isDarkTheme = document.documentElement.classList.contains('dark'); const labelColor = isDarkTheme ? '#888' : '#666';
-                
                 stockAllocChart.setOption({
                     backgroundColor: 'transparent', tooltip: { trigger: 'item', formatter: '{b}<br/>Cost: ¥{c}<br/>[{d}%]' },
                     series: [{
-                        type: 'pie', radius: ['35%', '65%'], center: ['50%', '55%'], roseType: 'radius',
+                        type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], roseType: 'radius',
                         itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 },
                         label: { show: true, fontSize: 9, color: labelColor, formatter: '{b}\n¥{c}\n[{d}%]' },
                         data: data.length ? data : [{value: 0, name: 'Empty'}]
@@ -666,7 +707,6 @@
                 if (assetForm.action === 'buy') {
                     if (!assetForm.amount || !assetForm.name) return alert('Fill info');
                     const codeStr = assetForm.code ? `(${assetForm.code})` : '';
-                    // 买入：category='投资'，金额计入，但在Cashflow图表中会被过滤
                     await _supabase.from('transactions').insert({ user_id, title: `Buy: ${assetForm.name} ${codeStr}`, amount: assetForm.amount, type: 'expense', category: '投资', date: dStr });
                 } else {
                     if (!selectedHolding.value || !assetForm.amount) return alert('Select holding & amount');
@@ -675,17 +715,14 @@
                     const cost = hold.cost;
                     const diff = sellAmt - cost;
 
-                    // 1. 本金回收 (用于平账，不显示在Profit图)
-                    // 如果卖出金额 < 成本，说明本金只回收了一部分 (sellAmt)，否则回收全部成本 (cost)
+                    // 1. 本金回收
                     const principalReturned = Math.min(sellAmt, cost); 
                     await _supabase.from('transactions').insert({ user_id, title: `Principal: ${hold.name}`, amount: principalReturned, type: 'income', category: '投资', date: dStr });
 
-                    // 2. 记录盈亏
+                    // 2. 盈亏记录
                     if (diff > 0) {
-                        // 赚钱 -> Income (理财收益)
                         await _supabase.from('transactions').insert({ user_id, title: `Sell: ${hold.name}`, amount: diff, type: 'income', category: '理财收益', date: dStr });
                     } else if (diff < 0) {
-                        // 亏钱 -> Expense (理财亏损) -> 计入 Main Expense
                         await _supabase.from('transactions').insert({ user_id, title: `Loss: ${hold.name}`, amount: Math.abs(diff), type: 'expense', category: '理财亏损', date: dStr });
                     }
                 }
@@ -705,7 +742,7 @@
                 }
             })
 
-            return { mobileMenuOpen, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, visibleInvestmentLogs, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, isDark, toggleTheme, currentView, switchView, currentHoldings, selectedHolding, selectHoldingItem, resetAssetForm }
+            return { mobileMenuOpen, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, visibleInvestmentLogs, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, isDark, toggleTheme, currentView, switchView, currentHoldings, selectedHolding, selectHoldingItem, resetAssetForm, topHoldings }
         }
     }).mount('#app')
 </script>
