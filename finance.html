@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Finance (V6.1 - Layout Fix)</title>
+    <title>MindForge Finance (V6.1 - Stable)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -88,7 +88,7 @@
 
     <main class="flex-1 flex flex-col bg-transparent relative w-full px-2 md:pl-4 md:pt-4 no-scroll-x h-full">
         
-        <header class="h-14 md:h-16 flex items-center justify-between px-4 md:px-8 shrink-0 mb-2 md:mb-4 md:mr-4 cyber-card z-[40] sticky top-2 md:top-0 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg !overflow-visible">
+        <header class="h-14 md:h-16 flex items-center justify-between px-4 md:px-8 shrink-0 mb-2 md:mb-4 md:mr-4 cyber-card z-[100] sticky top-2 md:top-0 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg !overflow-visible">
             <div class="flex items-center gap-3 md:gap-6">
                 <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl">☰</button>
                 <div class="flex flex-col relative justify-center">
@@ -193,7 +193,7 @@
                                         {{ item.type === 'expense' ? 'OUT' : 'IN' }}
                                     </div>
                                     <div>
-                                        <div class="text-xs font-bold text-black dark:text-white mb-0.5">{{ item.title }}</div>
+                                        <div class="text-xs font-bold text-black dark:text-white mb-0.5">{{ item.title || 'Unknown' }}</div>
                                         <div class="text-[9px] text-gray-400 font-mono flex items-center gap-2">
                                             <span>{{ item.date }}</span>
                                             <span class="uppercase">[{{ item.category }}]</span>
@@ -222,6 +222,7 @@
                             <div class="text-[10px] text-gray-400">Assets deployed in market</div>
                         </div>
                     </div>
+                    
                     <div class="cyber-card p-4 md:p-6 col-span-1 lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition">
                             <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Lifetime P&L [总盈亏]</div>
@@ -269,7 +270,7 @@
                              <div class="w-full md:w-2/3 border-t md:border-t-0 md:border-l border-gray-200 dark:border-white/10 pt-4 md:pt-0 md:pl-6 flex flex-col justify-start h-full">
                                  <div class="flex justify-between text-[9px] text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-200 dark:border-white/10 pb-1">
                                      <span>Asset Name</span>
-                                     <span class="text-right">Value / ROI</span>
+                                     <span class="text-right">Value / Alloc</span>
                                  </div>
                                  <div class="flex-1 overflow-y-auto max-h-40 custom-scroll pr-2">
                                      <div v-if="currentHoldings.length === 0" class="text-xs text-gray-500 italic py-2">No active positions</div>
@@ -486,6 +487,7 @@
                 return investmentTransactions.value.filter(t => t.title && !t.title.startsWith('Principal:'))
             })
 
+            // 安全计算持仓
             const currentHoldings = computed(() => {
                 const map = {}; 
                 transactions.value.filter(t => t.type === 'expense' && t.category === '投资').forEach(t => {
@@ -503,6 +505,11 @@
                 return [...currentHoldings.value].sort((a,b) => b.cost - a.cost);
             });
 
+            const topHoldings = computed(() => {
+                return [...currentHoldings.value].sort((a,b) => b.cost - a.cost).slice(0, 3);
+            });
+
+            // 投资统计面板 (安全校验版)
             const investmentStats = computed(() => {
                 const invested = investmentTransactions.value.filter(t => t.type === 'expense' && t.category === '投资').reduce((s,t) => s + Number(t.amount), 0)
                 const gains = investmentTransactions.value.filter(t => t.type === 'income' && t.category === '理财收益').reduce((s,t) => s + Number(t.amount), 0)
@@ -521,13 +528,13 @@
                     const val = Number(t.amount);
                     if (t.category === '理财收益' && val > bestVal) { 
                         bestVal = val; 
-                        bestTrade = t.title.replace('Sell: ', '');
+                        bestTrade = t.title ? t.title.replace('Sell: ', '') : 'Unknown';
                         const principal = investmentTransactions.value.find(p => p.date === t.date && p.title === `Principal: ${bestTrade}`);
                         if(principal && Number(principal.amount) > 0) bestTradeRoi = (val / Number(principal.amount) * 100).toFixed(1);
                     }
                     if (t.category === '理财亏损' && val > worstVal) { 
                         worstVal = val; 
-                        worstTrade = t.title.replace('Loss: ', '');
+                        worstTrade = t.title ? t.title.replace('Loss: ', '') : 'Unknown';
                         const principal = investmentTransactions.value.find(p => p.date === t.date && p.title === `Principal: ${worstTrade}`);
                         if(principal && Number(principal.amount) > 0) worstTradeRoi = (-val / (Number(principal.amount) + val) * 100).toFixed(1);
                     }
