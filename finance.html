@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Finance (V6.2 - Layout Perfect)</title>
+    <title>MindForge Finance (V6.3 - Logic Secured)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -182,7 +182,7 @@
                         </div>
                     </div>
                     
-                    <div class="cyber-card flex-1 flex flex-col overflow-hidden h-96 md:h-96">
+                    <div class="cyber-card flex-1 flex flex-col overflow-hidden h-96 lg:h-[42rem]">
                         <div class="p-4 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-gray-50 dark:bg-black/20">
                             <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Cashflow Log</h3>
                             <span class="text-[10px] font-mono text-gray-400">{{ filteredTransactions.length }} ITEMS</span>
@@ -258,13 +258,13 @@
 
                 <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 min-h-[400px]">
                     
-                    <div class="cyber-card p-4 md:p-6 flex flex-col h-96 lg:h-96">
+                    <div class="cyber-card p-4 md:p-6 flex flex-col h-80 lg:h-80">
                         <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Monthly P&L [月度盈亏]</h3>
                         <div id="chart-stock-trend" class="flex-1 w-full"></div>
                     </div>
 
-                    <div class="cyber-card p-4 md:p-6 flex flex-col lg:col-span-2 h-96 lg:h-96">
-                         <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Asset Allocation [资产分布]</h3>
+                    <div class="cyber-card p-4 md:p-6 flex flex-col lg:col-span-2 h-80 lg:h-80">
+                         <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Asset Allocation [资产分布]</h3>
                          <div class="flex flex-col md:flex-row h-full items-start">
                              <div id="chart-stock-allocation" class="h-48 md:h-full w-full md:w-1/3"></div>
                              
@@ -293,7 +293,7 @@
                          </div>
                     </div>
 
-                    <div class="cyber-card flex flex-col overflow-hidden h-64 lg:h-64 lg:col-span-3">
+                    <div class="cyber-card flex flex-col overflow-hidden h-96 lg:col-span-3">
                         <div class="p-4 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-blue-50/50 dark:bg-blue-900/10">
                             <h3 class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Live Transaction Stream</h3>
                             <span class="text-[10px] font-mono text-blue-400">HISTORY</span>
@@ -488,16 +488,31 @@
                 return investmentTransactions.value.filter(t => t.title && !t.title.startsWith('Principal:'))
             })
 
+            // 核心逻辑: 计算持仓
             const currentHoldings = computed(() => {
                 const map = {}; 
+                // Add buy amount
                 transactions.value.filter(t => t.type === 'expense' && t.category === '投资').forEach(t => {
                     let name = t.title ? t.title.replace('Buy: ', '').trim() : 'Unknown';
                     map[name] = (map[name] || 0) + Number(t.amount);
                 });
+                // Subtract principal returned (Income, category='投资')
                 transactions.value.filter(t => t.type === 'income' && t.category === '投资').forEach(t => {
                     let name = t.title ? t.title.replace('Principal: ', '').trim() : 'Unknown';
                     if(map[name]) map[name] -= Number(t.amount);
                 });
+                // Subtract loss (Expense, category='理财亏损') - 核心修复
+                transactions.value.filter(t => t.type === 'expense' && t.category === '理财亏损').forEach(t => {
+                    let name = t.title ? t.title.replace('Loss: ', '').trim() : 'Unknown';
+                    // 亏损部分也意味着本金的减少，所以要减去
+                    // 比如买入1000，卖出800（收回本金800，亏损200）
+                    // 1000 - 800 - 0 = 200 (错，还剩200成本)
+                    // 所以这里不需要减去亏损额吗？
+                    // 实际上: Principal Income (800) + Loss Expense (200) = Original Cost (1000)
+                    // 所以要减去 (Principal + Loss) 才能归零。
+                    if(map[name]) map[name] -= Number(t.amount); 
+                });
+
                 return Object.keys(map).filter(k => map[k] > 1).map(k => ({ name: k, cost: map[k] }));
             });
 
@@ -691,7 +706,14 @@
                     series: [{
                         type: 'pie', radius: ['60%', '90%'], center: ['50%', '50%'], 
                         itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 },
-                        label: { show: false },
+                        label: { 
+                            show: true, 
+                            position: 'outside', 
+                            formatter: '{b}\n{d}%', 
+                            fontSize: 10,
+                            color: labelColor
+                        },
+                        labelLine: { show: true, length: 10, length2: 5 },
                         data: data.length ? data : [{value: 0, name: 'Empty'}]
                     }]
                 });
@@ -762,7 +784,7 @@
                 }
             })
 
-            return { mobileMenuOpen, privacyMode, togglePrivacy, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, reversedFilteredTransactions, visibleInvestmentLogs, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, formatDateTime, isDark, toggleTheme, currentView, switchView, currentHoldings, sortedHoldings, selectedHolding, selectHoldingItem, resetAssetForm }
+            return { mobileMenuOpen, privacyMode, togglePrivacy, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, reversedFilteredTransactions, visibleInvestmentLogs, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, formatDateTime, isDark, toggleTheme, currentView, switchView, currentHoldings, sortedHoldings, selectedHolding, selectHoldingItem, resetAssetForm, topHoldings }
         }
     }).mount('#app')
 </script>
