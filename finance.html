@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Finance (V5.8 - Refined)</title>
+    <title>MindForge Finance (V5.9 - Privacy Core)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -88,17 +88,16 @@
 
     <main class="flex-1 flex flex-col bg-transparent relative w-full px-2 md:pl-4 md:pt-4 no-scroll-x h-full">
         
-        <header class="h-14 md:h-16 flex items-center justify-between px-4 md:px-8 shrink-0 mb-2 md:mb-4 md:mr-4 cyber-card z-[40] sticky top-2 md:top-0 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
+        <header class="h-14 md:h-16 flex items-center justify-between px-4 md:px-8 shrink-0 mb-2 md:mb-4 md:mr-4 cyber-card z-[40] sticky top-2 md:top-0 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg !overflow-visible">
             <div class="flex items-center gap-3 md:gap-6">
                 <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl">☰</button>
                 <div class="flex flex-col relative justify-center">
                     <span class="text-[8px] md:text-[9px] font-bold text-gray-500 uppercase tracking-[0.1em] md:tracking-[0.2em] mb-0.5">Financial Intelligence</span>
-                    <div class="relative">
-                        <div v-if="currentView === 'cashflow'">
+                    <div class="relative z-[100]"> <div v-if="currentView === 'cashflow'">
                             <button @click="showMonthPicker = !showMonthPicker" class="month-trigger-btn text-black dark:text-white text-xs font-bold">
                                 <span>{{ selectedYear }}</span><span class="text-gray-400">.</span><span>{{ selectedMonth < 10 ? '0'+selectedMonth : selectedMonth }}</span><span class="text-[8px] text-gray-400 ml-1">▼</span>
                             </button>
-                            <div v-if="showMonthPicker" class="absolute top-full left-0 mt-2 w-48 p-2 bg-white/95 dark:bg-[#0a0a0a]/95 border border-gray-200 dark:border-white/20 rounded-xl shadow-xl z-[70]">
+                            <div v-if="showMonthPicker" class="absolute top-full left-0 mt-2 w-48 p-2 bg-white/95 dark:bg-[#0a0a0a]/95 border border-gray-200 dark:border-white/20 rounded-xl shadow-xl z-[100]">
                                 <div class="flex justify-between items-center mb-2 pb-2 border-b border-gray-200 dark:border-white/10">
                                     <button @click="selectedYear--" class="px-2">◀</button>
                                     <span class="font-bold">{{ selectedYear }}</span>
@@ -120,6 +119,10 @@
             </div>
 
             <div class="flex items-center gap-2 md:gap-4">
+                <button @click="togglePrivacy" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:text-blue-500 transition" title="Privacy Mode">
+                    <span>{{ privacyMode ? '🙈' : '👁️' }}</span>
+                </button>
+                
                 <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500">
                     <span v-if="isDark">☀</span><span v-else>☾</span>
                 </button>
@@ -167,14 +170,17 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 h-auto">
-                    <div class="cyber-card p-4 md:p-6 flex flex-col h-64 md:h-80">
-                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Savings Trend</h3>
-                        <div id="chart-history" class="flex-1 w-full"></div>
+                    <div class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                        <div class="cyber-card p-4 md:p-6 flex flex-col h-64 md:h-80">
+                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Savings Trend</h3>
+                            <div id="chart-history" class="flex-1 w-full"></div>
+                        </div>
+                        <div class="cyber-card p-4 md:p-6 flex flex-col h-64 md:h-80">
+                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Structure</h3>
+                            <div id="chart-pie" class="flex-1 w-full"></div>
+                        </div>
                     </div>
-                    <div class="cyber-card p-4 md:p-6 flex flex-col h-64 md:h-80">
-                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Structure</h3>
-                        <div id="chart-pie" class="flex-1 w-full"></div>
-                    </div>
+                    
                     <div class="cyber-card flex-1 flex flex-col overflow-hidden h-96 lg:h-auto">
                         <div class="p-4 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-gray-50 dark:bg-black/20">
                             <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Cashflow Log</h3>
@@ -223,18 +229,28 @@
                             <div :class="['text-xl font-bold font-mono', investmentStats.gains >= 0 ? 'text-green-500' : 'text-red-500']">
                                 {{ investmentStats.gains >= 0 ? '+' : '' }}{{ nFormatter(investmentStats.gains) }}
                             </div>
+                            <div class="text-[9px] font-mono opacity-60 mt-1">ROI: [{{ investmentStats.roi }}%]</div>
                         </div>
                         <div class="p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition">
                             <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Win Rate [胜率]</div>
                             <div class="text-xl font-bold text-blue-500 font-mono">{{ investmentStats.winRate }}%</div>
+                            <div class="text-[9px] font-mono opacity-60 mt-1">Trade Efficiency</div>
                         </div>
                         <div class="p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition">
                             <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Best Trade [最佳]</div>
-                            <div class="text-xs font-bold text-green-500 line-clamp-2" :title="investmentStats.bestTrade">{{ investmentStats.bestTrade || '--' }}</div>
+                            <div class="text-xs font-bold text-green-500 line-clamp-1" :title="investmentStats.bestTrade">{{ investmentStats.bestTrade.split('|')[0] || '--' }}</div>
+                            <div class="flex items-center gap-1 mt-1">
+                                <span class="text-[10px] font-mono text-black dark:text-white">{{ nFormatter(investmentStats.bestTradeVal) }}</span>
+                                <span v-if="investmentStats.bestTradeRoi" class="text-[8px] px-1 rounded bg-green-500/20 text-green-500 font-bold">[{{ investmentStats.bestTradeRoi }}%]</span>
+                            </div>
                         </div>
                         <div class="p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition">
                             <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Worst Trade [最差]</div>
-                            <div class="text-xs font-bold text-red-500 line-clamp-2" :title="investmentStats.worstTrade">{{ investmentStats.worstTrade || '--' }}</div>
+                            <div class="text-xs font-bold text-red-500 line-clamp-1" :title="investmentStats.worstTrade">{{ investmentStats.worstTrade.split('|')[0] || '--' }}</div>
+                            <div class="flex items-center gap-1 mt-1">
+                                <span class="text-[10px] font-mono text-black dark:text-white">{{ nFormatter(investmentStats.worstTradeVal) }}</span>
+                                <span v-if="investmentStats.worstTradeRoi" class="text-[8px] px-1 rounded bg-red-500/20 text-red-500 font-bold">[{{ investmentStats.worstTradeRoi }}%]</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -247,19 +263,30 @@
                     </div>
 
                     <div class="cyber-card p-4 md:p-6 flex flex-col lg:col-span-2 h-auto">
-                         <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Asset Allocation</h3>
-                         <div class="flex flex-col md:flex-row h-full">
-                             <div id="chart-stock-allocation" class="h-64 md:h-full flex-1"></div>
+                         <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Asset Allocation [资产分布]</h3>
+                         <div class="flex flex-col md:flex-row h-full items-center">
+                             <div id="chart-stock-allocation" class="h-48 md:h-full w-full md:w-1/3"></div>
                              
-                             <div class="w-full md:w-1/3 border-t md:border-t-0 md:border-l border-gray-200 dark:border-white/10 pt-4 md:pt-0 md:pl-4 flex flex-col justify-center">
-                                 <div class="text-[9px] text-gray-400 uppercase tracking-widest mb-3">Top 3 Heavyweights</div>
-                                 <div v-if="currentHoldings.length === 0" class="text-xs text-gray-500 italic">No holdings</div>
-                                 <div v-for="(h, index) in topHoldings" :key="h.name" class="flex justify-between items-center mb-3">
-                                     <div class="flex items-center gap-2">
-                                         <span class="text-[10px] font-bold w-4 h-4 rounded bg-gray-200 dark:bg-white/10 flex items-center justify-center">{{ index + 1 }}</span>
-                                         <span class="text-xs font-bold">{{ h.name }}</span>
+                             <div class="w-full md:w-2/3 border-t md:border-t-0 md:border-l border-gray-200 dark:border-white/10 pt-4 md:pt-0 md:pl-6 flex flex-col justify-center h-full">
+                                 <div class="flex justify-between text-[9px] text-gray-400 uppercase tracking-widest mb-2 border-b border-gray-200 dark:border-white/10 pb-1">
+                                     <span>Asset Name</span>
+                                     <span class="text-right">Value / ROI</span>
+                                 </div>
+                                 <div class="flex-1 overflow-y-auto max-h-40 custom-scroll pr-2">
+                                     <div v-if="currentHoldings.length === 0" class="text-xs text-gray-500 italic py-2">No active positions</div>
+                                     <div v-for="h in sortedHoldings" :key="h.name" class="flex justify-between items-center mb-3 group hover:bg-gray-50 dark:hover:bg-white/5 p-1 rounded transition">
+                                         <div class="flex items-center gap-3">
+                                             <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                                             <div class="flex flex-col">
+                                                 <span class="text-xs font-bold text-black dark:text-white">{{ h.name }}</span>
+                                                 <span class="text-[9px] text-gray-500">{{ ((h.cost / investmentStats.currentBookValue)*100).toFixed(1) }}% Alloc</span>
+                                             </div>
+                                         </div>
+                                         <div class="text-right flex flex-col">
+                                             <span class="text-xs font-mono font-bold text-black dark:text-white">¥{{ nFormatter(h.cost) }}</span>
+                                             <span class="text-[9px] text-gray-400 font-mono">COST BASIS</span>
+                                         </div>
                                      </div>
-                                     <span class="text-xs font-mono">¥{{ nFormatter(h.cost) }}</span>
                                  </div>
                              </div>
                          </div>
@@ -412,6 +439,10 @@
             if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
             const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
 
+            // 隐私模式
+            const privacyMode = ref(false)
+            const togglePrivacy = () => privacyMode.value = !privacyMode.value
+
             const currentView = ref('cashflow')
             const switchView = (view) => { 
                 currentView.value = view; 
@@ -459,7 +490,7 @@
                 return investmentTransactions.value.filter(t => !t.title.startsWith('Principal:'))
             })
 
-            // 核心逻辑: 计算持仓
+            // 计算持仓
             const currentHoldings = computed(() => {
                 const map = {}; 
                 transactions.value.filter(t => t.type === 'expense' && t.category === '投资').forEach(t => {
@@ -473,9 +504,8 @@
                 return Object.keys(map).filter(k => map[k] > 1).map(k => ({ name: k, cost: map[k] }));
             });
 
-            // 获取前3重仓股
-            const topHoldings = computed(() => {
-                return [...currentHoldings.value].sort((a,b) => b.cost - a.cost).slice(0, 3);
+            const sortedHoldings = computed(() => {
+                return [...currentHoldings.value].sort((a,b) => b.cost - a.cost);
             });
 
             // 投资统计面板
@@ -490,16 +520,32 @@
                 const totalClosedTrades = winningTrades + losingTrades;
                 const winRate = totalClosedTrades > 0 ? ((winningTrades / totalClosedTrades) * 100).toFixed(0) : '0';
 
-                let bestTrade = '', bestVal = 0, worstTrade = '', worstVal = 0;
+                // Best/Worst Calculation (need principal to calc %)
+                let bestTrade = '', bestVal = 0, bestTradeRoi = '';
+                let worstTrade = '', worstVal = 0, worstTradeRoi = '';
+
+                // 构建一个简单的卖出查找表 (匹配 Principal)
+                // 注意：这里仅做简单估算，因为没有 Transaction ID 关联
                 investmentTransactions.value.forEach(t => {
                     const val = Number(t.amount);
-                    if (t.category === '理财收益' && val > bestVal) { bestVal = val; bestTrade = t.title.replace('Sell: ', '') + ` (+${val})`; }
-                    if (t.category === '理财亏损' && val > worstVal) { worstVal = val; worstTrade = t.title.replace('Loss: ', '') + ` (-${val})`; }
+                    if (t.category === '理财收益' && val > bestVal) { 
+                        bestVal = val; 
+                        bestTrade = t.title.replace('Sell: ', '');
+                        // 尝试查找当天的 Principal 记录来估算 ROI
+                        const principal = investmentTransactions.value.find(p => p.date === t.date && p.title === `Principal: ${bestTrade}`);
+                        if(principal) bestTradeRoi = (val / Number(principal.amount) * 100).toFixed(1);
+                    }
+                    if (t.category === '理财亏损' && val > worstVal) { 
+                        worstVal = val; 
+                        worstTrade = t.title.replace('Loss: ', '');
+                        const principal = investmentTransactions.value.find(p => p.date === t.date && p.title === `Principal: ${worstTrade}`);
+                        if(principal) worstTradeRoi = (-val / (Number(principal.amount) + val) * 100).toFixed(1); // loss ROI calc
+                    }
                 });
 
                 const currentBookValue = currentHoldings.value.reduce((s, h) => s + h.cost, 0);
 
-                return { currentBookValue, gains: netGains, roi: invested > 0 ? ((netGains / invested) * 100).toFixed(1) : '0.0', winRate, bestTrade, worstTrade }
+                return { currentBookValue, gains: netGains, roi: invested > 0 ? ((netGains / invested) * 100).toFixed(1) : '0.0', winRate, bestTrade, bestVal, bestTradeRoi, worstTrade, worstVal, worstTradeRoi }
             })
             
             const lifetimeStats = computed(() => {
@@ -520,7 +566,9 @@
                 return (((inc - currentMonthStats.value.expense) / inc) * 100).toFixed(1)
             })
 
+            // 核心修改: 支持隐私模式
             const nFormatter = (num) => {
+                if (privacyMode.value) return '****';
                 if (!num && num !== 0) return '0.00';
                 return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             }
@@ -572,7 +620,7 @@
                 dailyChart.setOption({ 
                     backgroundColor: 'transparent', tooltip: { trigger: 'axis', confine: true }, 
                     legend: { bottom: 0, icon: 'roundRect', itemGap: 15, textStyle: { color: textColor } },
-                    grid: { top: 30, right: 0, bottom: 40, left: 0 }, // 隐藏Y轴空间
+                    grid: { top: 30, right: 0, bottom: 40, left: 0 }, // 隐藏Y轴
                     xAxis: { type: 'category', data: days, axisLine: { lineStyle: { color: axisColor } }, axisLabel: { color: textColor } }, 
                     yAxis: { type: 'value', show: false }, 
                     series: series 
@@ -638,20 +686,22 @@
                         type: 'bar', data: data, barWidth: '40%', 
                         itemStyle: { color: (p) => p.value >= 0 ? '#10b981' : '#ef4444', borderRadius: [4, 4, 0, 0] }, 
                         label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: (p) => p.value != 0 ? `¥${p.value}` : '' } 
-                    }]
+                    }] 
                 });
             }
 
+            // 资产分布图 (重构：左图右表模式，仅显示圆环)
             const updateStockAllocationChart = () => {
                 const el = document.getElementById('chart-stock-allocation'); if (!el) return; if (stockAllocChart) stockAllocChart.dispose(); stockAllocChart = echarts.init(el);
                 const data = currentHoldings.value.map(h => ({ value: h.cost, name: h.name }));
-                const isDarkTheme = document.documentElement.classList.contains('dark'); const labelColor = isDarkTheme ? '#888' : '#666';
+                const isDarkTheme = document.documentElement.classList.contains('dark');
+                
                 stockAllocChart.setOption({
-                    backgroundColor: 'transparent', tooltip: { trigger: 'item', formatter: '{b}<br/>Cost: ¥{c}<br/>[{d}%]' },
+                    backgroundColor: 'transparent', tooltip: { trigger: 'item', confine: true },
                     series: [{
-                        type: 'pie', radius: ['30%', '55%'], center: ['50%', '50%'], roseType: 'radius', avoidLabelOverlap: true,
+                        type: 'pie', radius: ['60%', '90%'], center: ['50%', '50%'], 
                         itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 },
-                        label: { show: true, fontSize: 9, color: labelColor, formatter: '{b}\n[{d}%]' },
+                        label: { show: false }, // 隐藏标签，右侧表格已显示
                         data: data.length ? data : [{value: 0, name: 'Empty'}]
                     }]
                 });
@@ -663,7 +713,7 @@
             }
             
             const fetchTransactions = async () => {
-                const { data } = await _supabase.from('transactions').select('*').order('date', { ascending: true })
+                const { data } = await _supabase.from('transactions').select('*').order('created_at', { ascending: true }) // 按创建时间排序确保最新
                 if (data) { transactions.value = data; nextTick(() => updateAllCharts()); }
             }
             watch([selectedYear, selectedMonth, isDark], () => { setTimeout(updateAllCharts, 100); })
@@ -722,7 +772,7 @@
                 }
             })
 
-            return { mobileMenuOpen, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, reversedFilteredTransactions, visibleInvestmentLogs, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, formatDateTime, isDark, toggleTheme, currentView, switchView, currentHoldings, selectedHolding, selectHoldingItem, resetAssetForm, topHoldings }
+            return { mobileMenuOpen, privacyMode, togglePrivacy, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, reversedFilteredTransactions, visibleInvestmentLogs, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, formatDateTime, isDark, toggleTheme, currentView, switchView, currentHoldings, sortedHoldings, selectedHolding, selectHoldingItem, resetAssetForm, topHoldings }
         }
     }).mount('#app')
 </script>
