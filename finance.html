@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Finance (V6.3 - Logic Secured)</title>
+    <title>MindForge Finance (V6.4 - Bulletproof)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -26,9 +26,7 @@
 
     <style>
         [v-cloak] { display: none; }
-        
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
 
         .log-item {
@@ -58,7 +56,7 @@
 
         .custom-select-btn {
             display: flex; justify-content: space-between; align-items: center;
-            width: 100%; padding: 12px;
+            width: 100%; padding: 10px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px; font-size: 12px; font-weight: bold;
@@ -172,17 +170,17 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 h-auto">
                     <div class="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-                        <div class="cyber-card p-4 md:p-6 flex flex-col h-64 md:h-96">
+                        <div class="cyber-card p-4 md:p-6 flex flex-col h-64 md:h-80">
                             <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Savings Trend</h3>
                             <div id="chart-history" class="flex-1 w-full"></div>
                         </div>
-                        <div class="cyber-card p-4 md:p-6 flex flex-col h-64 md:h-96">
+                        <div class="cyber-card p-4 md:p-6 flex flex-col h-64 md:h-80">
                             <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Structure</h3>
                             <div id="chart-pie" class="flex-1 w-full"></div>
                         </div>
                     </div>
                     
-                    <div class="cyber-card flex-1 flex flex-col overflow-hidden h-96 lg:h-[42rem]">
+                    <div class="cyber-card flex-1 flex flex-col overflow-hidden h-96 lg:h-[41rem]">
                         <div class="p-4 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-gray-50 dark:bg-black/20">
                             <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Cashflow Log</h3>
                             <span class="text-[10px] font-mono text-gray-400">{{ filteredTransactions.length }} ITEMS</span>
@@ -194,7 +192,7 @@
                                         {{ item.type === 'expense' ? 'OUT' : 'IN' }}
                                     </div>
                                     <div>
-                                        <div class="text-xs font-bold text-black dark:text-white mb-0.5">{{ item.title || 'Unknown' }}</div>
+                                        <div class="text-xs font-bold text-black dark:text-white mb-0.5">{{ safeTitle(item.title) }}</div>
                                         <div class="text-[9px] text-gray-400 font-mono flex items-center gap-2">
                                             <span>{{ item.date }}</span>
                                             <span class="uppercase">[{{ item.category }}]</span>
@@ -239,7 +237,7 @@
                         </div>
                         <div class="p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition">
                             <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Best Trade [最佳]</div>
-                            <div class="text-xs font-bold text-green-500 line-clamp-1" :title="investmentStats.bestTrade">{{ investmentStats.bestTrade ? investmentStats.bestTrade.split('|')[0] : '--' }}</div>
+                            <div class="text-xs font-bold text-green-500 line-clamp-1" :title="investmentStats.bestTrade">{{ safeTitle(investmentStats.bestTrade).split('|')[0] || '--' }}</div>
                             <div class="flex items-center gap-1 mt-1">
                                 <span class="text-[10px] font-mono text-black dark:text-white">{{ nFormatter(investmentStats.bestTradeVal) }}</span>
                                 <span v-if="investmentStats.bestTradeRoi" class="text-[8px] px-1 rounded bg-green-500/20 text-green-500 font-bold">[{{ investmentStats.bestTradeRoi }}%]</span>
@@ -247,7 +245,7 @@
                         </div>
                         <div class="p-3 bg-gray-50 dark:bg-white/5 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition">
                             <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-2">Worst Trade [最差]</div>
-                            <div class="text-xs font-bold text-red-500 line-clamp-1" :title="investmentStats.worstTrade">{{ investmentStats.worstTrade ? investmentStats.worstTrade.split('|')[0] : '--' }}</div>
+                            <div class="text-xs font-bold text-red-500 line-clamp-1" :title="investmentStats.worstTrade">{{ safeTitle(investmentStats.worstTrade).split('|')[0] || '--' }}</div>
                             <div class="flex items-center gap-1 mt-1">
                                 <span class="text-[10px] font-mono text-black dark:text-white">{{ nFormatter(investmentStats.worstTradeVal) }}</span>
                                 <span v-if="investmentStats.worstTradeRoi" class="text-[8px] px-1 rounded bg-red-500/20 text-red-500 font-bold">[{{ investmentStats.worstTradeRoi }}%]</span>
@@ -293,7 +291,7 @@
                          </div>
                     </div>
 
-                    <div class="cyber-card flex flex-col overflow-hidden h-96 lg:col-span-3">
+                    <div class="cyber-card flex flex-col overflow-hidden h-60 lg:h-60 lg:col-span-3">
                         <div class="p-4 border-b border-gray-200 dark:border-white/5 flex justify-between items-center bg-blue-50/50 dark:bg-blue-900/10">
                             <h3 class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Live Transaction Stream</h3>
                             <span class="text-[10px] font-mono text-blue-400">HISTORY</span>
@@ -305,10 +303,10 @@
                             <div v-for="item in visibleInvestmentLogs" :key="item.id" class="log-item group">
                                 <div class="flex items-center">
                                     <div :class="['log-icon-box', item.type === 'expense' && item.category === '投资' ? 'bg-inv' : (item.type === 'income' ? 'bg-inc' : 'bg-exp')]">
-                                        {{ item.title && item.title.startsWith('Buy') ? 'BUY' : 'SELL' }}
+                                        {{ safeTitle(item.title).startsWith('Buy') ? 'BUY' : 'SELL' }}
                                     </div>
                                     <div>
-                                        <div class="text-xs font-bold text-black dark:text-white mb-0.5 line-clamp-1">{{ item.title ? item.title.replace(/Buy: |Sell: |Loss: /, '') : 'Unknown' }}</div>
+                                        <div class="text-xs font-bold text-black dark:text-white mb-0.5 line-clamp-1">{{ safeTitle(item.title).replace(/Buy: |Sell: |Loss: /, '') }}</div>
                                         <div class="text-[9px] text-gray-400 font-mono flex items-center gap-2">
                                             <span>{{ formatDateTime(item.created_at) }}</span>
                                         </div>
@@ -478,6 +476,11 @@
             const filteredTransactions = computed(() => transactions.value.filter(t => t.date.startsWith(currentMonthKey.value)))
             const reversedFilteredTransactions = computed(() => [...filteredTransactions.value].reverse())
             
+            // 安全的标题处理函数 (防止 null 崩溃)
+            const safeTitle = (t) => {
+                return t ? String(t) : 'Unknown';
+            }
+
             const investmentTransactions = computed(() => {
                 return transactions.value.filter(t => 
                     t.category === '投资' || t.category === '理财收益' || t.category === '理财亏损'
@@ -485,31 +488,22 @@
             })
 
             const visibleInvestmentLogs = computed(() => {
-                return investmentTransactions.value.filter(t => t.title && !t.title.startsWith('Principal:'))
+                return investmentTransactions.value.filter(t => safeTitle(t.title) && !safeTitle(t.title).startsWith('Principal:'))
             })
 
             // 核心逻辑: 计算持仓
             const currentHoldings = computed(() => {
                 const map = {}; 
-                // Add buy amount
                 transactions.value.filter(t => t.type === 'expense' && t.category === '投资').forEach(t => {
-                    let name = t.title ? t.title.replace('Buy: ', '').trim() : 'Unknown';
+                    let name = safeTitle(t.title).replace('Buy: ', '').trim();
                     map[name] = (map[name] || 0) + Number(t.amount);
                 });
-                // Subtract principal returned (Income, category='投资')
                 transactions.value.filter(t => t.type === 'income' && t.category === '投资').forEach(t => {
-                    let name = t.title ? t.title.replace('Principal: ', '').trim() : 'Unknown';
+                    let name = safeTitle(t.title).replace('Principal: ', '').trim();
                     if(map[name]) map[name] -= Number(t.amount);
                 });
-                // Subtract loss (Expense, category='理财亏损') - 核心修复
                 transactions.value.filter(t => t.type === 'expense' && t.category === '理财亏损').forEach(t => {
-                    let name = t.title ? t.title.replace('Loss: ', '').trim() : 'Unknown';
-                    // 亏损部分也意味着本金的减少，所以要减去
-                    // 比如买入1000，卖出800（收回本金800，亏损200）
-                    // 1000 - 800 - 0 = 200 (错，还剩200成本)
-                    // 所以这里不需要减去亏损额吗？
-                    // 实际上: Principal Income (800) + Loss Expense (200) = Original Cost (1000)
-                    // 所以要减去 (Principal + Loss) 才能归零。
+                    let name = safeTitle(t.title).replace('Loss: ', '').trim();
                     if(map[name]) map[name] -= Number(t.amount); 
                 });
 
@@ -518,6 +512,10 @@
 
             const sortedHoldings = computed(() => {
                 return [...currentHoldings.value].sort((a,b) => b.cost - a.cost);
+            });
+
+            const topHoldings = computed(() => {
+                return [...currentHoldings.value].sort((a,b) => b.cost - a.cost).slice(0, 3);
             });
 
             const investmentStats = computed(() => {
@@ -538,13 +536,13 @@
                     const val = Number(t.amount);
                     if (t.category === '理财收益' && val > bestVal) { 
                         bestVal = val; 
-                        bestTrade = t.title ? t.title.replace('Sell: ', '') : 'Unknown';
+                        bestTrade = safeTitle(t.title).replace('Sell: ', '');
                         const principal = investmentTransactions.value.find(p => p.date === t.date && p.title === `Principal: ${bestTrade}`);
                         if(principal && Number(principal.amount) > 0) bestTradeRoi = (val / Number(principal.amount) * 100).toFixed(1);
                     }
                     if (t.category === '理财亏损' && val > worstVal) { 
                         worstVal = val; 
-                        worstTrade = t.title ? t.title.replace('Loss: ', '') : 'Unknown';
+                        worstTrade = safeTitle(t.title).replace('Loss: ', '');
                         const principal = investmentTransactions.value.find(p => p.date === t.date && p.title === `Principal: ${worstTrade}`);
                         if(principal && Number(principal.amount) > 0) worstTradeRoi = (-val / (Number(principal.amount) + val) * 100).toFixed(1);
                     }
@@ -709,7 +707,7 @@
                         label: { 
                             show: true, 
                             position: 'outside', 
-                            formatter: '{b}\n{d}%', 
+                            formatter: '{b}\n{c} ({d}%)', 
                             fontSize: 10,
                             color: labelColor
                         },
@@ -784,7 +782,7 @@
                 }
             })
 
-            return { mobileMenuOpen, privacyMode, togglePrivacy, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, reversedFilteredTransactions, visibleInvestmentLogs, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, formatDateTime, isDark, toggleTheme, currentView, switchView, currentHoldings, sortedHoldings, selectedHolding, selectHoldingItem, resetAssetForm, topHoldings }
+            return { mobileMenuOpen, privacyMode, togglePrivacy, lifetimeStats, currentMonthStats, savingsRate, filteredTransactions, reversedFilteredTransactions, visibleInvestmentLogs, investmentStats, showModal, showAssetModal, showMonthPicker, showHoldingPicker, form, assetForm, currentCategories, selectedYear, selectedMonth, formYear, formMonth, formDay, daysInFormMonth, setMonth, openAddModal, openAssetModal, saveTransaction, saveAssetTransaction, deleteTransaction, nFormatter, formatDateTime, isDark, toggleTheme, currentView, switchView, currentHoldings, sortedHoldings, selectedHolding, selectHoldingItem, resetAssetForm, topHoldings, safeTitle }
         }
     }).mount('#app')
 </script>
