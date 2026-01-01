@@ -1,3 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MindForge Finance (V5.4 - Pro)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <link rel="stylesheet" href="css/global.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' },
+                    fontFamily: { sans: ['"JetBrains Mono"', '"Microsoft YaHei"', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        [v-cloak] { display: none; }
+        
+        /* 隐藏数字输入框的上下小箭头 */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .log-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; margin-bottom: 8px;
+            border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        .dark .log-item { background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.05); }
+        .dark .log-item:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); transform: scale(1.01); }
+        html:not(.dark) .log-item { background: #fff; border-color: rgba(0, 0, 0, 0.05); box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        html:not(.dark) .log-item:hover { border-color: rgba(0, 0, 0, 0.1); transform: scale(1.01); }
+
+        .log-icon-box {
+            width: 36px; height: 36px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: bold; margin-right: 12px;
+        }
+        .bg-inc { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .bg-exp { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .bg-inv { background: rgba(59, 130, 246, 0.15); color: #3b82f6; } 
+
+        .view-tab.active::after {
+            content: ''; position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+            width: 20px; height: 2px; background-color: #3b82f6; border-radius: 2px;
+        }
+    </style>
+</head>
 <body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200">
 
 <script src="js/config.js"></script>
@@ -304,6 +370,7 @@
     </div>
 
 </div>
+
 <script>
     const { createApp, ref, onMounted, reactive, computed, watch, nextTick } = Vue
 
@@ -342,7 +409,6 @@
             const incomeCategories = ['工资', '兼职', '理财收益', '奖金', '其他']
             
             const form = reactive({ type: 'expense', amount: '', title: '', category: '' })
-            // 新增: selectedHolding 用于卖出时存储选中的持仓对象
             const assetForm = reactive({ action: 'buy', name: '', code: '', amount: '' })
             const selectedHolding = ref(null)
 
@@ -354,32 +420,22 @@
                 return transactions.value.filter(t => t.category === '投资' || t.category === '理财收益').sort((a,b) => new Date(b.date) - new Date(a.date))
             })
 
-            // 核心逻辑: 计算当前持仓列表 (用于卖出下拉框)
             const currentHoldings = computed(() => {
-                const map = {}; // key: stockName, value: remainingCost
-                
-                // 1. 加上所有买入成本
+                const map = {}; 
                 transactions.value.filter(t => t.type === 'expense' && t.category === '投资').forEach(t => {
-                    // 格式 Buy: Name (Code) -> 提取 Name (Code)
                     let name = t.title.replace('Buy: ', '').trim();
                     map[name] = (map[name] || 0) + Number(t.amount);
                 });
-
-                // 2. 减去所有已卖出的本金 (category='投资' & type='income')
                 transactions.value.filter(t => t.type === 'income' && t.category === '投资').forEach(t => {
                     let name = t.title.replace('Principal: ', '').trim();
                     if(map[name]) map[name] -= Number(t.amount);
                 });
-
-                // 3. 返回剩余成本 > 1 的持仓
                 return Object.keys(map).filter(k => map[k] > 1).map(k => ({ name: k, cost: map[k] }));
             });
 
             const investmentStats = computed(() => {
                 const invested = investmentTransactions.value.filter(t => t.type === 'expense' && t.category === '投资').reduce((s,t) => s + Number(t.amount), 0)
                 const gains = investmentTransactions.value.filter(t => t.type === 'income' && t.category === '理财收益').reduce((s,t) => s + Number(t.amount), 0)
-                // 计算 ROI：总收益 / 总投入 (这里用简单估算，如果想要更精确的收益率需根据时间加权，目前展示 累计收益/累计投入)
-                // 注意：这里的ROI是总仓位ROI
                 const roi = invested > 0 ? ((gains / invested) * 100).toFixed(1) : '0.0';
                 return { invested, gains, roi }
             })
@@ -408,13 +464,12 @@
             let dailyChart = null, historyChart = null, pieChart = null;
             let stockTrendChart = null, stockAllocChart = null;
 
-            // 1. Daily Trend (修正：线连续，0值标签隐藏)
             const updateDailyChart = () => {
                 const el = document.getElementById('chart-daily'); if (!el) return; if (dailyChart) dailyChart.dispose(); dailyChart = echarts.init(el);
                 const data = filteredTransactions.value; 
                 const daysInMonth = new Date(selectedYear.value, selectedMonth.value, 0).getDate(); 
                 const days = Array.from({length: daysInMonth}, (_, i) => (i + 1).toString()); 
-                const dailyTotal = new Array(daysInMonth).fill(0); // 必须是0以保证线连续
+                const dailyTotal = new Array(daysInMonth).fill(0);
                 
                 data.filter(t => t.type === 'expense').forEach(t => { 
                     if (t.category !== '储蓄') { 
@@ -434,13 +489,11 @@
                     series: [{ 
                         name: 'TOTAL', type: 'line', data: dailyTotal, smooth: true, 
                         lineStyle: { width: 3, color: '#3b82f6' }, areaStyle: { opacity: 0.2, color: '#3b82f6' }, 
-                        // 核心修正: formatter 判断，如果为0则返回空字符串
                         label: { show: true, position: 'top', color: textColor, formatter: (p) => p.value > 0 ? p.value : '' } 
                     }] 
                 }, true);
             }
 
-            // 2. Savings Trend (修正：显示百分比，使用 [] 括号)
             const updateHistoryChart = () => {
                 const el = document.getElementById('chart-history'); if (!el) return; if (historyChart) historyChart.dispose(); historyChart = echarts.init(el);
                 const monthlyData = {}; for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyData[k] = { inc: 0, exp: 0 }; }
@@ -458,12 +511,11 @@
                     series: [{ 
                         type: 'line', data: rates, smooth: true, 
                         lineStyle: { width: 2, color: '#10b981' }, areaStyle: { opacity: 0.2, color: '#10b981' }, symbol: 'circle',
-                        label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: '[{c}%]' } // 显示标签
+                        label: { show: true, position: 'top', color: textColor, fontSize: 9, formatter: '[{c}%]' }
                     }] 
                 });
             }
 
-            // 3. Structure (修正：显示百分比，使用 [] 括号)
             const updatePieChart = () => {
                 const el = document.getElementById('chart-pie'); if (!el) return; if (pieChart) pieChart.dispose(); pieChart = echarts.init(el);
                 const map = {}; filteredTransactions.value.filter(t => t.type === 'expense' && t.category !== '储蓄').forEach(t => map[t.category] = (map[t.category] || 0) + Number(t.amount));
@@ -475,14 +527,12 @@
                     series: [{ 
                         type: 'pie', radius: ['40%', '65%'], itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 }, 
                         labelLine: { length: 10, length2: 0, lineStyle: { color: labelColor } }, 
-                        // 修正: 包含百分比
                         label: { show: true, formatter: '{name|{b}}\n{value|¥{c}} {rate|[{d}%]}', rich: { name: { color: labelColor, fontSize: 10 }, value: { color: valueColor, fontSize: 10 }, rate: { color: '#3b82f6', fontSize: 10, fontWeight: 'bold' } } }, 
                         data: Object.keys(map).map(k => ({ value: map[k], name: k })) 
                     }] 
                 });
             }
 
-            // 4. Stock Trend (月度收益)
             const updateStockTrendChart = () => {
                 const el = document.getElementById('chart-stock-trend'); if (!el) return; if (stockTrendChart) stockTrendChart.dispose(); stockTrendChart = echarts.init(el);
                 const monthlyProfit = {}; for(let i=1; i<=12; i++) { const k = `${selectedYear.value}-${i < 10 ? '0'+i : i}`; monthlyProfit[k] = 0; }
@@ -499,26 +549,20 @@
                 });
             }
 
-            // 5. Stock Allocation (修正：显示 Value 和 ROI 标签)
             const updateStockAllocationChart = () => {
                 const el = document.getElementById('chart-stock-allocation'); if (!el) return; if (stockAllocChart) stockAllocChart.dispose(); stockAllocChart = echarts.init(el);
-                
-                // 这里我们显示 'Realized Profit' 的分布 (哪个票赚得多)
                 const map = {};
                 investmentTransactions.value.filter(t => t.category === '理财收益').forEach(t => {
                     let name = t.title.replace('Sell: ', '').trim();
                     if(name.includes(' ')) name = name.split(' ')[0];
                     map[name] = (map[name] || 0) + Number(t.amount);
                 });
-                
                 const isDarkTheme = document.documentElement.classList.contains('dark'); const labelColor = isDarkTheme ? '#888' : '#666';
-                
                 stockAllocChart.setOption({
                     backgroundColor: 'transparent', tooltip: { trigger: 'item' },
                     series: [{
                         type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], roseType: 'radius',
                         itemStyle: { borderRadius: 4, borderColor: isDarkTheme ? '#0a0a0a' : '#fff', borderWidth: 2 },
-                        // 显示 收益金额
                         label: { show: true, fontSize: 9, color: labelColor, formatter: '{b}\n[¥{c}]' },
                         data: Object.keys(map).map(k => ({ value: map[k], name: k }))
                     }]
@@ -554,7 +598,6 @@
                 assetForm.amount = ''; assetForm.name = ''; assetForm.code = ''; selectedHolding.value = null;
             }
 
-            // Save Cashflow
             const saveTransaction = async () => {
                 if (!form.amount || !form.title) return alert('Incomplete');
                 const dStr = `${formYear.value}-${formMonth.value<10?'0'+formMonth.value:formMonth.value}-${formDay.value<10?'0'+formDay.value:formDay.value}`;
@@ -562,7 +605,6 @@
                 if (!error) { showModal.value = false; fetchTransactions(); }
             }
 
-            // Save Stock (Buy/Sell)
             const saveAssetTransaction = async () => {
                 const d = new Date();
                 const dStr = `${d.getFullYear()}-${d.getMonth()+1<10?'0'+(d.getMonth()+1):d.getMonth()+1}-${d.getDate()<10?'0'+d.getDate():d.getDate()}`;
@@ -575,17 +617,14 @@
                         user_id, title: `Buy: ${assetForm.name} ${codeStr}`, amount: assetForm.amount, type: 'expense', category: '投资', date: dStr 
                     });
                 } else {
-                    // Sell Logic
                     if (!selectedHolding.value || !assetForm.amount) return alert('Select holding & amount');
                     const hold = selectedHolding.value;
                     const profit = Number(assetForm.amount) - hold.cost;
                     
-                    // 1. Return Principal (Investment Income)
                     await _supabase.from('transactions').insert({ 
                         user_id, title: `Principal: ${hold.name}`, amount: hold.cost, type: 'income', category: '投资', date: dStr 
                     });
                     
-                    // 2. Log Profit/Loss (Financial Income)
                     await _supabase.from('transactions').insert({ 
                         user_id, title: `Sell: ${hold.name}`, amount: profit, type: 'income', category: '理财收益', date: dStr 
                     });
