@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Bio-OS (V7.7 - Fix)</title>
+    <title>MindForge Bio-OS (V8.3 - Persistent)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -15,26 +15,16 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' },
+                    colors: { 'bg-dark': '#020204', 'bg-light': '#f0f2f5' },
                     fontFamily: { sans: ['"JetBrains Mono"', '"Microsoft YaHei"', 'sans-serif'] },
                     animation: {
                         'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'scanline': 'scanline 8s linear infinite',
-                        'glitch-anim': 'glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite',
-                        'stream': 'stream 2s linear infinite',
+                        'flow': 'flow 3s linear infinite',
                     },
                     keyframes: {
-                        stream: {
-                            '0%': { backgroundPosition: '0% 0%' },
-                            '100%': { backgroundPosition: '200% 0%' }
-                        },
-                        flashRed: {
-                            '0%, 100%': { opacity: 0 },
-                            '50%': { opacity: 1 }
-                        },
-                        flashGreen: {
-                            '0%, 100%': { opacity: 0 },
-                            '50%': { opacity: 1 }
+                        flow: {
+                            '0%': { backgroundPosition: '0% 50%' },
+                            '100%': { backgroundPosition: '100% 50%' }
                         }
                     }
                 }
@@ -43,48 +33,59 @@
     </script>
 
     <style>
-        [v-cloak] { display: none; }
+        [v-cloak] { display: block !important; }
         
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 16px; width: 16px; 
-            background: #000; border: 2px solid #3b82f6; cursor: pointer; margin-top: -6px;
-            transform: rotate(45deg);
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+        .plasma-bar {
+            background: linear-gradient(90deg, 
+                rgba(255,255,255,0.1) 0%, 
+                rgba(255,255,255,0.4) 50%, 
+                rgba(255,255,255,0.1) 100%);
+            background-size: 200% 100%;
+            animation: flow 2s infinite linear;
+            box-shadow: 0 0 15px currentColor;
         }
-        .dark input[type=range]::-webkit-slider-thumb { background: #fff; border-color: #3b82f6; }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; cursor: pointer;
-            background: rgba(255,255,255,0.1); border-radius: 2px;
-        }
-
-        .progress-stream { background-size: 200% 100%; animation: stream 3s linear infinite; }
-        .bg-stream-green { background-image: linear-gradient(90deg, #059669, #34d399, #059669); }
-        .bg-stream-red { background-image: linear-gradient(90deg, #7f1d1d, #ef4444, #7f1d1d); }
-        .bg-stream-blue { background-image: linear-gradient(90deg, #1e3a8a, #3b82f6, #1e3a8a); }
 
         .habit-card {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(20, 20, 23, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.2s ease-out;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
         }
-        .habit-card:hover { border-color: rgba(59, 130, 246, 0.4); box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.3); }
+        .habit-card:hover { 
+            border-color: rgba(59, 130, 246, 0.5); 
+            transform: translateY(-1px);
+        }
         
-        .active-glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); border-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.05) !important; }
-        .red-alert { box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; }
+        .sleep-mode {
+            background: #000;
+            z-index: 9999;
+        }
+        .sleep-text {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+        }
     </style>
 </head>
-<body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200 text-sm">
+<body :class="['bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200 text-sm relative selection:bg-blue-500/30', isSleeping ? 'cursor-auto' : '']">
 
 <script src="js/config.js"></script>
 
-<div id="app" v-cloak class="h-full w-full flex relative z-10 flex-col md:flex-row">
+<!-- 睡眠模式全屏遮罩 -->
+<div v-if="isSleeping" class="fixed inset-0 sleep-mode flex flex-col items-center justify-center text-white transition-opacity duration-1000">
+    <div class="text-6xl font-black mb-4 animate-pulse sleep-text">{{ currentTime }}</div>
+    <div class="text-sm tracking-[0.5em] text-blue-500 mb-12">SYSTEM HIBERNATION ACTIVE</div>
+    <div class="flex gap-4">
+        <button @click="wakeUp" class="px-8 py-3 border border-white/20 hover:bg-white/10 rounded-full text-xs font-bold tracking-widest transition">
+            INITIATE WAKE SEQUENCE
+        </button>
+        <button @click="forceReset" class="px-4 py-3 text-red-500 hover:text-red-400 text-xs font-mono opacity-50 hover:opacity-100">
+            [FORCE RESET]
+        </button>
+    </div>
+</div>
 
-    <!-- 全屏特效层 (放在 #app 内部以便 Vue 控制) -->
-    <div :class="['fixed inset-0 pointer-events-none z-[100] transition-opacity duration-500', screenEffect === 'red' ? 'bg-red-500/20' : (screenEffect === 'green' ? 'bg-green-500/20' : 'opacity-0')]"></div>
+<div id="app" class="h-full w-full flex relative z-10 flex-col md:flex-row">
 
-    <!-- 侧边栏 (完全复刻 Finance 样式) -->
+    <!-- 侧边栏 -->
     <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-50 h-full bg-bg-light dark:bg-bg-dark border-r border-gray-200 dark:border-white/5', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
         <div>
             <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
@@ -93,63 +94,71 @@
             <nav class="p-4 space-y-6">
                 <div>
                     <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">Core</div>
-                    <a href="index.html" class="nav-item w-full text-left block p-3 mb-1 text-xs">System Home</a>
-                    <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs">Finance 金融</a>
-                    <button class="nav-item w-full text-left block p-3 text-xs active">Habits 习惯</button>
+                    <a href="index.html" class="nav-item w-full text-left block p-3 mb-1 text-xs hover:bg-gray-100 dark:hover:bg-white/5 rounded">System Home</a>
+                    <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs hover:bg-gray-100 dark:hover:bg-white/5 rounded">Finance 金融</a>
+                    <button class="nav-item w-full text-left block p-3 text-xs active bg-black text-white dark:bg-white dark:text-black rounded font-bold shadow-lg">Habits 习惯</button>
                 </div>
             </nav>
         </div>
         <div class="p-6 border-t border-gray-200 dark:border-white/5">
-            <div class="text-[10px] text-gray-500 font-mono">SECURE CONNECTION</div>
+            <div class="text-[10px] text-gray-500 font-mono flex items-center gap-2">
+                <div :class="['w-2 h-2 rounded-full', connectionStatus.includes('ONLINE') ? 'bg-green-500' : 'bg-orange-500']"></div>
+                {{ connectionStatus }}
+            </div>
         </div>
     </aside>
 
     <main class="flex-1 flex flex-col bg-transparent relative w-full px-2 md:pl-4 md:pt-4 no-scroll-x h-full">
         
-        <!-- Top HUD -->
-        <header class="h-auto md:h-28 flex flex-col justify-between p-4 shrink-0 mb-3 cyber-card z-[40] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg gap-2">
+        <!-- HUD -->
+        <header class="h-auto md:h-32 flex flex-col justify-between p-5 shrink-0 mb-4 cyber-card z-[40] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
             
             <div class="flex justify-between items-start">
                 <div class="flex items-center gap-4">
                     <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl">☰</button>
                     <div>
-                        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Bio-Metric Status</div>
-                        <div class="flex items-center gap-2 mt-1">
-                            <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping"></div>
-                            <span class="text-[9px] font-mono text-blue-500">METABOLISM: ACTIVE</span>
-                        </div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">System Status</div>
+                        <div class="text-xl font-black font-mono tracking-tight">{{ currentTime }} <span class="text-[10px] font-normal text-gray-500 ml-1">CST</span></div>
                     </div>
                 </div>
-                <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition">
-                    <span v-if="isDark">☀</span><span v-else>☾</span>
-                </button>
+                
+                <div class="flex items-center gap-3">
+                    <button @click="showSettings = true" class="w-8 h-8 flex items-center justify-center rounded border border-transparent hover:border-gray-200 dark:hover:border-white/20 text-gray-500 transition">⚙️</button>
+                    <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded border border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                        <span v-if="isDark">☀</span><span v-else>☾</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Double Energy Bars -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 w-full mt-1">
-                <!-- Neural Buffer -->
-                <div class="relative group">
-                    <div class="flex justify-between items-end mb-1.5">
-                        <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-2">
-                            <span>⚡ Neural Buffer</span>
-                            <span v-if="isDecaying" class="text-[8px] text-red-500 animate-pulse">DRAINING...</span>
-                        </span>
-                        <span :class="['text-xs font-mono font-black', bufferColor]">{{ neuralBuffer.toFixed(1) }}%</span>
-                    </div>
-                    <div class="h-2.5 w-full bg-gray-200 dark:bg-white/5 rounded overflow-hidden relative border border-black/5 dark:border-white/5">
-                        <div :class="['h-full transition-all duration-[2000ms] ease-out', neuralBuffer < 30 ? 'bg-red-500' : 'bg-stream-blue progress-stream']" :style="{width: neuralBuffer + '%'}"></div>
-                    </div>
-                    <input type="range" v-model="neuralBuffer" min="0" max="100" step="0.1" class="absolute inset-0 opacity-0 group-hover:opacity-100 cursor-ew-resize z-10" @change="saveBufferLog" title="Adjust Energy">
-                </div>
-
-                <!-- Health Integrity -->
+            <!-- Progress Bars -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-2">
+                <!-- Energy -->
                 <div>
                     <div class="flex justify-between items-end mb-1.5">
-                        <span class="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase tracking-widest">✚ Health Integrity</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Neural Buffer</span>
+                            <span v-if="maxCaps.energy < 100" class="text-[8px] text-red-500 bg-red-500/10 px-1 rounded">CAP: {{ maxCaps.energy.toFixed(1) }}%</span>
+                        </div>
+                        <span :class="['text-xs font-mono font-black', bufferColor]">{{ neuralBuffer.toFixed(1) }}%</span>
+                    </div>
+                    <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden border border-black/5 dark:border-white/5">
+                        <div class="absolute right-0 top-0 bottom-0 bg-black/10 dark:bg-white/5" :style="{width: (100 - maxCaps.energy) + '%'}"></div>
+                        <div :class="['h-full transition-all duration-1000 ease-out plasma-bar', bufferColorBg]" :style="{width: (neuralBuffer / 100 * maxCaps.energy) + '%', color: bufferColorHex}"></div>
+                    </div>
+                </div>
+
+                <!-- Health -->
+                <div>
+                    <div class="flex justify-between items-end mb-1.5">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Health Integrity</span>
+                            <span v-if="maxCaps.health < 100" class="text-[8px] text-red-500 bg-red-500/10 px-1 rounded">CAP: {{ maxCaps.health.toFixed(1) }}%</span>
+                        </div>
                         <span :class="['text-xs font-mono font-black', healthColor]">{{ healthIntegrity.toFixed(1) }}%</span>
                     </div>
-                    <div class="h-2.5 w-full bg-gray-200 dark:bg-white/5 rounded overflow-hidden relative border border-black/5 dark:border-white/5">
-                        <div :class="['h-full transition-all duration-1000', healthColorBg]" :style="{width: healthIntegrity + '%'}"></div>
+                    <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden border border-black/5 dark:border-white/5">
+                        <div class="absolute right-0 top-0 bottom-0 bg-black/10 dark:bg-white/5" :style="{width: (100 - maxCaps.health) + '%'}"></div>
+                        <div :class="['h-full transition-all duration-1000 plasma-bar', healthColorBg]" :style="{width: (healthIntegrity / 100 * maxCaps.health) + '%', color: healthColorHex}"></div>
                     </div>
                 </div>
             </div>
@@ -157,140 +166,115 @@
 
         <div class="flex-1 overflow-y-auto pr-2 md:pr-4 pb-4 relative z-10 custom-scroll space-y-4">
             
-            <!-- SECTION 1: MAINTENANCE -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <!-- Water -->
-                <div class="cyber-card p-4 flex flex-col justify-between h-36 relative overflow-hidden group">
-                    <div class="absolute bottom-0 left-0 w-full bg-blue-500/5 transition-all duration-1000" :style="{height: (todayStats.water / 8 * 100) + '%'}"></div>
-                    <div class="flex justify-between items-start relative z-10">
-                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Hydration Level</span>
-                        <span class="text-lg opacity-50">💧</span>
+            <!-- SECTION 1: SYSTEM FIREWALL -->
+            <div :class="['cyber-card p-4 border-l-4 transition-all duration-500 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4', abstinenceStreak > 0 ? 'border-l-emerald-500' : 'border-l-red-500']">
+                <div class="flex items-center gap-6 w-full md:w-auto">
+                    <div class="text-center md:text-left">
+                        <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Abstinence Streak</div>
+                        <div class="flex items-baseline gap-2 justify-center md:justify-start">
+                            <span class="text-3xl font-black font-mono">{{ abstinenceStreak }}</span>
+                            <span class="text-xs text-gray-400">DAYS</span>
+                        </div>
                     </div>
-                    <div class="flex items-baseline gap-1 relative z-10 my-1">
-                        <span class="text-3xl font-black text-black dark:text-white">{{ todayStats.water }}</span>
-                        <span class="text-xs text-gray-400 font-bold">/ 8</span>
-                    </div>
-                    <button @click="drinkWater" class="relative z-10 w-full py-2 bg-white dark:bg-white/5 hover:bg-blue-500 dark:hover:bg-blue-600 hover:text-white border border-gray-200 dark:border-white/10 rounded text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 group-hover:border-blue-500/50">
-                        <span>+ Add Water</span>
-                    </button>
-                </div>
-
-                <!-- Food -->
-                <div class="cyber-card p-4 flex flex-col justify-between h-36">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Bio-Fuel Input</span>
-                        <span class="text-lg opacity-50">🍱</span>
-                    </div>
-                    <div class="flex flex-col gap-2 mt-2">
-                        <input v-model="inputs.food" type="text" placeholder="Meal content..." class="w-full bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none transition">
-                        <button @click="eatFood" class="w-full py-2 bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white border border-orange-500/20 rounded text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95">
-                            Consume
-                        </button>
+                    
+                    <div class="flex gap-2">
+                        <div :class="['w-10 h-10 rounded flex items-center justify-center border text-lg', abstinenceStreak >= 3 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-gray-500/5 border-white/5 text-gray-700']" title="3 Days">🔰</div>
+                        <div :class="['w-10 h-10 rounded flex items-center justify-center border text-lg', abstinenceStreak >= 7 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-gray-500/5 border-white/5 text-gray-700']" title="7 Days">🏆</div>
+                        <div :class="['w-10 h-10 rounded flex items-center justify-center border text-lg', abstinenceStreak >= 21 ? 'bg-purple-500/10 border-purple-500/30 text-purple-500' : 'bg-gray-500/5 border-white/5 text-gray-700']" title="21 Days">👑</div>
                     </div>
                 </div>
 
-                <!-- Sleep -->
-                <div class="cyber-card p-4 flex flex-col justify-between h-36">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Sleep Cycle</span>
-                        <span class="text-lg opacity-50">🌙</span>
-                    </div>
-                    <div class="flex items-center gap-2 mt-2">
-                        <input v-model="inputs.sleep" type="number" placeholder="0" class="w-16 text-center bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded py-1.5 text-lg font-bold">
-                        <span class="text-xs text-gray-500 font-bold">HRS</span>
-                    </div>
-                    <button @click="sleep" class="w-full py-2 bg-purple-500/10 hover:bg-purple-500 text-purple-600 hover:text-white border border-purple-500/20 rounded text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95">
-                        Log Rest
+                <div class="w-full md:w-auto flex gap-3">
+                    <button @click="triggerNicotine" class="flex-1 md:flex-none px-6 py-2 rounded bg-red-500/5 hover:bg-red-500/10 border border-red-500/30 text-red-500 text-[10px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2">
+                        <span>⚠️ TOXIN INJECT</span>
                     </button>
                 </div>
             </div>
 
-            <!-- SECTION 2: FIREWALL -->
-            <div :class="['cyber-card p-5 border-l-4 transition-all duration-500 relative overflow-hidden', abstinenceStreak > 0 ? 'border-l-emerald-500' : 'border-l-red-500 red-alert']">
-                <div v-if="nicotineCrashPending" class="absolute inset-0 bg-red-500/5 animate-pulse z-0"></div>
-
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center relative z-10 gap-4">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <div :class="['w-2 h-2 rounded-full', abstinenceStreak > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-red-500']"></div>
-                            <h3 class="text-xs font-bold text-black dark:text-white uppercase tracking-widest">System Firewall [戒除监测]</h3>
-                        </div>
-                        <div class="flex gap-4 items-end">
-                            <div class="text-2xl font-black font-mono">{{ abstinenceStreak }} <span class="text-[10px] text-gray-500 font-normal">DAYS CLEAN</span></div>
-                            <div v-if="abstinenceStreak >= 3" class="hidden md:flex gap-1 mb-1">
-                                <span class="text-[8px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-500 rounded border border-emerald-500/30" title="3 Days Clean">🔰 IRON WILL</span>
-                                <span v-if="abstinenceStreak >= 7" class="text-[8px] px-1.5 py-0.5 bg-amber-500/20 text-amber-500 rounded border border-amber-500/30" title="7 Days Clean">🏆 PURIFIED</span>
-                            </div>
-                        </div>
+            <!-- SECTION 2: MAINTENANCE -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <!-- Water -->
+                <div class="cyber-card p-4 flex flex-col justify-between h-32 relative overflow-hidden group">
+                    <div class="absolute bottom-0 left-0 w-full bg-blue-500/10 transition-all duration-1000" :style="{height: (todayStats.water / 8 * 100) + '%'}"></div>
+                    <div class="flex justify-between items-start relative z-10">
+                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Hydration</span>
+                        <span class="text-lg">💧</span>
                     </div>
-                    
-                    <button @click="triggerNicotine" class="w-full md:w-auto px-6 py-3 rounded bg-red-500/5 hover:bg-red-500/10 border border-red-500/30 text-red-500 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 group">
-                        <span class="group-hover:animate-bounce">⚠️</span>
-                        <span>Inject Toxin (Smoke)</span>
-                    </button>
+                    <div class="flex items-center gap-2 relative z-10">
+                        <span class="text-2xl font-black">{{ todayStats.water }}</span>
+                        <span class="text-xs text-gray-500">/ 8</span>
+                        <button @click="drinkWater" class="ml-auto px-3 py-1 bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 rounded text-[9px] font-bold transition">+ ADD</button>
+                    </div>
                 </div>
-                
-                <div v-if="nicotineCrashPending" class="mt-2 text-[9px] text-red-400 font-mono flex items-center gap-2">
-                    <span class="animate-spin">⟳</span>
-                    METABOLIC CRASH IMMINENT... ENERGY DRAINING
+
+                <!-- Food -->
+                <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[9px] font-bold text-gray-500 uppercase">Nutrient Input</span>
+                        <span class="text-lg">🍱</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input v-model="inputs.food" type="text" placeholder="Meal..." class="flex-1 bg-transparent border-b border-gray-700 text-xs focus:outline-none focus:border-blue-500">
+                        <button @click="eatFood" class="text-[10px] font-bold text-orange-500 hover:text-white hover:bg-orange-500 px-2 py-1 rounded transition">LOG</button>
+                    </div>
+                </div>
+
+                <!-- Sleep -->
+                <div class="cyber-card p-4 flex flex-col justify-between h-32 bg-purple-900/5 border-purple-500/20">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[9px] font-bold text-purple-500 uppercase">Sleep Protocol</span>
+                        <span class="text-lg">🌙</span>
+                    </div>
+                    <button @click="initiateSleep" class="w-full py-2 bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 rounded text-[10px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2">
+                        <span>INITIATE SLEEP</span>
+                    </button>
                 </div>
             </div>
 
             <!-- SECTION 3: SKILL & LOGS -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
                 <div class="lg:col-span-2 cyber-card p-5">
-                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 border-b border-gray-200 dark:border-white/10 pb-2 flex justify-between">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
                         <span>Skill Upload</span>
-                        <span :class="neuralBuffer < 30 ? 'text-red-500' : 'text-blue-500'">{{ neuralBuffer < 30 ? '⚠ LOW POWER' : '● SYSTEM READY' }}</span>
+                        <span :class="neuralBuffer < 30 ? 'text-red-500' : 'text-blue-500'">{{ neuralBuffer < 30 ? 'LOW POWER' : 'READY' }}</span>
                     </h3>
-                    
-                    <div class="space-y-4">
-                        <!-- Piano -->
-                        <div class="flex items-center justify-between group">
-                            <label class="text-xs font-bold w-24">🎹 Piano</label>
-                            <div class="flex-1 mx-4 h-8 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded flex items-center px-2">
-                                <input v-model="inputs.piano" type="number" placeholder="Mins" class="bg-transparent w-full text-xs font-mono focus:outline-none" :disabled="neuralBuffer < 30">
-                            </div>
-                            <button @click="addHabit('piano', inputs.piano)" :disabled="neuralBuffer < 30" class="w-16 h-8 rounded bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold hover:opacity-80 disabled:opacity-30">SAVE</button>
-                        </div>
-                        <!-- Sport -->
-                        <div class="flex items-center justify-between group">
-                            <label class="text-xs font-bold w-24">🏃 Sport</label>
-                            <div class="flex-1 mx-4 h-8 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded flex items-center px-2">
-                                <input v-model="inputs.sport" type="number" placeholder="Mins" class="bg-transparent w-full text-xs font-mono focus:outline-none" :disabled="neuralBuffer < 30">
-                            </div>
-                            <button @click="addHabit('sport', inputs.sport)" :disabled="neuralBuffer < 30" class="w-16 h-8 rounded bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold hover:opacity-80 disabled:opacity-30">SAVE</button>
-                        </div>
-                        <!-- Study -->
-                        <div class="flex items-center justify-between group">
-                            <label class="text-xs font-bold w-24">📚 Study</label>
-                            <div class="flex-1 mx-4 h-8 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded flex items-center px-2">
-                                <input v-model="inputs.study" type="number" placeholder="Mins" class="bg-transparent w-full text-xs font-mono focus:outline-none">
-                            </div>
-                            <button @click="addHabit('study', inputs.study)" class="w-16 h-8 rounded bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold hover:opacity-80">SAVE</button>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div v-for="skill in ['Piano', 'Sport', 'Study']" :key="skill" class="space-y-2">
+                            <label class="text-[9px] text-gray-400 font-bold uppercase">{{ skill }}</label>
+                            <input v-model="inputs[skill.toLowerCase()]" type="number" placeholder="Mins" class="cyber-input text-center text-xs" :disabled="neuralBuffer < 30 && skill !== 'Study'">
+                            <button @click="addHabit(skill.toLowerCase(), inputs[skill.toLowerCase()])" class="btn-cyber w-full py-1 text-[10px] rounded hover:bg-white hover:text-black">LOG</button>
                         </div>
                     </div>
                 </div>
 
-                <div class="cyber-card flex flex-col h-64 lg:h-auto">
+                <!-- Log Summary -->
+                <div class="cyber-card flex flex-col">
                     <div class="p-3 border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-gray-500 uppercase">Daily Log</span>
-                        <input type="date" v-model="selectedDate" @change="fetchLogs" class="bg-transparent text-[10px] font-mono text-blue-500 focus:outline-none cursor-pointer">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase">Daily Summary</span>
+                        <div class="flex items-center gap-2">
+                            <!-- 赛博风格日期切换 -->
+                            <button @click="changeDate(-1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition">◀</button>
+                            <span class="text-[10px] font-mono text-blue-500 font-bold">{{ selectedDate }}</span>
+                            <button @click="changeDate(1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition">▶</button>
+                        </div>
                     </div>
                     
-                    <div class="px-3 py-2 border-b border-gray-200 dark:border-white/5 grid grid-cols-2 gap-2 bg-gray-50/50 dark:bg-black/20">
-                        <div class="text-[9px] text-gray-500">Water: <span class="text-black dark:text-white font-bold">{{ summaryStats.water }}</span></div>
-                        <div class="text-[9px] text-gray-500">Sport: <span class="text-black dark:text-white font-bold">{{ summaryStats.sport }}m</span></div>
-                        <div class="text-[9px] text-gray-500">Sleep: <span class="text-black dark:text-white font-bold">{{ summaryStats.sleep }}h</span></div>
-                        <div class="text-[9px] text-gray-500">Study: <span class="text-black dark:text-white font-bold">{{ summaryStats.study }}m</span></div>
-                    </div>
-
-                    <div class="flex-1 overflow-y-auto p-3 custom-scroll space-y-2">
-                        <div v-if="logs.length === 0" class="text-center text-[10px] text-gray-400 py-4 italic">No data for this date</div>
-                        <div v-for="log in logs" :key="log.id" class="flex justify-between items-center text-[10px] font-mono border-b border-gray-200 dark:border-white/5 pb-1 last:border-0 hover:bg-gray-50 dark:hover:bg-white/5 px-1 rounded transition">
-                            <span class="text-gray-400">[{{ formatTime(log.created_at) }}]</span>
-                            <span class="text-black dark:text-white uppercase truncate flex-1 mx-2">{{ log.habit_name.replace(/_/g, ' ') }}</span>
-                            <span :class="log.habit_name.includes('debuff') ? 'text-red-500 font-bold' : 'text-green-500'">{{ isNaN(log.value) ? '•' : '+' + log.value }}</span>
+                    <div class="flex-1 p-4 grid grid-cols-2 gap-4">
+                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                            <div class="text-[9px] text-gray-500 uppercase mb-1">Water</div>
+                            <div class="text-xl font-bold">{{ summaryStats.water }}</div>
+                        </div>
+                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                            <div class="text-[9px] text-gray-500 uppercase mb-1">Skills</div>
+                            <div class="text-xl font-bold">{{ summaryStats.skills }}m</div>
+                        </div>
+                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                            <div class="text-[9px] text-gray-500 uppercase mb-1">Sleep</div>
+                            <div class="text-xl font-bold">{{ summaryStats.sleep }}h</div>
+                        </div>
+                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                            <div class="text-[9px] text-gray-500 uppercase mb-1">Toxin</div>
+                            <div :class="['text-xl font-bold', summaryStats.smoke > 0 ? 'text-red-500' : 'text-green-500']">{{ summaryStats.smoke }}</div>
                         </div>
                     </div>
                 </div>
@@ -298,184 +282,229 @@
 
         </div>
     </main>
+
+    <!-- Settings Modal -->
+    <div v-if="showSettings" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+        <div class="cyber-card w-80 p-6 relative bg-[#0a0a0a]">
+            <button @click="showSettings = false" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+            <h3 class="text-lg font-black mb-4">SYSTEM BIOS</h3>
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[9px] text-gray-400 uppercase">Sleep Goal (Hours)</label>
+                    <input type="number" v-model="settings.sleepGoal" class="cyber-input">
+                </div>
+                <button @click="showSettings = false" class="w-full btn-cyber py-2 rounded">SAVE CONFIG</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
-    const { createApp, ref, onMounted, reactive, computed, watch } = Vue
+    const { createApp, ref, onMounted, reactive, computed } = Vue
 
     createApp({
         setup() {
-            let _supabase = null;
-            if (window._supabase) _supabase = window._supabase;
+            // 核心：Mock 数据库引擎 (修复版：支持链式调用)
+            const getLocalLogs = () => JSON.parse(localStorage.getItem('habit_logs') || '[]');
+            const saveLocalLogs = (logs) => localStorage.setItem('habit_logs', JSON.stringify(logs));
+
+            const mockSupabase = {
+                auth: { getUser: async () => ({ data: { user: { id: 'mock-user' } } }) },
+                from: (table) => ({
+                    select: (cols) => ({
+                        eq: (col, val) => ({
+                            order: (col2, dir) => {
+                                // 离线查询: 返回本地数据
+                                const all = getLocalLogs();
+                                const filtered = all.filter(i => i.date === val);
+                                return Promise.resolve({ data: filtered });
+                            }
+                        })
+                    }),
+                    insert: (payload) => {
+                        const all = getLocalLogs();
+                        // 插入数据: 增加时间戳
+                        all.push({ ...payload, id: Date.now(), created_at: new Date().toISOString() });
+                        saveLocalLogs(all);
+                        return Promise.resolve({ error: null });
+                    }
+                })
+            };
+
+            let _supabase = mockSupabase;
+            const connectionStatus = ref('OFFLINE (MOCK)');
+
+            // 尝试连接真实数据库
+            try {
+                if (window._supabase) {
+                    _supabase = window._supabase;
+                    connectionStatus.value = 'ONLINE';
+                }
+            } catch (e) {
+                console.warn("Using Mock Engine");
+            }
 
             const isDark = ref(true)
             const mobileMenuOpen = ref(false)
+            const showSettings = ref(false)
+            const currentTime = ref('');
             
-            const birthYear = 1995; 
-            const lifeExpectancy = 80;
-            const lifeProgress = computed(() => {
-                const now = new Date();
-                const age = now.getFullYear() - birthYear;
-                return ((age / lifeExpectancy) * 100).toFixed(6);
-            });
-
-            const neuralBuffer = ref(80); 
-            const healthIntegrity = ref(90); 
-            const screenEffect = ref(''); 
-            const nicotineCrashPending = ref(false);
+            // Bio State
+            const neuralBuffer = ref(80);
+            const healthIntegrity = ref(90);
+            const maxCaps = reactive({ energy: 100, health: 100 });
             const isDecaying = ref(false);
+            const isSleeping = ref(false);
+            const sleepStartTime = ref(null);
 
-            const smoothDrain = (amount, durationMs) => {
-                const stepTime = 100;
-                const steps = durationMs / stepTime;
-                const decrement = amount / steps;
-                isDecaying.value = true;
-                
-                let currentStep = 0;
-                const timer = setInterval(() => {
-                    if (neuralBuffer.value > 0) neuralBuffer.value = Math.max(0, neuralBuffer.value - decrement);
-                    currentStep++;
-                    if (currentStep >= steps) {
-                        clearInterval(timer);
-                        isDecaying.value = false;
-                    }
-                }, stepTime);
-            };
+            setInterval(() => {
+                currentTime.value = new Date().toLocaleTimeString('en-US', { hour12: false });
+                // 衰减逻辑
+                if(!isSleeping.value && neuralBuffer.value > 0) {
+                    neuralBuffer.value = Math.max(0, neuralBuffer.value - 0.05);
+                }
+            }, 1000);
 
-            const bufferColor = computed(() => neuralBuffer.value < 30 ? 'text-red-500' : (neuralBuffer.value > 70 ? 'text-green-500' : 'text-yellow-500'));
-            const bufferColorBg = computed(() => neuralBuffer.value < 30 ? 'bg-red-500' : (neuralBuffer.value > 70 ? 'bg-stream-green' : 'bg-yellow-500'));
-            const bufferStatus = computed(() => {
-                if (neuralBuffer.value >= 70) return { text: 'OPTIMAL', color: 'text-green-500' };
-                if (neuralBuffer.value >= 30) return { text: 'NOMINAL', color: 'text-yellow-500' };
-                return { text: 'CRITICAL', color: 'text-red-500' };
-            });
-
+            const bufferColor = computed(() => neuralBuffer.value < 30 ? 'text-red-500' : 'text-blue-500');
+            const bufferColorBg = computed(() => neuralBuffer.value < 30 ? 'bg-red-500' : 'bg-stream-blue');
+            const bufferColorHex = computed(() => neuralBuffer.value < 30 ? '#ef4444' : '#3b82f6');
+            
             const healthColor = computed(() => healthIntegrity.value < 50 ? 'text-red-500' : 'text-green-500');
             const healthColorBg = computed(() => healthIntegrity.value < 50 ? 'bg-stream-red' : 'bg-stream-green');
+            const healthColorHex = computed(() => healthIntegrity.value < 50 ? '#ef4444' : '#10b981');
 
             const logs = ref([]);
             const selectedDate = ref(new Date().toISOString().split('T')[0]);
             const inputs = reactive({ piano: '', study: '', sport: '', food: '', sleep: '' });
-            
+            const settings = reactive({ sleepGoal: 8, metaRate: 'normal' });
+
+            // 假数据填充 (防止页面空白)
             const summaryStats = computed(() => {
-                const stats = { water: 0, sport: 0, sleep: 0, study: 0 };
-                logs.value.forEach(log => {
-                    const val = Number(log.value) || 0;
-                    if (log.habit_name === 'water') stats.water += val;
-                    if (log.habit_name === 'sport') stats.sport += val;
-                    if (log.habit_name === 'sleep') stats.sleep += val;
-                    if (log.habit_name === 'study') stats.study += val;
+                const s = { water: 0, skills: 0, sleep: 0, smoke: 0 };
+                logs.value.forEach(l => {
+                    const v = Number(l.value) || 0;
+                    if(l.habit_name === 'water') s.water += v;
+                    if(['piano','sport','study'].includes(l.habit_name)) s.skills += v;
+                    if(l.habit_name === 'sleep') s.sleep += v;
+                    if(l.habit_name === 'debuff_smoke') s.smoke += v;
                 });
-                return stats;
+                return s;
             });
 
-            const todayStats = computed(() => {
-                const stats = { water: 0, teeth_am: 0, teeth_pm: 0, face: 0, house: 0 };
-                logs.value.forEach(log => {
-                    if (stats[log.habit_name] !== undefined) stats[log.habit_name] += Number(log.value);
-                });
-                return stats;
-            });
+            const todayStats = computed(() => summaryStats.value);
 
-            const lastBreachDate = ref(null); 
+            const lastBreachDate = ref(null);
             const abstinenceStreak = computed(() => {
-                if (!lastBreachDate.value) return 12; 
-                const today = new Date();
-                const last = new Date(lastBreachDate.value);
-                const diffTime = Math.abs(today - last);
-                return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                if(!lastBreachDate.value) return 0;
+                const diff = new Date() - new Date(lastBreachDate.value);
+                return Math.floor(diff / (1000 * 60 * 60 * 24));
             });
 
             const fetchLogs = async () => {
-                if (!_supabase) return;
-                const { data } = await _supabase.from('habit_logs').select('*').eq('date', selectedDate.value).order('created_at', { ascending: false });
-                if (data) logs.value = data;
+                try {
+                    const { data } = await _supabase.from('habit_logs').select('*').eq('date', selectedDate.value).order('created_at', { ascending: false });
+                    if (data) logs.value = data;
+                } catch(e) { 
+                    console.log('Fetch error, checking local'); 
+                    // Fallback to local if live fetch fails unexpectedly
+                    const all = getLocalLogs();
+                    logs.value = all.filter(i => i.date === selectedDate.value);
+                }
             };
 
-            const logAction = async (name, value, note = '') => {
-                if (!_supabase) return alert("Offline Mode");
-                
+            const logAction = async (name, value) => {
                 const { error } = await _supabase.from('habit_logs').insert({
                     user_id: (await _supabase.auth.getUser()).data.user.id,
-                    habit_name: name,
-                    value: value,
-                    date: selectedDate.value
+                    habit_name: name, value, date: selectedDate.value
                 });
-                if (!error) {
+                // 如果是Mock模式，上面的insert已经处理了本地存储
+                if (!error || connectionStatus.value.includes('MOCK')) {
                     fetchLogs();
                 }
             };
 
-            const drinkWater = async () => {
-                neuralBuffer.value = Math.min(100, neuralBuffer.value + 3);
-                triggerScreenEffect('green');
-                await logAction('water', 1);
-            };
+            const changeDate = (days) => {
+                const d = new Date(selectedDate.value);
+                d.setDate(d.getDate() + days);
+                selectedDate.value = d.toISOString().split('T')[0];
+                fetchLogs();
+            }
 
-            const eatFood = async () => {
-                if (!inputs.food) return alert("Please specify food.");
-                neuralBuffer.value = Math.min(100, neuralBuffer.value + 10);
-                await logAction('food', 1, inputs.food);
-                inputs.food = '';
-            };
+            const initiateSleep = () => {
+                isSleeping.value = true;
+                sleepStartTime.value = new Date();
+                localStorage.setItem('sleep_start', sleepStartTime.value);
+            }
 
-            const sleep = async () => {
-                if (!inputs.sleep) return;
-                const hours = parseFloat(inputs.sleep);
-                let recovery = hours <= 4 ? hours * 5 : (20 + ((hours - 4) * 10));
-                neuralBuffer.value = Math.min(100, neuralBuffer.value + recovery);
-                healthIntegrity.value = Math.min(100, healthIntegrity.value + (hours * 2));
+            const wakeUp = async () => {
+                const now = new Date();
+                let start = sleepStartTime.value;
+                const storedStart = localStorage.getItem('sleep_start');
+                if (storedStart && !isNaN(new Date(storedStart).getTime())) start = new Date(storedStart);
+                else start = new Date();
+
+                const hours = ((now - start) / (1000 * 60 * 60)).toFixed(1);
+                const hour = start.getHours();
+                let efficiency = 1.0;
+                if(hour >= 21 && hour < 23) efficiency = 1.2; 
+                if(hour >= 1 && hour < 5) efficiency = 0.7; 
+                
+                const recovery = hours * 10 * efficiency;
+                neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + recovery);
+                
+                isSleeping.value = false;
+                localStorage.removeItem('sleep_start');
                 await logAction('sleep', hours);
-                inputs.sleep = '';
-            };
+                
+                if(hours > 0.1) alert(`SLEEP COMPLETE.\nDuration: ${hours}h\nEfficiency: ${efficiency*100}%`);
+            }
+            
+            const forceReset = () => {
+                isSleeping.value = false;
+                localStorage.removeItem('sleep_start');
+            }
 
             const triggerNicotine = async () => {
-                if(!confirm("⚠️ TOXIN WARNING ⚠️\n\n- Immediate: Energy Spike\n- 2 Hours Later: SEVERE CRASH\n- Permanent Health Damage\n\nProceed?")) return;
-
-                neuralBuffer.value = Math.min(100, neuralBuffer.value + 15); 
-                healthIntegrity.value = Math.max(0, healthIntegrity.value - 5); 
-                
-                triggerScreenEffect('red');
-                nicotineCrashPending.value = true;
+                if(!confirm("WARNING: Toxin will damage MAX CAPACITY permanently.\nProceed?")) return;
+                maxCaps.energy = Math.max(50, maxCaps.energy - 0.5);
+                maxCaps.health = Math.max(50, maxCaps.health - 0.5);
+                neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + 10);
                 await logAction('debuff_smoke', 1);
-                lastBreachDate.value = new Date();
+                lastBreachDate.value = new Date(); 
+            }
 
-                setTimeout(() => {
-                    alert("⚠ NICOTINE HALF-LIFE ENDED. CRASH INITIATED.");
-                    smoothDrain(30, 5000); 
-                    nicotineCrashPending.value = false;
-                }, 5000); 
-            };
-
-            const triggerScreenEffect = (color) => {
-                screenEffect.value = color;
-                setTimeout(() => screenEffect.value = '', 500);
+            const drinkWater = async () => {
+                neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + 3);
+                await logAction('water', 1);
+            }
+            
+            const eatFood = async () => {
+                if(!inputs.food) return;
+                neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + 10);
+                await logAction('food', 1);
+                inputs.food = '';
             }
 
             const addHabit = async (name, val) => {
-                if(neuralBuffer.value < 30) return;
+                if(neuralBuffer.value < 30 && name !== 'study') return alert("Energy too low.");
                 await logAction(name, val);
                 inputs[name] = '';
-            };
-
-            const toggleToggleHabit = async (name) => {
-                if (todayStats.value[name] >= 1) return; 
-                await logAction(name, 1);
-                neuralBuffer.value = Math.min(100, neuralBuffer.value + 1);
-            };
-
-            const saveBufferLog = () => { }
+            }
 
             const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
             if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
 
-            const formatTime = (iso) => new Date(iso).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
             onMounted(() => {
                 fetchLogs();
+                const storedSleep = localStorage.getItem('sleep_start');
+                if(storedSleep && !isNaN(new Date(storedSleep).getTime())) {
+                    isSleeping.value = true;
+                    sleepStartTime.value = new Date(storedSleep);
+                }
             });
 
-            return { isDark, toggleTheme, mobileMenuOpen, lifeProgress, neuralBuffer, healthIntegrity, bufferStatus, bufferColor, bufferColorBg, healthColor, healthColorBg, todayStats, logs, inputs, addHabit, toggleToggleHabit, triggerNicotine, drinkWater, eatFood, sleep, abstinenceStreak, saveBufferLog, formatTime, screenEffect, nicotineCrashPending, selectedDate, fetchLogs, summaryStats, isDecaying }
+            return { isDark, toggleTheme, mobileMenuOpen, showSettings, currentTime, neuralBuffer, healthIntegrity, maxCaps, isDecaying, isSleeping, bufferColor, bufferColorBg, bufferColorHex, healthColor, healthColorBg, healthColorHex, todayStats, summaryStats, selectedDate, inputs, drinkWater, eatFood, initiateSleep, wakeUp, forceReset, triggerNicotine, addHabit, changeDate, abstinenceStreak, settings, connectionStatus }
         }
     }).mount('#app')
 </script>
