@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Bio-OS (V12.7 - Critical Patch)</title>
+    <title>MindForge Bio-OS (V12.8 - Stabilized)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -22,12 +22,12 @@
                         'flash-red': 'flashRed 0.5s ease-in-out',
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'pan': 'pan 20s linear infinite',
-                        'spin-slow': 'spin 30s linear infinite',
-                        'spin-medium': 'spin 20s linear infinite',
-                        'spin-fast': 'spin 15s linear infinite',
-                        'spin-reverse-slow': 'spin 30s linear infinite reverse',
-                        'spin-reverse-medium': 'spin 20s linear infinite reverse',
-                        'spin-reverse-fast': 'spin 15s linear infinite reverse',
+                        'spin-slow': 'spin 25s linear infinite',
+                        'spin-medium': 'spin 18s linear infinite',
+                        'spin-fast': 'spin 12s linear infinite',
+                        'spin-reverse-slow': 'spin 25s linear infinite reverse',
+                        'spin-reverse-medium': 'spin 18s linear infinite reverse',
+                        'spin-reverse-fast': 'spin 12s linear infinite reverse',
                         'data-pop': 'dataPop 0.3s ease-out',
                         'float': 'float 3s ease-in-out infinite',
                     },
@@ -57,17 +57,16 @@
         .plasma-bar-green { color: #10b981; }
         .plasma-bar-red { color: #ef4444; }
 
-        /* 核心修复：直接覆盖 .cyber-card 类，强制显示溢出内容 */
-        .cyber-card {
+        .habit-card {
             background: rgba(10, 12, 16, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
             transition: all 0.2s ease;
-            overflow: visible !important; /* 解决裁剪问题的关键 */
+            overflow: visible !important;
             position: relative;
-            border-radius: 0.75rem; /* 确保圆角 */
+            border-radius: 0.75rem;
         }
-        .cyber-card:active { transform: scale(0.99); }
+        .habit-card:active { transform: scale(0.99); }
         
         .active-glow {
             border-color: #3b82f6 !important;
@@ -87,9 +86,7 @@
             background-size: 40px 40px;
         }
         
-        /* 核心修复：轨道动画绝对居中 */
-        .orbit-group { transform-origin: 200px 300px; } /* SVG画布中心 */
-        .organ-wrapper { transform-box: fill-box; transform-origin: center; } /* 自身中心 */
+        .organ-wrapper { transform-box: fill-box; transform-origin: center; }
 
         .scan-line-v {
             position: absolute; left: 0; top: 0; width: 100%; height: 50%;
@@ -139,7 +136,7 @@
         <div class="flex flex-col lg:flex-row gap-4 h-full pb-4">
             
             <!-- LEFT COLUMN: CONTROL DECK (2/3) -->
-            <div class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scroll pr-2 pb-32"> <!-- 增加底部Padding防止遮挡 -->
+            <div class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scroll pr-2 pb-32">
                 
                 <!-- HUD: 仪表盘 -->
                 <header class="shrink-0 p-5 cyber-card z-[50] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
@@ -272,7 +269,7 @@
                 </div>
 
                 <!-- SECTION 4: SKILL UPLOAD -->
-                <div class="cyber-card p-5 pb-8"> <!-- 增加底部留白 -->
+                <div class="cyber-card p-5 pb-8"> 
                     <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
                         <span>Skill Upload [能力进化]</span>
                         <span :class="neuralBuffer < 30 ? 'text-red-500' : 'text-blue-500'">{{ neuralBuffer < 30 ? '⚠ LOW POWER' : '● READY' }}</span>
@@ -349,7 +346,7 @@
 
             </div>
             
-            <!-- RIGHT COLUMN: ORBITAL CORE (Full Height, Independent Scroll) -->
+            <!-- RIGHT COLUMN: ORBITAL CORE (Full Height) -->
             <div class="w-full lg:w-1/3 flex flex-col h-full overflow-hidden">
                 <div class="cyber-card flex-1 relative flex flex-col items-center justify-center p-0 border-blue-500/20 bg-dark bio-bg-grid overflow-hidden min-h-[600px] lg:min-h-0 animate-pan">
                     <div class="absolute top-4 left-4 text-[10px] font-bold text-blue-500 tracking-widest z-20">ORBITAL CORE v5.2</div>
@@ -520,14 +517,17 @@
             };
 
             const logAction = async (name, value) => {
-                // 核心修复: 乐观更新UI (Optimistic Update)
-                // 先更新本地 logs 数组，让 UI 立即反应，然后再去存库
-                logs.value.unshift({ habit_name: name, value: value, created_at: new Date().toISOString() });
-
                 try {
+                    // Force lowercase for consistency
+                    const n = name.toLowerCase();
                     await _supabase.from('habit_logs').insert({
-                        user_id: 'user', habit_name: name, value, date: selectedDate.value
+                        user_id: 'user', habit_name: n, value, date: selectedDate.value
                     });
+                    
+                    // Optimistic UI Update (Immediate visual feedback)
+                    logs.value.unshift({ habit_name: n, value: value, created_at: new Date().toISOString() });
+                    
+                    // fetchLogs(); // Optional: sync later
                 } catch (e) { console.error(e); }
             };
 
@@ -539,6 +539,7 @@
             }
 
             const drinkWater = async () => {
+                if (summaryStats.value.water >= 8) return showToast("Daily Limit (8/8)", "error");
                 neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + 2);
                 await logAction('water', 1);
                 showToast("Hydration +1");
