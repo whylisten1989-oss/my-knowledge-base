@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Bio-OS (V8.3 - Persistent)</title>
+    <title>MindForge Bio-OS (V9.0 - Stable Core)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -17,15 +17,9 @@
                 extend: {
                     colors: { 'bg-dark': '#020204', 'bg-light': '#f0f2f5' },
                     fontFamily: { sans: ['"JetBrains Mono"', '"Microsoft YaHei"', 'sans-serif'] },
-                    animation: {
-                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'flow': 'flow 3s linear infinite',
-                    },
+                    animation: { 'flow': 'flow 3s linear infinite' },
                     keyframes: {
-                        flow: {
-                            '0%': { backgroundPosition: '0% 50%' },
-                            '100%': { backgroundPosition: '100% 50%' }
-                        }
+                        flow: { '0%': { backgroundPosition: '0% 50%' }, '100%': { backgroundPosition: '100% 50%' } }
                     }
                 }
             }
@@ -33,60 +27,40 @@
     </script>
 
     <style>
+        /* 强制显示内容，防止白屏 */
         [v-cloak] { display: block !important; }
         
         .plasma-bar {
-            background: linear-gradient(90deg, 
-                rgba(255,255,255,0.1) 0%, 
-                rgba(255,255,255,0.4) 50%, 
-                rgba(255,255,255,0.1) 100%);
+            background: linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.4), rgba(255,255,255,0.1));
             background-size: 200% 100%;
             animation: flow 2s infinite linear;
             box-shadow: 0 0 15px currentColor;
         }
 
         .habit-card {
-            background: rgba(20, 20, 23, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(20, 20, 23, 0.8); /* 加深背景，防止透明度问题 */
+            border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(12px);
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
-        .habit-card:hover { 
-            border-color: rgba(59, 130, 246, 0.5); 
-            transform: translateY(-1px);
-        }
-        
-        .sleep-mode {
-            background: #000;
-            z-index: 9999;
-        }
-        .sleep-text {
-            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
-        }
+        .habit-card:active { transform: scale(0.98); } /* 点击反馈 */
     </style>
 </head>
-<body :class="['bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200 text-sm relative selection:bg-blue-500/30', isSleeping ? 'cursor-auto' : '']">
+<body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden text-gray-900 dark:text-gray-200 text-sm">
 
+<!-- 尝试加载配置，失败也没关系 -->
 <script src="js/config.js"></script>
-
-<!-- 睡眠模式全屏遮罩 -->
-<div v-if="isSleeping" class="fixed inset-0 sleep-mode flex flex-col items-center justify-center text-white transition-opacity duration-1000">
-    <div class="text-6xl font-black mb-4 animate-pulse sleep-text">{{ currentTime }}</div>
-    <div class="text-sm tracking-[0.5em] text-blue-500 mb-12">SYSTEM HIBERNATION ACTIVE</div>
-    <div class="flex gap-4">
-        <button @click="wakeUp" class="px-8 py-3 border border-white/20 hover:bg-white/10 rounded-full text-xs font-bold tracking-widest transition">
-            INITIATE WAKE SEQUENCE
-        </button>
-        <button @click="forceReset" class="px-4 py-3 text-red-500 hover:text-red-400 text-xs font-mono opacity-50 hover:opacity-100">
-            [FORCE RESET]
-        </button>
-    </div>
-</div>
 
 <div id="app" class="h-full w-full flex relative z-10 flex-col md:flex-row">
 
+    <!-- 顶部通知条 (替代 alert) -->
+    <div v-if="notification.message" :class="['fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl z-[9999] font-bold text-xs flex items-center gap-2 border', notification.type === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-blue-900/90 border-blue-500 text-white']">
+        <span>{{ notification.icon }}</span>
+        <span>{{ notification.message }}</span>
+    </div>
+
     <!-- 侧边栏 -->
-    <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-50 h-full bg-bg-light dark:bg-bg-dark border-r border-gray-200 dark:border-white/5', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+    <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-[60] h-full bg-bg-light dark:bg-bg-dark border-r border-gray-200 dark:border-white/5', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
         <div>
             <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
                 <span class="text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">BIO-OS</span></span>
@@ -102,7 +76,7 @@
         </div>
         <div class="p-6 border-t border-gray-200 dark:border-white/5">
             <div class="text-[10px] text-gray-500 font-mono flex items-center gap-2">
-                <div :class="['w-2 h-2 rounded-full', connectionStatus.includes('ONLINE') ? 'bg-green-500' : 'bg-orange-500']"></div>
+                <div :class="['w-2 h-2 rounded-full', connectionStatus === 'ONLINE' ? 'bg-green-500' : 'bg-orange-500']"></div>
                 {{ connectionStatus }}
             </div>
         </div>
@@ -111,20 +85,17 @@
     <main class="flex-1 flex flex-col bg-transparent relative w-full px-2 md:pl-4 md:pt-4 no-scroll-x h-full">
         
         <!-- HUD -->
-        <header class="h-auto md:h-32 flex flex-col justify-between p-5 shrink-0 mb-4 cyber-card z-[40] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
-            
+        <header class="h-auto md:h-32 flex flex-col justify-between p-5 shrink-0 mb-4 cyber-card z-[50] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
             <div class="flex justify-between items-start">
                 <div class="flex items-center gap-4">
-                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl">☰</button>
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl p-2">☰</button>
                     <div>
                         <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">System Status</div>
                         <div class="text-xl font-black font-mono tracking-tight">{{ currentTime }} <span class="text-[10px] font-normal text-gray-500 ml-1">CST</span></div>
                     </div>
                 </div>
-                
                 <div class="flex items-center gap-3">
-                    <button @click="showSettings = true" class="w-8 h-8 flex items-center justify-center rounded border border-transparent hover:border-gray-200 dark:hover:border-white/20 text-gray-500 transition">⚙️</button>
-                    <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded border border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                    <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded border border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition z-[60]">
                         <span v-if="isDark">☀</span><span v-else>☾</span>
                     </button>
                 </div>
@@ -132,33 +103,22 @@
 
             <!-- Progress Bars -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-2">
-                <!-- Energy -->
                 <div>
                     <div class="flex justify-between items-end mb-1.5">
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Neural Buffer</span>
-                            <span v-if="maxCaps.energy < 100" class="text-[8px] text-red-500 bg-red-500/10 px-1 rounded">CAP: {{ maxCaps.energy.toFixed(1) }}%</span>
-                        </div>
+                        <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Neural Buffer</span>
                         <span :class="['text-xs font-mono font-black', bufferColor]">{{ neuralBuffer.toFixed(1) }}%</span>
                     </div>
-                    <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden border border-black/5 dark:border-white/5">
-                        <div class="absolute right-0 top-0 bottom-0 bg-black/10 dark:bg-white/5" :style="{width: (100 - maxCaps.energy) + '%'}"></div>
-                        <div :class="['h-full transition-all duration-1000 ease-out plasma-bar', bufferColorBg]" :style="{width: (neuralBuffer / 100 * maxCaps.energy) + '%', color: bufferColorHex}"></div>
+                    <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden">
+                        <div :class="['h-full transition-all duration-1000 ease-out plasma-bar', bufferColorBg]" :style="{width: neuralBuffer + '%', color: bufferColorHex}"></div>
                     </div>
                 </div>
-
-                <!-- Health -->
                 <div>
                     <div class="flex justify-between items-end mb-1.5">
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Health Integrity</span>
-                            <span v-if="maxCaps.health < 100" class="text-[8px] text-red-500 bg-red-500/10 px-1 rounded">CAP: {{ maxCaps.health.toFixed(1) }}%</span>
-                        </div>
+                        <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Health Integrity</span>
                         <span :class="['text-xs font-mono font-black', healthColor]">{{ healthIntegrity.toFixed(1) }}%</span>
                     </div>
-                    <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden border border-black/5 dark:border-white/5">
-                        <div class="absolute right-0 top-0 bottom-0 bg-black/10 dark:bg-white/5" :style="{width: (100 - maxCaps.health) + '%'}"></div>
-                        <div :class="['h-full transition-all duration-1000 plasma-bar', healthColorBg]" :style="{width: (healthIntegrity / 100 * maxCaps.health) + '%', color: healthColorHex}"></div>
+                    <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden">
+                        <div :class="['h-full transition-all duration-1000 plasma-bar', healthColorBg]" :style="{width: healthIntegrity + '%', color: healthColorHex}"></div>
                     </div>
                 </div>
             </div>
@@ -176,127 +136,89 @@
                             <span class="text-xs text-gray-400">DAYS</span>
                         </div>
                     </div>
-                    
-                    <div class="flex gap-2">
-                        <div :class="['w-10 h-10 rounded flex items-center justify-center border text-lg', abstinenceStreak >= 3 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' : 'bg-gray-500/5 border-white/5 text-gray-700']" title="3 Days">🔰</div>
-                        <div :class="['w-10 h-10 rounded flex items-center justify-center border text-lg', abstinenceStreak >= 7 ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-gray-500/5 border-white/5 text-gray-700']" title="7 Days">🏆</div>
-                        <div :class="['w-10 h-10 rounded flex items-center justify-center border text-lg', abstinenceStreak >= 21 ? 'bg-purple-500/10 border-purple-500/30 text-purple-500' : 'bg-gray-500/5 border-white/5 text-gray-700']" title="21 Days">👑</div>
-                    </div>
                 </div>
-
-                <div class="w-full md:w-auto flex gap-3">
-                    <button @click="triggerNicotine" class="flex-1 md:flex-none px-6 py-2 rounded bg-red-500/5 hover:bg-red-500/10 border border-red-500/30 text-red-500 text-[10px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2">
-                        <span>⚠️ TOXIN INJECT</span>
-                    </button>
-                </div>
+                <button @click="triggerNicotine" class="relative z-[50] px-6 py-2 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 text-[10px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2 cursor-pointer">
+                    <span>⚠️ TOXIN INJECT</span>
+                </button>
             </div>
 
             <!-- SECTION 2: MAINTENANCE -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <!-- Water -->
-                <div class="cyber-card p-4 flex flex-col justify-between h-32 relative overflow-hidden group">
-                    <div class="absolute bottom-0 left-0 w-full bg-blue-500/10 transition-all duration-1000" :style="{height: (todayStats.water / 8 * 100) + '%'}"></div>
-                    <div class="flex justify-between items-start relative z-10">
+                <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                    <div class="flex justify-between items-start">
                         <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Hydration</span>
                         <span class="text-lg">💧</span>
                     </div>
-                    <div class="flex items-center gap-2 relative z-10">
+                    <div class="flex items-center gap-2">
                         <span class="text-2xl font-black">{{ todayStats.water }}</span>
                         <span class="text-xs text-gray-500">/ 8</span>
-                        <button @click="drinkWater" class="ml-auto px-3 py-1 bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 rounded text-[9px] font-bold transition">+ ADD</button>
+                        <button @click="drinkWater" class="relative z-[50] ml-auto px-3 py-1 bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 rounded text-[9px] font-bold transition cursor-pointer">+ ADD</button>
                     </div>
                 </div>
 
-                <!-- Food -->
                 <div class="cyber-card p-4 flex flex-col justify-between h-32">
                     <div class="flex justify-between items-start">
-                        <span class="text-[9px] font-bold text-gray-500 uppercase">Nutrient Input</span>
+                        <span class="text-[9px] font-bold text-gray-500 uppercase">Food</span>
                         <span class="text-lg">🍱</span>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 relative z-[50]">
                         <input v-model="inputs.food" type="text" placeholder="Meal..." class="flex-1 bg-transparent border-b border-gray-700 text-xs focus:outline-none focus:border-blue-500">
-                        <button @click="eatFood" class="text-[10px] font-bold text-orange-500 hover:text-white hover:bg-orange-500 px-2 py-1 rounded transition">LOG</button>
+                        <button @click="eatFood" class="text-[10px] font-bold text-orange-500 hover:text-white hover:bg-orange-500 px-2 py-1 rounded transition cursor-pointer">LOG</button>
                     </div>
                 </div>
 
-                <!-- Sleep -->
-                <div class="cyber-card p-4 flex flex-col justify-between h-32 bg-purple-900/5 border-purple-500/20">
+                <div class="cyber-card p-4 flex flex-col justify-between h-32">
                     <div class="flex justify-between items-start">
-                        <span class="text-[9px] font-bold text-purple-500 uppercase">Sleep Protocol</span>
+                        <span class="text-[9px] font-bold text-purple-500 uppercase">Sleep</span>
                         <span class="text-lg">🌙</span>
                     </div>
-                    <button @click="initiateSleep" class="w-full py-2 bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 rounded text-[10px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2">
-                        <span>INITIATE SLEEP</span>
-                    </button>
+                    <div v-if="!isSleeping" class="relative z-[50]">
+                         <button @click="initiateSleep" class="w-full py-2 bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 rounded text-[10px] font-bold uppercase tracking-widest transition cursor-pointer">
+                            START SLEEP
+                        </button>
+                    </div>
+                    <div v-else class="text-center relative z-[50]">
+                        <div class="text-[10px] text-purple-400 animate-pulse mb-2">SLEEPING...</div>
+                         <button @click="wakeUp" class="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/30 rounded text-[10px] font-bold uppercase tracking-widest transition cursor-pointer">
+                            WAKE UP
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- SECTION 3: SKILL & LOGS -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <div class="lg:col-span-2 cyber-card p-5">
-                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
-                        <span>Skill Upload</span>
-                        <span :class="neuralBuffer < 30 ? 'text-red-500' : 'text-blue-500'">{{ neuralBuffer < 30 ? 'LOW POWER' : 'READY' }}</span>
-                    </h3>
-                    <div class="grid grid-cols-3 gap-4">
-                        <div v-for="skill in ['Piano', 'Sport', 'Study']" :key="skill" class="space-y-2">
-                            <label class="text-[9px] text-gray-400 font-bold uppercase">{{ skill }}</label>
-                            <input v-model="inputs[skill.toLowerCase()]" type="number" placeholder="Mins" class="cyber-input text-center text-xs" :disabled="neuralBuffer < 30 && skill !== 'Study'">
-                            <button @click="addHabit(skill.toLowerCase(), inputs[skill.toLowerCase()])" class="btn-cyber w-full py-1 text-[10px] rounded hover:bg-white hover:text-black">LOG</button>
-                        </div>
+            <!-- SECTION 3: LOGS -->
+            <div class="cyber-card flex flex-col h-auto">
+                <div class="p-3 border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 flex justify-between items-center">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase">Daily Summary</span>
+                    <div class="flex items-center gap-2 relative z-[50]">
+                        <button @click="changeDate(-1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition cursor-pointer">◀</button>
+                        <span class="text-[10px] font-mono text-blue-500 font-bold">{{ selectedDate }}</span>
+                        <button @click="changeDate(1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition cursor-pointer">▶</button>
                     </div>
                 </div>
-
-                <!-- Log Summary -->
-                <div class="cyber-card flex flex-col">
-                    <div class="p-3 border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-gray-500 uppercase">Daily Summary</span>
-                        <div class="flex items-center gap-2">
-                            <!-- 赛博风格日期切换 -->
-                            <button @click="changeDate(-1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition">◀</button>
-                            <span class="text-[10px] font-mono text-blue-500 font-bold">{{ selectedDate }}</span>
-                            <button @click="changeDate(1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition">▶</button>
-                        </div>
+                
+                <div class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                        <div class="text-[9px] text-gray-500 uppercase mb-1">Water</div>
+                        <div class="text-xl font-bold">{{ summaryStats.water }}</div>
                     </div>
-                    
-                    <div class="flex-1 p-4 grid grid-cols-2 gap-4">
-                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
-                            <div class="text-[9px] text-gray-500 uppercase mb-1">Water</div>
-                            <div class="text-xl font-bold">{{ summaryStats.water }}</div>
-                        </div>
-                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
-                            <div class="text-[9px] text-gray-500 uppercase mb-1">Skills</div>
-                            <div class="text-xl font-bold">{{ summaryStats.skills }}m</div>
-                        </div>
-                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
-                            <div class="text-[9px] text-gray-500 uppercase mb-1">Sleep</div>
-                            <div class="text-xl font-bold">{{ summaryStats.sleep }}h</div>
-                        </div>
-                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
-                            <div class="text-[9px] text-gray-500 uppercase mb-1">Toxin</div>
-                            <div :class="['text-xl font-bold', summaryStats.smoke > 0 ? 'text-red-500' : 'text-green-500']">{{ summaryStats.smoke }}</div>
-                        </div>
+                    <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                        <div class="text-[9px] text-gray-500 uppercase mb-1">Skills</div>
+                        <div class="text-xl font-bold">{{ summaryStats.skills }}m</div>
+                    </div>
+                    <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                        <div class="text-[9px] text-gray-500 uppercase mb-1">Sleep</div>
+                        <div class="text-xl font-bold">{{ summaryStats.sleep }}h</div>
+                    </div>
+                    <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                        <div class="text-[9px] text-gray-500 uppercase mb-1">Toxin</div>
+                        <div :class="['text-xl font-bold', summaryStats.smoke > 0 ? 'text-red-500' : 'text-green-500']">{{ summaryStats.smoke }}</div>
                     </div>
                 </div>
             </div>
 
         </div>
     </main>
-
-    <!-- Settings Modal -->
-    <div v-if="showSettings" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
-        <div class="cyber-card w-80 p-6 relative bg-[#0a0a0a]">
-            <button @click="showSettings = false" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
-            <h3 class="text-lg font-black mb-4">SYSTEM BIOS</h3>
-            <div class="space-y-4">
-                <div class="space-y-1">
-                    <label class="text-[9px] text-gray-400 uppercase">Sleep Goal (Hours)</label>
-                    <input type="number" v-model="settings.sleepGoal" class="cyber-input">
-                </div>
-                <button @click="showSettings = false" class="w-full btn-cyber py-2 rounded">SAVE CONFIG</button>
-            </div>
-        </div>
-    </div>
 
 </div>
 
@@ -305,81 +227,100 @@
 
     createApp({
         setup() {
-            // 核心：Mock 数据库引擎 (修复版：支持链式调用)
-            const getLocalLogs = () => JSON.parse(localStorage.getItem('habit_logs') || '[]');
-            const saveLocalLogs = (logs) => localStorage.setItem('habit_logs', JSON.stringify(logs));
+            // --- 核心：安全初始化与 Mock 引擎 ---
+            const connectionStatus = ref('CHECKING...');
+            const notification = reactive({ message: '', type: '', icon: '' });
 
-            const mockSupabase = {
-                auth: { getUser: async () => ({ data: { user: { id: 'mock-user' } } }) },
-                from: (table) => ({
-                    select: (cols) => ({
-                        eq: (col, val) => ({
-                            order: (col2, dir) => {
-                                // 离线查询: 返回本地数据
-                                const all = getLocalLogs();
-                                const filtered = all.filter(i => i.date === val);
-                                return Promise.resolve({ data: filtered });
-                            }
-                        })
-                    }),
-                    insert: (payload) => {
-                        const all = getLocalLogs();
-                        // 插入数据: 增加时间戳
-                        all.push({ ...payload, id: Date.now(), created_at: new Date().toISOString() });
-                        saveLocalLogs(all);
-                        return Promise.resolve({ error: null });
-                    }
-                })
+            // Toast helper
+            const showToast = (msg, type = 'info') => {
+                notification.message = msg;
+                notification.type = type;
+                notification.icon = type === 'error' ? '⚠' : 'ℹ';
+                setTimeout(() => notification.message = '', 3000);
             };
 
-            let _supabase = mockSupabase;
-            const connectionStatus = ref('OFFLINE (MOCK)');
+            // Mock Data Helpers
+            const getLocalLogs = () => {
+                try { return JSON.parse(localStorage.getItem('habit_logs') || '[]'); } 
+                catch(e) { return []; }
+            };
+            const saveLocalLogs = (logs) => localStorage.setItem('habit_logs', JSON.stringify(logs));
 
-            // 尝试连接真实数据库
+            // 构建 Supabase 客户端 (带降级)
+            let _supabase = null;
             try {
                 if (window._supabase) {
                     _supabase = window._supabase;
                     connectionStatus.value = 'ONLINE';
+                } else {
+                    throw new Error("No config");
                 }
             } catch (e) {
-                console.warn("Using Mock Engine");
+                console.warn("Supabase not found, using Local Mock.");
+                connectionStatus.value = 'LOCAL MOCK';
+                
+                // Polyfill for Supabase
+                _supabase = {
+                    auth: { getUser: async () => ({ data: { user: { id: 'local-user' } } }) },
+                    from: (table) => ({
+                        select: () => ({
+                            eq: (col, val) => ({
+                                order: () => {
+                                    const all = getLocalLogs();
+                                    const filtered = all.filter(l => l.date === val);
+                                    return Promise.resolve({ data: filtered });
+                                }
+                            })
+                        }),
+                        insert: (payload) => {
+                            const all = getLocalLogs();
+                            // 确保 payload 是对象
+                            if (typeof payload === 'object') {
+                                all.push({ ...payload, id: Date.now(), created_at: new Date().toISOString() });
+                                saveLocalLogs(all);
+                            }
+                            return Promise.resolve({ error: null });
+                        }
+                    })
+                };
             }
 
-            const isDark = ref(true)
-            const mobileMenuOpen = ref(false)
-            const showSettings = ref(false)
+            // --- 状态变量 ---
+            const isDark = ref(true);
+            const mobileMenuOpen = ref(false);
             const currentTime = ref('');
             
             // Bio State
             const neuralBuffer = ref(80);
             const healthIntegrity = ref(90);
             const maxCaps = reactive({ energy: 100, health: 100 });
-            const isDecaying = ref(false);
             const isSleeping = ref(false);
             const sleepStartTime = ref(null);
 
+            // --- 核心逻辑 ---
+            
+            // 时钟
             setInterval(() => {
                 currentTime.value = new Date().toLocaleTimeString('en-US', { hour12: false });
-                // 衰减逻辑
+                // 简单衰减
                 if(!isSleeping.value && neuralBuffer.value > 0) {
                     neuralBuffer.value = Math.max(0, neuralBuffer.value - 0.05);
                 }
             }, 1000);
 
+            // 颜色计算
             const bufferColor = computed(() => neuralBuffer.value < 30 ? 'text-red-500' : 'text-blue-500');
             const bufferColorBg = computed(() => neuralBuffer.value < 30 ? 'bg-red-500' : 'bg-stream-blue');
             const bufferColorHex = computed(() => neuralBuffer.value < 30 ? '#ef4444' : '#3b82f6');
-            
             const healthColor = computed(() => healthIntegrity.value < 50 ? 'text-red-500' : 'text-green-500');
             const healthColorBg = computed(() => healthIntegrity.value < 50 ? 'bg-stream-red' : 'bg-stream-green');
             const healthColorHex = computed(() => healthIntegrity.value < 50 ? '#ef4444' : '#10b981');
 
+            // 数据
             const logs = ref([]);
             const selectedDate = ref(new Date().toISOString().split('T')[0]);
             const inputs = reactive({ piano: '', study: '', sport: '', food: '', sleep: '' });
-            const settings = reactive({ sleepGoal: 8, metaRate: 'normal' });
 
-            // 假数据填充 (防止页面空白)
             const summaryStats = computed(() => {
                 const s = { water: 0, skills: 0, sleep: 0, smoke: 0 };
                 logs.value.forEach(l => {
@@ -401,26 +342,26 @@
                 return Math.floor(diff / (1000 * 60 * 60 * 24));
             });
 
+            // 动作函数
             const fetchLogs = async () => {
                 try {
                     const { data } = await _supabase.from('habit_logs').select('*').eq('date', selectedDate.value).order('created_at', { ascending: false });
                     if (data) logs.value = data;
-                } catch(e) { 
-                    console.log('Fetch error, checking local'); 
-                    // Fallback to local if live fetch fails unexpectedly
-                    const all = getLocalLogs();
-                    logs.value = all.filter(i => i.date === selectedDate.value);
+                } catch (e) {
+                    console.error("Fetch Log Error", e);
+                    showToast("Sync Error", "error");
                 }
             };
 
             const logAction = async (name, value) => {
-                const { error } = await _supabase.from('habit_logs').insert({
-                    user_id: (await _supabase.auth.getUser()).data.user.id,
-                    habit_name: name, value, date: selectedDate.value
-                });
-                // 如果是Mock模式，上面的insert已经处理了本地存储
-                if (!error || connectionStatus.value.includes('MOCK')) {
+                try {
+                    await _supabase.from('habit_logs').insert({
+                        user_id: 'user', // Simplified
+                        habit_name: name, value, date: selectedDate.value
+                    });
                     fetchLogs();
+                } catch (e) {
+                    console.error("Log Action Error", e);
                 }
             };
 
@@ -431,70 +372,56 @@
                 fetchLogs();
             }
 
+            // 交互
+            const drinkWater = async () => {
+                neuralBuffer.value = Math.min(100, neuralBuffer.value + 3);
+                await logAction('water', 1);
+                showToast("Hydration +1");
+            };
+            
+            const eatFood = async () => {
+                if(!inputs.food) return showToast("Enter food name", "error");
+                neuralBuffer.value = Math.min(100, neuralBuffer.value + 10);
+                await logAction('food', 1);
+                inputs.food = '';
+                showToast("Energy Restored");
+            };
+
+            const triggerNicotine = async () => {
+                if(!confirm("CONFIRM TOXIN INJECT?")) return;
+                maxCaps.energy -= 0.5;
+                maxCaps.health -= 0.5;
+                neuralBuffer.value += 10;
+                await logAction('debuff_smoke', 1);
+                lastBreachDate.value = new Date();
+                showToast("⚠️ SYSTEM COMPROMISED", "error");
+            };
+
+            // 睡眠系统
             const initiateSleep = () => {
                 isSleeping.value = true;
                 sleepStartTime.value = new Date();
                 localStorage.setItem('sleep_start', sleepStartTime.value);
-            }
+            };
 
             const wakeUp = async () => {
                 const now = new Date();
-                let start = sleepStartTime.value;
-                const storedStart = localStorage.getItem('sleep_start');
-                if (storedStart && !isNaN(new Date(storedStart).getTime())) start = new Date(storedStart);
-                else start = new Date();
+                let start = sleepStartTime.value || new Date(localStorage.getItem('sleep_start'));
+                // 安全检查
+                if (!start || isNaN(new Date(start).getTime())) start = new Date();
 
-                const hours = ((now - start) / (1000 * 60 * 60)).toFixed(1);
-                const hour = start.getHours();
-                let efficiency = 1.0;
-                if(hour >= 21 && hour < 23) efficiency = 1.2; 
-                if(hour >= 1 && hour < 5) efficiency = 0.7; 
-                
-                const recovery = hours * 10 * efficiency;
+                const hours = Math.max(0.1, ((now - new Date(start)) / (1000 * 60 * 60)).toFixed(1));
+                const recovery = hours * 10; // 简化算法
+
                 neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + recovery);
                 
                 isSleeping.value = false;
                 localStorage.removeItem('sleep_start');
                 await logAction('sleep', hours);
-                
-                if(hours > 0.1) alert(`SLEEP COMPLETE.\nDuration: ${hours}h\nEfficiency: ${efficiency*100}%`);
-            }
-            
-            const forceReset = () => {
-                isSleeping.value = false;
-                localStorage.removeItem('sleep_start');
-            }
+                showToast(`Woke up. +${hours}h Sleep`);
+            };
 
-            const triggerNicotine = async () => {
-                if(!confirm("WARNING: Toxin will damage MAX CAPACITY permanently.\nProceed?")) return;
-                maxCaps.energy = Math.max(50, maxCaps.energy - 0.5);
-                maxCaps.health = Math.max(50, maxCaps.health - 0.5);
-                neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + 10);
-                await logAction('debuff_smoke', 1);
-                lastBreachDate.value = new Date(); 
-            }
-
-            const drinkWater = async () => {
-                neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + 3);
-                await logAction('water', 1);
-            }
-            
-            const eatFood = async () => {
-                if(!inputs.food) return;
-                neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + 10);
-                await logAction('food', 1);
-                inputs.food = '';
-            }
-
-            const addHabit = async (name, val) => {
-                if(neuralBuffer.value < 30 && name !== 'study') return alert("Energy too low.");
-                await logAction(name, val);
-                inputs[name] = '';
-            }
-
-            const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
-            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
-
+            // 状态恢复
             onMounted(() => {
                 fetchLogs();
                 const storedSleep = localStorage.getItem('sleep_start');
@@ -502,9 +429,14 @@
                     isSleeping.value = true;
                     sleepStartTime.value = new Date(storedSleep);
                 }
+                
+                // Theme Init
+                if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
             });
 
-            return { isDark, toggleTheme, mobileMenuOpen, showSettings, currentTime, neuralBuffer, healthIntegrity, maxCaps, isDecaying, isSleeping, bufferColor, bufferColorBg, bufferColorHex, healthColor, healthColorBg, healthColorHex, todayStats, summaryStats, selectedDate, inputs, drinkWater, eatFood, initiateSleep, wakeUp, forceReset, triggerNicotine, addHabit, changeDate, abstinenceStreak, settings, connectionStatus }
+            const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
+
+            return { isDark, toggleTheme, mobileMenuOpen, currentTime, neuralBuffer, healthIntegrity, maxCaps, isSleeping, bufferColor, bufferColorBg, bufferColorHex, healthColor, healthColorBg, healthColorHex, todayStats, summaryStats, selectedDate, inputs, drinkWater, eatFood, initiateSleep, wakeUp, triggerNicotine, changeDate, abstinenceStreak, connectionStatus, notification }
         }
     }).mount('#app')
 </script>
