@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Bio-OS (V12.6 - Orbit Fix)</title>
+    <title>MindForge Bio-OS (V12.7 - Critical Patch)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -57,15 +57,17 @@
         .plasma-bar-green { color: #10b981; }
         .plasma-bar-red { color: #ef4444; }
 
-        .habit-card {
+        /* 核心修复：直接覆盖 .cyber-card 类，强制显示溢出内容 */
+        .cyber-card {
             background: rgba(10, 12, 16, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
             transition: all 0.2s ease;
-            /* 关键修复: 移除 hidden 防止裁剪阴影和下拉 */
-            overflow: visible; 
+            overflow: visible !important; /* 解决裁剪问题的关键 */
+            position: relative;
+            border-radius: 0.75rem; /* 确保圆角 */
         }
-        .habit-card:active { transform: scale(0.99); }
+        .cyber-card:active { transform: scale(0.99); }
         
         .active-glow {
             border-color: #3b82f6 !important;
@@ -86,8 +88,9 @@
         }
         
         /* 核心修复：轨道动画绝对居中 */
-        .orbit-system { transform-origin: 200px 300px; } /* SVG画布中心 */
-        
+        .orbit-group { transform-origin: 200px 300px; } /* SVG画布中心 */
+        .organ-wrapper { transform-box: fill-box; transform-origin: center; } /* 自身中心 */
+
         .scan-line-v {
             position: absolute; left: 0; top: 0; width: 100%; height: 50%;
             background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.1), transparent);
@@ -354,8 +357,8 @@
                     
                     <!-- SVG ORBITAL SYSTEM (绝对居中 & 公转修正) -->
                     <div class="relative w-full h-full flex items-center justify-center z-10">
-                        <!-- viewBox 400x600, Center at 200,300 -->
-                        <svg viewBox="0 0 400 600" class="w-full h-full drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+                        <!-- 核心修复：preserveAspectRatio 强制居中 -->
+                        <svg viewBox="0 0 400 600" preserveAspectRatio="xMidYMid meet" class="w-full h-full drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]">
                             
                             <!-- CENTER: BRAIN / CPU (Fixed) -->
                             <g transform="translate(200, 300)" class="animate-float">
@@ -366,11 +369,10 @@
                             </g>
 
                             <!-- ORBIT 1: AIR (Radius 100) -->
-                            <!-- 将旋转逻辑应用在 g 上，transform-origin 设为画布中心 200 300 -->
                             <g class="orbit-group animate-spin-medium" style="transform-origin: 200px 300px;">
                                 <circle cx="200" cy="300" r="100" class="orbit-path" />
                                 <g transform="translate(200, 200)"> <!-- Top: (200, 300-100) -->
-                                    <g class="orbit-icon animate-spin-reverse-medium"> <!-- Counter Rotate -->
+                                    <g class="organ-wrapper animate-spin-reverse-medium"> <!-- Counter Rotate -->
                                         <circle r="22" :fill="summaryStats.smoke > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'" :stroke="summaryStats.smoke > 0 ? '#ef4444' : '#10b981'" stroke-width="1.5" />
                                         <text y="0" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold">AIR [肺]</text>
                                         <text y="10" text-anchor="middle" :fill="summaryStats.smoke > 0 ? '#ef4444' : '#10b981'" font-size="6">{{ summaryStats.smoke > 0 ? 'TOXIC' : 'CLEAN' }}</text>
@@ -382,7 +384,7 @@
                             <g class="orbit-group animate-spin-slow" style="transform-origin: 200px 300px;">
                                 <circle cx="200" cy="300" r="140" class="orbit-path" />
                                 <g transform="translate(340, 300)"> <!-- Right: (200+140, 300) -->
-                                    <g class="orbit-icon animate-spin-reverse-slow">
+                                    <g class="organ-wrapper animate-spin-reverse-slow">
                                         <circle r="20" :fill="inputs.food ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)'" stroke="#f59e0b" stroke-width="1.5" />
                                         <text y="0" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold">FUEL [胃]</text>
                                         <text y="9" text-anchor="middle" fill="#f59e0b" font-size="6">{{ inputs.food ? 'ON' : 'OFF' }}</text>
@@ -394,7 +396,7 @@
                             <g class="orbit-group animate-spin-fast" style="transform-origin: 200px 300px;">
                                 <circle cx="200" cy="300" r="180" class="orbit-path" />
                                 <g transform="translate(200, 480)"> <!-- Bottom: (200, 300+180) -->
-                                    <g class="orbit-icon animate-spin-reverse-fast">
+                                    <g class="organ-wrapper animate-spin-reverse-fast">
                                         <circle r="24" :fill="summaryStats.sport > 0 ? 'rgba(236,72,153,0.2)' : 'rgba(255,255,255,0.05)'" stroke="#ec4899" stroke-width="1.5" />
                                         <text y="0" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold">PWR [肌]</text>
                                         <text y="10" text-anchor="middle" fill="#ec4899" font-size="6">{{ summaryStats.sport }}m</text>
@@ -518,17 +520,14 @@
             };
 
             const logAction = async (name, value) => {
+                // 核心修复: 乐观更新UI (Optimistic Update)
+                // 先更新本地 logs 数组，让 UI 立即反应，然后再去存库
+                logs.value.unshift({ habit_name: name, value: value, created_at: new Date().toISOString() });
+
                 try {
-                    // Force lowercase for consistency
-                    const n = name.toLowerCase();
                     await _supabase.from('habit_logs').insert({
-                        user_id: 'user', habit_name: n, value, date: selectedDate.value
+                        user_id: 'user', habit_name: name, value, date: selectedDate.value
                     });
-                    
-                    // Optimistic UI Update (Immediate visual feedback)
-                    logs.value.unshift({ habit_name: n, value, created_at: new Date().toISOString() });
-                    
-                    // fetchLogs(); // Optional: sync later
                 } catch (e) { console.error(e); }
             };
 
@@ -590,7 +589,7 @@
             const addHabit = async (name, val) => {
                 if(neuralBuffer.value < 30 && name === 'sport') return showToast("Energy too low", "error");
                 
-                // Force name to lowercase for consistency
+                // Force lowercase
                 const n = name.toLowerCase();
                 
                 if (n === 'sport') neuralBuffer.value = Math.max(0, neuralBuffer.value - 15); 
