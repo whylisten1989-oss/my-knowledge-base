@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Bio-OS (V9.4 - Polished)</title>
+    <title>MindForge Bio-OS (V11.0 - Holographic)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="css/global.css">
 
     <script>
@@ -20,15 +21,15 @@
                     animation: { 
                         'flow': 'flow 3s linear infinite',
                         'flash-red': 'flashRed 0.5s ease-in-out',
-                        'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'hologram': 'hologram 4s linear infinite',
+                        'organ-pulse': 'organPulse 2s ease-in-out infinite',
                     },
                     keyframes: {
                         flow: { '0%': { backgroundPosition: '0% 50%' }, '100%': { backgroundPosition: '100% 50%' } },
                         flashRed: { '0%, 100%': { opacity: 0 }, '50%': { opacity: 0.3, backgroundColor: 'red' } },
-                        pulseGlow: {
-                            '0%, 100%': { opacity: 1, filter: 'brightness(1)' },
-                            '50%': { opacity: 0.85, filter: 'brightness(1.2)' }
-                        }
+                        hologram: { '0%, 100%': { opacity: 0.8 }, '50%': { opacity: 0.4 } },
+                        organPulse: { '0%, 100%': { opacity: 0.6, filter: 'brightness(1)' }, '50%': { opacity: 1, filter: 'brightness(1.5) drop-shadow(0 0 5px currentColor)' } }
                     }
                 }
             }
@@ -46,8 +47,8 @@
         }
 
         .habit-card {
-            background: rgba(20, 20, 23, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 15, 18, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
             transition: all 0.2s ease;
         }
@@ -62,6 +63,21 @@
         .btn-quick {
             @apply border border-gray-700 hover:border-gray-500 hover:bg-white/5 rounded text-[10px] font-bold transition flex items-center justify-center;
         }
+
+        /* SVG Hologram Styles */
+        .bio-svg path { transition: all 0.5s ease; fill: rgba(255,255,255,0.05); stroke: rgba(255,255,255,0.2); stroke-width: 1; }
+        .bio-svg .active-organ { stroke-width: 2; animation: organ-pulse 2s infinite; }
+        
+        /* Specific Organ Colors */
+        .organ-brain.active { fill: rgba(59, 130, 246, 0.2); stroke: #3b82f6; color: #3b82f6; }
+        .organ-brain.critical { fill: rgba(239, 68, 68, 0.2); stroke: #ef4444; color: #ef4444; animation: pulse 0.5s infinite; }
+        
+        .organ-lungs.active { fill: rgba(16, 185, 129, 0.2); stroke: #10b981; color: #10b981; }
+        .organ-lungs.toxic { fill: rgba(100, 100, 100, 0.5); stroke: #ef4444; color: #ef4444; }
+        
+        .organ-stomach.active { fill: rgba(245, 158, 11, 0.2); stroke: #f59e0b; color: #f59e0b; }
+        
+        .organ-muscle.active { fill: rgba(236, 72, 153, 0.2); stroke: #ec4899; color: #ec4899; }
     </style>
 </head>
 <body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden text-gray-900 dark:text-gray-200 text-sm">
@@ -70,7 +86,7 @@
 
 <div id="app" class="h-full w-full flex relative z-10 flex-col md:flex-row">
 
-    <!-- 全屏红色闪烁特效 -->
+    <!-- 全屏特效 -->
     <div v-if="isFlashRed" class="fixed inset-0 pointer-events-none z-[9999] animate-flash-red"></div>
 
     <!-- 侧边栏 -->
@@ -98,220 +114,275 @@
 
     <main class="flex-1 flex flex-col bg-transparent relative w-full px-2 md:pl-4 md:pt-4 no-scroll-x h-full">
         
-        <!-- HUD -->
-        <header class="h-auto md:h-32 flex flex-col justify-between p-4 shrink-0 mb-3 cyber-card z-[50] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
-            <div class="flex justify-between items-start mb-2">
-                <div class="flex items-center gap-4">
-                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl p-2">☰</button>
-                    <div>
-                        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-0.5">Bio-Metrics</div>
-                        <div class="flex items-baseline gap-2">
-                            <div class="text-lg font-black font-mono tracking-tight">{{ currentTime }}</div>
-                            <div class="text-[9px] text-gray-400 font-mono uppercase">{{ currentDate }} CST</div>
+        <!-- 布局：左侧控制台 + 右侧全息图 -->
+        <div class="flex flex-col lg:flex-row gap-4 h-full pb-4">
+            
+            <!-- LEFT COLUMN: CONTROLS (2/3) -->
+            <div class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scroll pr-2">
+                
+                <!-- HUD: 仪表盘 -->
+                <header class="shrink-0 p-5 cyber-card z-[50] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-4">
+                            <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl p-2">☰</button>
+                            <div>
+                                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-0.5">Bio-Metrics Status</div>
+                                <div class="flex items-baseline gap-2">
+                                    <div class="text-xl font-black font-mono tracking-tight">{{ currentTime }}</div>
+                                    <div class="text-[9px] text-gray-400 font-mono uppercase">{{ currentDate }} CST</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded border border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition z-[60]">
+                                <span v-if="isDark">☀</span><span v-else>☾</span>
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div class="flex items-center gap-3">
-                    <button @click="toggleTheme" class="w-7 h-7 flex items-center justify-center rounded border border-gray-200 dark:border-white/10 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition z-[60]">
-                        <span v-if="isDark">☀</span><span v-else>☾</span>
+
+                    <!-- Progress Bars (V9.4 Fix: Taller & Spaced) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                        <div>
+                            <div class="flex justify-between items-end mb-2">
+                                <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-2">
+                                    Neural Buffer [精力]
+                                    <span v-if="isToxic" class="text-red-500 animate-pulse">[TOXIC DRAIN]</span>
+                                </span>
+                                <span :class="['text-xs font-mono font-black', bufferColor]">{{ neuralBuffer.toFixed(1) }}% <span class="text-gray-500 font-normal">/ {{ maxCaps.energy.toFixed(0) }}</span></span>
+                            </div>
+                            <div class="h-8 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden border border-black/5 dark:border-white/10">
+                                 <div class="absolute right-0 top-0 bottom-0 bg-red-500/20" :style="{width: (100 - maxCaps.energy) + '%'}"></div>
+                                <div :class="['h-full transition-all duration-1000 ease-out plasma-bar animate-pulse-glow', bufferColorBg]" :style="{width: (neuralBuffer / 100 * maxCaps.energy) + '%', color: bufferColorHex}"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-end mb-2">
+                                <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Health Integrity [健康]</span>
+                                <span :class="['text-xs font-mono font-black', healthColor]">{{ healthIntegrity.toFixed(1) }}% <span class="text-gray-500 font-normal">/ {{ maxCaps.health.toFixed(0) }}</span></span>
+                            </div>
+                            <div class="h-8 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden border border-black/5 dark:border-white/10">
+                                 <div class="absolute right-0 top-0 bottom-0 bg-red-500/20" :style="{width: (100 - maxCaps.health) + '%'}"></div>
+                                <div :class="['h-full transition-all duration-1000 plasma-bar animate-pulse-glow', healthColorBg]" :style="{width: (healthIntegrity / 100 * maxCaps.health) + '%', color: healthColorHex}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- SECTION 1: SYSTEM FIREWALL -->
+                <div :class="['cyber-card px-5 py-4 border-l-4 transition-all duration-500 flex flex-col md:flex-row justify-between items-center gap-3', abstinenceStreak > 0 ? 'border-l-emerald-500' : 'border-l-red-500']">
+                    <div class="flex items-center gap-6 w-full md:w-auto">
+                        <div class="text-center md:text-left">
+                            <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Abstinence [戒烟天数]</div>
+                            <div class="flex items-baseline gap-2 justify-center md:justify-start">
+                                <span :class="['text-3xl font-black font-mono', abstinenceStreak > 0 ? 'text-emerald-500' : 'text-red-500']">{{ abstinenceStreak }}</span>
+                                <span class="text-xs text-gray-400">DAYS</span>
+                            </div>
+                        </div>
+                        <div v-if="abstinenceStreak >= 3" class="hidden md:flex gap-1">
+                            <span class="text-[8px] px-2 py-0.5 bg-emerald-500/20 text-emerald-500 rounded border border-emerald-500/30 font-bold">🔰 IRON WILL</span>
+                        </div>
+                    </div>
+                    <button @click="triggerNicotine" class="relative z-[50] w-full md:w-auto px-6 py-2.5 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 text-[10px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2 cursor-pointer active:scale-95 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                        <span>⚠️ INJECT TOXIN</span>
                     </button>
                 </div>
-            </div>
 
-            <!-- Progress Bars (Height Increased & Pulse Animation) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <div>
-                    <div class="flex justify-between items-end mb-1">
-                        <span class="text-[9px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-2">
-                            Neural Buffer 
-                            <span v-if="isToxic" class="text-red-500 animate-pulse">[TOXIC DRAIN]</span>
-                        </span>
-                        <span :class="['text-[10px] font-mono font-black', bufferColor]">{{ neuralBuffer.toFixed(1) }}% <span class="text-gray-500 font-normal">/ {{ maxCaps.energy.toFixed(0) }}</span></span>
-                    </div>
-                    <!-- h-6 (24px) 高度 -->
-                    <div class="h-6 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden">
-                         <div class="absolute right-0 top-0 bottom-0 bg-red-500/20" :style="{width: (100 - maxCaps.energy) + '%'}"></div>
-                        <div :class="['h-full transition-all duration-1000 ease-out plasma-bar animate-pulse-glow', bufferColorBg]" :style="{width: (neuralBuffer / 100 * maxCaps.energy) + '%', color: bufferColorHex}"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between items-end mb-1">
-                        <span class="text-[9px] font-bold text-green-500 uppercase tracking-widest">Health Integrity</span>
-                        <span :class="['text-[10px] font-mono font-black', healthColor]">{{ healthIntegrity.toFixed(1) }}% <span class="text-gray-500 font-normal">/ {{ maxCaps.health.toFixed(0) }}</span></span>
-                    </div>
-                    <!-- h-6 (24px) 高度 -->
-                    <div class="h-6 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden">
-                         <div class="absolute right-0 top-0 bottom-0 bg-red-500/20" :style="{width: (100 - maxCaps.health) + '%'}"></div>
-                        <div :class="['h-full transition-all duration-1000 plasma-bar animate-pulse-glow', healthColorBg]" :style="{width: (healthIntegrity / 100 * maxCaps.health) + '%', color: healthColorHex}"></div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <div class="flex-1 overflow-y-auto pr-2 md:pr-4 pb-4 relative z-10 custom-scroll space-y-3">
-            
-            <!-- SECTION 1: SYSTEM FIREWALL -->
-            <div :class="['cyber-card px-4 py-3 border-l-4 transition-all duration-500 flex flex-col md:flex-row justify-between items-center gap-3', abstinenceStreak > 0 ? 'border-l-emerald-500' : 'border-l-red-500']">
-                <div class="flex items-center gap-4 w-full md:w-auto">
-                    <div class="text-center md:text-left">
-                        <div class="text-[8px] text-gray-500 uppercase tracking-widest mb-0.5">Abstinence Streak</div>
-                        <div class="flex items-baseline gap-2 justify-center md:justify-start">
-                            <span :class="['text-2xl font-black font-mono', abstinenceStreak > 0 ? 'text-emerald-500' : 'text-red-500']">{{ abstinenceStreak }}</span>
-                            <span class="text-[10px] text-gray-400">DAYS</span>
+                <!-- SECTION 2: BIO-MAINTENANCE -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- Water -->
+                    <div class="cyber-card p-4 flex flex-col justify-between h-32 relative overflow-hidden group">
+                        <div class="absolute bottom-0 left-0 w-full bg-blue-500/10 transition-all duration-1000" :style="{height: (todayStats.water / 8 * 100) + '%'}"></div>
+                        <div class="flex justify-between items-start relative z-10">
+                            <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Hydration [水分]</span>
+                            <span class="text-xl opacity-80">💧</span>
+                        </div>
+                        <div class="flex items-center justify-between relative z-10 mt-1">
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-3xl font-black">{{ todayStats.water }}</span>
+                                <span class="text-xs text-gray-500">/ 8</span>
+                            </div>
+                            <button @click="drinkWater" class="px-4 py-1.5 bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 rounded text-[10px] font-bold transition cursor-pointer active:scale-95">+ 补充</button>
                         </div>
                     </div>
-                    <div v-if="abstinenceStreak >= 3" class="hidden md:flex gap-1">
-                        <span class="text-[8px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-500 rounded border border-emerald-500/30">🔰 IRON WILL</span>
-                    </div>
-                </div>
-                <button @click="triggerNicotine" class="relative z-[50] w-full md:w-auto px-4 py-2 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 text-[9px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2 cursor-pointer active:scale-95">
-                    <span>⚠️ INJECT TOXIN (Smoke)</span>
-                </button>
-            </div>
 
-            <!-- SECTION 2: BIO-MAINTENANCE -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <!-- Water -->
-                <div class="cyber-card p-3 flex flex-col justify-between h-28 relative overflow-hidden group">
-                    <div class="absolute bottom-0 left-0 w-full bg-blue-500/10 transition-all duration-1000" :style="{height: (todayStats.water / 8 * 100) + '%'}"></div>
-                    <div class="flex justify-between items-start relative z-10">
-                        <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Hydration</span>
-                        <span class="text-lg opacity-80">💧</span>
-                    </div>
-                    <div class="flex items-center justify-between relative z-10 mt-1">
-                        <div class="flex items-baseline gap-1">
-                            <span class="text-2xl font-black">{{ todayStats.water }}</span>
-                            <span class="text-[10px] text-gray-500">/ 8</span>
+                    <!-- Food -->
+                    <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[9px] font-bold text-gray-500 uppercase">Nutrient [饮食]</span>
+                            <span class="text-xl opacity-80">🍱</span>
                         </div>
-                        <button @click="drinkWater" class="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 rounded text-[9px] font-bold transition cursor-pointer active:scale-95">+ ADD</button>
+                        <div class="flex flex-col gap-2 relative z-[50]">
+                            <input v-model="inputs.food" type="text" placeholder="食物内容..." class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500">
+                            <button @click="eatFood" class="w-full py-1.5 bg-orange-500/10 hover:bg-orange-500 text-orange-500 hover:text-white border border-orange-500/30 rounded text-[10px] font-bold transition cursor-pointer active:scale-95">记录摄入</button>
+                        </div>
+                    </div>
+
+                    <!-- Sleep -->
+                    <div class="cyber-card p-4 flex flex-col justify-between h-32 bg-purple-900/5 border-purple-500/20">
+                        <div class="flex justify-between items-start">
+                            <span class="text-[9px] font-bold text-purple-500 uppercase">Sleep [休眠]</span>
+                            <button @click="askRecoveryAdvice" class="text-[8px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded border border-purple-500/30 hover:bg-purple-500 hover:text-white transition flex items-center gap-1 z-[50]">
+                                ✨ 建议
+                            </button>
+                        </div>
+                        <div class="flex gap-2 relative z-[50] mt-auto">
+                            <!-- V9.4 修复: 纯数字输入 -->
+                            <input v-model="inputs.sleep" type="number" placeholder="Hrs" class="w-16 bg-white/5 border border-purple-500/30 rounded px-2 text-center font-bold text-[12px] focus:outline-none appearance-none">
+                            <button @click="logSleep" class="flex-1 py-1.5 bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 rounded text-[10px] font-bold uppercase tracking-widest transition cursor-pointer active:scale-95">
+                                记录睡眠
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Food -->
-                <div class="cyber-card p-3 flex flex-col justify-between h-28">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[9px] font-bold text-gray-500 uppercase">Nutrient</span>
-                        <span class="text-lg opacity-80">🍱</span>
-                    </div>
-                    <div class="flex flex-col gap-1.5 relative z-[50]">
-                        <input v-model="inputs.food" type="text" placeholder="Meal..." class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded px-2 py-1 text-[10px]">
-                        <button @click="eatFood" class="w-full py-1.5 bg-orange-500/10 hover:bg-orange-500 text-orange-500 hover:text-white border border-orange-500/30 rounded text-[9px] font-bold transition cursor-pointer active:scale-95">LOG MEAL</button>
-                    </div>
+                <!-- SECTION 3: DAILY ROUTINE -->
+                <div class="cyber-card p-4 flex justify-between items-center gap-3 overflow-x-auto">
+                    <button @click="toggleToggleHabit('teeth_am')" :class="['flex-1 py-3 px-3 rounded border transition flex flex-col items-center justify-center min-w-[80px]', todayStats.teeth_am ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
+                        <span class="text-[10px] font-bold">早刷牙</span>
+                    </button>
+                    <button @click="toggleToggleHabit('teeth_pm')" :class="['flex-1 py-3 px-3 rounded border transition flex flex-col items-center justify-center min-w-[80px]', todayStats.teeth_pm ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
+                        <span class="text-[10px] font-bold">晚刷牙</span>
+                    </button>
+                    <button @click="toggleToggleHabit('face')" :class="['flex-1 py-3 px-3 rounded border transition flex flex-col items-center justify-center min-w-[80px]', todayStats.face ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
+                        <span class="text-[10px] font-bold">洗脸</span>
+                    </button>
+                    <button @click="toggleToggleHabit('house')" :class="['flex-1 py-3 px-3 rounded border transition flex flex-col items-center justify-center min-w-[80px]', todayStats.house ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
+                        <span class="text-[10px] font-bold">家务</span>
+                    </button>
                 </div>
 
-                <!-- Sleep (Manual Log Mode) -->
-                <div class="cyber-card p-3 flex flex-col justify-between h-28 bg-purple-900/5 border-purple-500/20">
-                    <div class="flex justify-between items-start">
-                        <span class="text-[9px] font-bold text-purple-500 uppercase">Sleep Record</span>
-                        <span class="text-lg opacity-80">🌙</span>
-                    </div>
-                    <div class="flex gap-2 relative z-[50] mt-auto">
-                        <input v-model="inputs.sleep" type="number" placeholder="Hrs..." class="w-16 bg-white/5 border border-purple-500/30 rounded px-2 text-center font-bold text-[12px] focus:outline-none">
-                        <button @click="logSleep" class="flex-1 py-1.5 bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 rounded text-[9px] font-bold uppercase tracking-widest transition cursor-pointer active:scale-95">
-                            LOG
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SECTION 3: DAILY ROUTINE -->
-            <div class="cyber-card p-3 flex justify-between items-center gap-2 overflow-x-auto">
-                <button @click="toggleToggleHabit('teeth_am')" :class="['flex-1 py-2 px-3 rounded border transition flex flex-col items-center justify-center min-w-[70px]', todayStats.teeth_am ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
-                    <span class="text-[9px] font-bold">BRUSH AM</span>
-                </button>
-                <button @click="toggleToggleHabit('teeth_pm')" :class="['flex-1 py-2 px-3 rounded border transition flex flex-col items-center justify-center min-w-[70px]', todayStats.teeth_pm ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
-                    <span class="text-[9px] font-bold">BRUSH PM</span>
-                </button>
-                <button @click="toggleToggleHabit('face')" :class="['flex-1 py-2 px-3 rounded border transition flex flex-col items-center justify-center min-w-[70px]', todayStats.face ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
-                    <span class="text-[9px] font-bold">FACE</span>
-                </button>
-                <button @click="toggleToggleHabit('house')" :class="['flex-1 py-2 px-3 rounded border transition flex flex-col items-center justify-center min-w-[70px]', todayStats.house ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
-                    <span class="text-[9px] font-bold">HOUSE</span>
-                </button>
-            </div>
-
-            <!-- SECTION 4: SKILLS & STATS -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                <!-- Skill Upload -->
-                <div class="lg:col-span-2 cyber-card p-4">
-                    <h3 class="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-3 flex justify-between">
-                        <span>Skill Upload</span>
+                <!-- SECTION 4: SKILL UPLOAD -->
+                <div class="cyber-card p-5">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
+                        <span>Skill Upload [能力进化]</span>
                         <span :class="neuralBuffer < 30 ? 'text-red-500' : 'text-blue-500'">{{ neuralBuffer < 30 ? '⚠ LOW POWER' : '● READY' }}</span>
                     </h3>
                     <div class="space-y-3">
                         <!-- Piano -->
                         <div class="flex items-center gap-3">
-                            <span class="w-16 text-[10px] font-bold text-gray-400">🎹 Piano</span>
+                            <span class="w-16 text-[10px] font-bold text-gray-400">🎹 钢琴</span>
                             <div class="flex gap-2 flex-1">
-                                <button @click="addHabit('piano', 15)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black">15</button>
-                                <button @click="addHabit('piano', 30)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black">30</button>
-                                <button @click="addHabit('piano', 60)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black">60</button>
+                                <button @click="addHabit('piano', 15)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black">15m</button>
+                                <button @click="addHabit('piano', 30)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black">30m</button>
+                                <button @click="addHabit('piano', 60)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black">60m</button>
                             </div>
                         </div>
                         <!-- Study -->
                         <div class="flex items-center gap-3">
-                            <span class="w-16 text-[10px] font-bold text-gray-400">📚 Study</span>
+                            <span class="w-16 text-[10px] font-bold text-gray-400">📚 学习</span>
                             <div class="flex gap-2 flex-1">
-                                <button @click="addHabit('study', 15)" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black">15</button>
-                                <button @click="addHabit('study', 30)" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black">30</button>
-                                <button @click="addHabit('study', 60)" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black">60</button>
+                                <button @click="addHabit('study', 15)" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black">15m</button>
+                                <button @click="addHabit('study', 30)" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black">30m</button>
+                                <button @click="addHabit('study', 60)" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black">60m</button>
                             </div>
                         </div>
                         <!-- Sport -->
                         <div class="flex items-center gap-3">
-                            <span class="w-16 text-[10px] font-bold text-gray-400">🏃 Sport</span>
+                            <span class="w-16 text-[10px] font-bold text-gray-400">🏃 运动</span>
                             <div class="flex gap-2 flex-1">
-                                <button @click="addHabit('sport', 15)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black text-red-400">-15E</button>
-                                <button @click="addHabit('sport', 30)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black text-red-400">-30E</button>
-                                <button @click="addHabit('sport', 60)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-1.5 hover:bg-white hover:text-black text-red-400">-60E</button>
+                                <button @click="addHabit('sport', 15)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black text-red-400">15m</button>
+                                <button @click="addHabit('sport', 30)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black text-red-400">30m</button>
+                                <button @click="addHabit('sport', 60)" :disabled="neuralBuffer < 30" class="btn-quick flex-1 py-2 hover:bg-white hover:text-black text-red-400">60m</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Comprehensive Summary Card -->
-                <div class="cyber-card p-3 flex flex-col justify-center">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-[9px] font-bold text-gray-500 uppercase">Today's Summary</span>
-                        <div class="flex items-center gap-2 relative z-[50]">
-                            <button @click="changeDate(-1)" class="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 transition cursor-pointer">◀</button>
-                            <span class="text-[9px] font-mono text-blue-500 font-bold">{{ selectedDate }}</span>
-                            <button @click="changeDate(1)" class="w-5 h-5 flex items-center justify-center rounded hover:bg-white/10 transition cursor-pointer">▶</button>
+            </div>
+            
+            <!-- RIGHT COLUMN: HOLOGRAPHIC DIAGNOSTICS (1/3) -->
+            <div class="w-full lg:w-1/3 flex flex-col gap-4">
+                <!-- Bio-Hologram Visual -->
+                <div class="cyber-card flex-1 min-h-[400px] relative flex flex-col items-center justify-center p-6 border-blue-500/20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-opacity-10">
+                    <div class="absolute top-4 left-4 text-[10px] font-bold text-blue-500 tracking-widest">BIO-HOLOGRAM v1.0</div>
+                    
+                    <!-- SVG Human Body Wireframe -->
+                    <div class="relative w-full h-full max-h-[500px] flex items-center justify-center">
+                        <svg viewBox="0 0 200 400" class="bio-svg h-full w-auto drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                            <!-- Body Outline -->
+                            <path d="M100,20 C120,20 130,40 130,60 L140,70 L170,150 L160,180 L140,150 L140,220 L160,380 L130,380 L120,250 L100,250 L80,250 L70,380 L40,380 L60,220 L60,150 L40,180 L30,150 L60,70 C60,40 80,20 100,20" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"></path>
+                            
+                            <!-- 1. Brain (Energy) -->
+                            <g class="organ-brain" :class="[neuralBuffer < 30 ? 'critical' : (neuralBuffer > 70 ? 'active' : '')]">
+                                <path d="M90,30 Q100,20 110,30 Q115,45 100,50 Q85,45 90,30" stroke="currentColor" fill="currentColor" fill-opacity="0.2"></path>
+                                <line x1="120" y1="35" x2="160" y2="35" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2,2"></line>
+                                <text x="165" y="38" fill="currentColor" font-size="6" font-family="monospace">CORTEX</text>
+                            </g>
+
+                            <!-- 2. Lungs (Smoke) -->
+                            <g class="organ-lungs" :class="[summaryStats.smoke > 0 ? 'toxic' : 'active']">
+                                <path d="M85,80 Q75,100 85,120 Q95,120 95,90 Z" stroke="currentColor" fill="currentColor" fill-opacity="0.2"></path>
+                                <path d="M115,80 Q125,100 115,120 Q105,120 105,90 Z" stroke="currentColor" fill="currentColor" fill-opacity="0.2"></path>
+                                <line x1="125" y1="100" x2="160" y2="100" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2,2"></line>
+                                <text x="165" y="103" fill="currentColor" font-size="6" font-family="monospace">RESPIRATORY</text>
+                            </g>
+                            
+                            <!-- 3. Stomach (Food/Water) -->
+                            <g class="organ-stomach" :class="[inputs.food || todayStats.water > 4 ? 'active' : '']">
+                                <path d="M95,130 Q85,140 90,150 Q110,155 105,135" stroke="currentColor" fill="currentColor" fill-opacity="0.2"></path>
+                            </g>
+
+                            <!-- 4. Muscle (Sport) -->
+                            <g class="organ-muscle" :class="[summaryStats.sport > 0 ? 'active' : '']">
+                                <rect x="50" y="80" width="15" height="40" rx="5" stroke="currentColor" fill="currentColor" fill-opacity="0.1"></rect>
+                                <rect x="135" y="80" width="15" height="40" rx="5" stroke="currentColor" fill="currentColor" fill-opacity="0.1"></rect>
+                                <line x1="45" y1="100" x2="20" y2="100" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2,2"></line>
+                                <text x="5" y="103" fill="currentColor" font-size="6" font-family="monospace">MUSCLE</text>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- System Diagnostic Panel (Static Report) -->
+                <div class="cyber-card p-5 bg-black border-t-4 border-t-blue-500">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 border-b border-gray-800 pb-2">Diagnostic Report [诊断报告]</h3>
+                    
+                    <div class="space-y-3 font-mono text-[10px]">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">SYSTEM UPTIME</span>
+                            <span class="text-blue-500">{{ currentTime }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">METABOLIC RATE</span>
+                            <span :class="isToxic ? 'text-red-500 animate-pulse' : 'text-green-500'">{{ isToxic ? 'CRITICAL (TOXIN)' : 'STABLE' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">LUNG CAPACITY</span>
+                            <span :class="summaryStats.smoke > 0 ? 'text-red-500' : 'text-green-500'">{{ summaryStats.smoke > 0 ? 'COMPROMISED' : 'OPTIMAL' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">SLEEP RECOVERY</span>
+                            <span class="text-white">{{ summaryStats.sleep }}h / 8h GOAL</span>
+                        </div>
+                        <div class="flex justify-between pt-2 border-t border-gray-800 mt-2">
+                            <span class="text-gray-500">OVERALL SCORE</span>
+                            <span class="text-xl font-black text-white">
+                                {{ Math.floor((neuralBuffer + healthIntegrity) / 2) }}<span class="text-xs text-gray-600">/100</span>
+                            </span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="p-2 rounded bg-gray-50 dark:bg-white/5 border border-transparent hover:border-white/10 transition">
-                            <div class="text-[8px] text-gray-500 uppercase mb-0.5">Piano</div>
-                            <div class="text-base font-bold">{{ summaryStats.piano }}<span class="text-[9px] text-gray-400">m</span></div>
-                        </div>
-                        <div class="p-2 rounded bg-gray-50 dark:bg-white/5 border border-transparent hover:border-white/10 transition">
-                            <div class="text-[8px] text-gray-500 uppercase mb-0.5">Study</div>
-                            <div class="text-base font-bold">{{ summaryStats.study }}<span class="text-[9px] text-gray-400">m</span></div>
-                        </div>
-                        <div class="p-2 rounded bg-gray-50 dark:bg-white/5 border border-transparent hover:border-white/10 transition">
-                            <div class="text-[8px] text-gray-500 uppercase mb-0.5">Sport</div>
-                            <div class="text-base font-bold">{{ summaryStats.sport }}<span class="text-[9px] text-gray-400">m</span></div>
-                        </div>
-                        <div class="p-2 rounded bg-gray-50 dark:bg-white/5 border border-transparent hover:border-white/10 transition">
-                            <div class="text-[8px] text-gray-500 uppercase mb-0.5">Sleep</div>
-                            <div class="text-base font-bold">{{ summaryStats.sleep }}<span class="text-[9px] text-gray-400">h</span></div>
-                        </div>
-                        <div class="p-2 rounded bg-gray-50 dark:bg-white/5 border border-transparent hover:border-white/10 transition col-span-2 flex justify-between items-center px-4">
-                             <div>
-                                 <div class="text-[8px] text-gray-500 uppercase mb-0.5">Water</div>
-                                 <div class="text-base font-bold text-blue-500">{{ summaryStats.water }}</div>
-                             </div>
-                             <div class="text-right">
-                                 <div class="text-[8px] text-gray-500 uppercase mb-0.5">Toxin</div>
-                                 <div :class="['text-base font-bold', summaryStats.smoke > 0 ? 'text-red-500' : 'text-green-500']">{{ summaryStats.smoke }}</div>
-                             </div>
-                        </div>
-                    </div>
+                    
+                    <!-- AI Analyze Button -->
+                    <button @click="analyzeBioData" class="w-full mt-4 py-2 border border-blue-500/30 text-blue-500 hover:bg-blue-500 hover:text-white rounded text-[9px] font-bold tracking-widest transition">
+                        RUN DEEP SCAN (AI)
+                    </button>
                 </div>
             </div>
 
         </div>
     </main>
+
+    <!-- AI Modal -->
+    <div v-if="showAnalysisModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in">
+        <div class="cyber-card w-full max-w-lg p-6 relative bg-[#050505] border border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.2)]">
+            <button @click="showAnalysisModal = false" class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+            <div class="flex items-center gap-3 mb-6 border-b border-blue-900/30 pb-4">
+                <div class="w-2 h-2 bg-blue-500 animate-pulse rounded-full"></div>
+                <h3 class="text-lg font-black tracking-widest text-blue-400">NEURAL CORE ANALYSIS</h3>
+            </div>
+            <div class="min-h-[150px] text-sm font-mono leading-relaxed text-gray-300 typing-cursor markdown-body" v-html="analysisResult"></div>
+        </div>
+    </div>
 
 </div>
 
@@ -320,7 +391,9 @@
 
     createApp({
         setup() {
-            // Mock Engine
+            const apiKey = ""; // API Key
+
+            // Config Check
             const connectionStatus = ref('CHECKING...');
             const notification = reactive({ message: '', type: '', icon: '' });
             const showToast = (msg, type = 'info') => {
@@ -358,13 +431,16 @@
             const maxCaps = reactive({ energy: 100, health: 100 });
             const isFlashRed = ref(false);
             const isToxic = ref(false); 
+            const isAnalyzing = ref(false);
+            const showAnalysisModal = ref(false);
+            const analysisResult = ref('');
 
             // Clock & Decay
             setInterval(() => {
                 const now = new Date();
                 currentTime.value = now.toLocaleTimeString('en-US', { hour12: false });
                 currentDate.value = now.toLocaleDateString();
-                
+                // 修正：极慢速自然衰减
                 if(neuralBuffer.value > 0) {
                     const decay = isToxic.value ? 0.01 : 0.002;
                     neuralBuffer.value = Math.max(0, neuralBuffer.value - decay);
@@ -397,6 +473,7 @@
                     if(l.habit_name === 'face') s.face += v;
                     if(l.habit_name === 'house') s.house += v;
                 });
+                s.sleep = Number(s.sleep).toFixed(1);
                 return s;
             });
 
@@ -419,8 +496,7 @@
             const logAction = async (name, value) => {
                 try {
                     await _supabase.from('habit_logs').insert({
-                        user_id: 'user', 
-                        habit_name: name, value, date: selectedDate.value
+                        user_id: 'user', habit_name: name, value, date: selectedDate.value
                     });
                     fetchLogs();
                 } catch (e) { console.error(e); }
@@ -451,8 +527,8 @@
                 isFlashRed.value = true;
                 setTimeout(() => isFlashRed.value = false, 500);
 
-                maxCaps.energy = Math.max(50, maxCaps.energy - 2); 
-                healthIntegrity.value = Math.max(0, healthIntegrity.value - 5); 
+                maxCaps.energy = Math.max(50, maxCaps.energy - 0.5); 
+                maxCaps.health = Math.max(0, healthIntegrity.value - 0.5); 
                 neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + 15); 
                 
                 isToxic.value = true;
@@ -460,16 +536,22 @@
 
                 await logAction('debuff_smoke', 1);
                 lastBreachDate.value = new Date();
-                showToast("⚠️ TOXIN DETECTED: CAP DAMAGE", "error");
+                showToast("⚠️ CAP DAMAGE", "error");
             };
 
-            // 手动记录睡眠逻辑
             const logSleep = async () => {
                 if(!inputs.sleep) return showToast("Enter hours", "error");
                 const hours = parseFloat(inputs.sleep);
-                const recovery = hours * 8; // 简单线性恢复
+                
+                // V10.1 修复上限逻辑
+                if (hours >= 7) {
+                    const recoveryCap = hours * 0.5;
+                    maxCaps.energy = Math.min(100, maxCaps.energy + recoveryCap);
+                    maxCaps.health = Math.min(100, maxCaps.health + recoveryCap);
+                }
+                
+                const recovery = hours * 8; 
                 neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + recovery);
-                healthIntegrity.value = Math.min(maxCaps.health, healthIntegrity.value + (hours * 1));
                 
                 await logAction('sleep', hours);
                 inputs.sleep = '';
@@ -477,20 +559,54 @@
             };
 
             const addHabit = async (name, val) => {
-                if(neuralBuffer.value < 30 && name === 'sport') return showToast("Energy too low for sport", "error");
+                if(neuralBuffer.value < 30 && name === 'sport') return showToast("Energy too low", "error");
                 
                 if (name === 'sport') neuralBuffer.value = Math.max(0, neuralBuffer.value - 15); 
                 else if (name === 'piano') neuralBuffer.value = Math.max(0, neuralBuffer.value - 5); 
                 
                 await logAction(name, val);
-                showToast(`${name} ${val}m recorded`);
+                showToast(`${name} ${val}m`);
             }
 
             const toggleToggleHabit = async (name) => {
                 if (todayStats.value[name] >= 1) return; 
                 await logAction(name, 1);
-                showToast("Task Complete");
+                showToast("Complete");
             }
+
+            const callGemini = async (prompt) => {
+                if (!apiKey) return "API KEY MISSING";
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "NO DATA";
+                } catch (e) { return "ERROR"; }
+            };
+
+            const analyzeBioData = async () => {
+                isAnalyzing.value = true;
+                showAnalysisModal.value = true;
+                analysisResult.value = "CONNECTING...";
+                const stats = summaryStats.value;
+                const prompt = `Role: Bio-OS AI. Stats: Energy ${neuralBuffer.value}%, Health ${healthIntegrity.value}%. Log: Water ${stats.water}, Sleep ${stats.sleep}h, Smoke ${stats.smoke}, Skills ${stats.piano+stats.study+stats.sport}m. Task: Short tactical report (max 50 words).`;
+                const result = await callGemini(prompt);
+                analysisResult.value = marked.parse(result);
+                isAnalyzing.value = false;
+            };
+
+            const askRecoveryAdvice = async () => {
+                isAnalyzing.value = true;
+                showAnalysisModal.value = true;
+                analysisResult.value = "CALCULATING...";
+                const prompt = `Role: Medic. Status: Energy ${neuralBuffer.value}%, Health ${healthIntegrity.value}%. Task: Recovery protocol (max 30 words).`;
+                const result = await callGemini(prompt);
+                analysisResult.value = marked.parse(result);
+                isAnalyzing.value = false;
+            };
 
             onMounted(() => {
                 fetchLogs();
@@ -499,7 +615,7 @@
 
             const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
 
-            return { isDark, toggleTheme, mobileMenuOpen, currentTime, currentDate, neuralBuffer, healthIntegrity, maxCaps, isFlashRed, isToxic, bufferColor, bufferColorBg, bufferColorHex, healthColor, healthColorBg, healthColorHex, todayStats, summaryStats, selectedDate, inputs, drinkWater, eatFood, logSleep, triggerNicotine, changeDate, abstinenceStreak, connectionStatus, notification, addHabit, toggleToggleHabit }
+            return { isDark, toggleTheme, mobileMenuOpen, currentTime, currentDate, neuralBuffer, healthIntegrity, maxCaps, isFlashRed, isToxic, bufferColor, bufferColorBg, bufferColorHex, healthColor, healthColorBg, healthColorHex, todayStats, summaryStats, selectedDate, inputs, drinkWater, eatFood, logSleep, triggerNicotine, changeDate, abstinenceStreak, connectionStatus, notification, addHabit, toggleToggleHabit, analyzeBioData, askRecoveryAdvice, isAnalyzing, showAnalysisModal, analysisResult }
         }
     }).mount('#app')
 </script>
