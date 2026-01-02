@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Bio-OS (V12.5 - Hard Fix)</title>
+    <title>MindForge Bio-OS (V12.6 - Orbit Fix)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -22,12 +22,12 @@
                         'flash-red': 'flashRed 0.5s ease-in-out',
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'pan': 'pan 20s linear infinite',
-                        'spin-slow': 'spin 20s linear infinite',
-                        'spin-medium': 'spin 15s linear infinite',
-                        'spin-fast': 'spin 10s linear infinite',
-                        'spin-reverse-slow': 'spin 20s linear infinite reverse',
-                        'spin-reverse-medium': 'spin 15s linear infinite reverse',
-                        'spin-reverse-fast': 'spin 10s linear infinite reverse',
+                        'spin-slow': 'spin 30s linear infinite',
+                        'spin-medium': 'spin 20s linear infinite',
+                        'spin-fast': 'spin 15s linear infinite',
+                        'spin-reverse-slow': 'spin 30s linear infinite reverse',
+                        'spin-reverse-medium': 'spin 20s linear infinite reverse',
+                        'spin-reverse-fast': 'spin 15s linear infinite reverse',
                         'data-pop': 'dataPop 0.3s ease-out',
                         'float': 'float 3s ease-in-out infinite',
                     },
@@ -85,10 +85,9 @@
             background-size: 40px 40px;
         }
         
-        /* 核心修复：轨道动画 */
-        .orbit-group { transform-origin: 200px 300px; } /* SVG中心点 */
-        .organ-wrapper { transform-box: fill-box; transform-origin: center; } /* 自身中心 */
-
+        /* 核心修复：轨道动画绝对居中 */
+        .orbit-system { transform-origin: 200px 300px; } /* SVG画布中心 */
+        
         .scan-line-v {
             position: absolute; left: 0; top: 0; width: 100%; height: 50%;
             background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.1), transparent);
@@ -347,7 +346,7 @@
 
             </div>
             
-            <!-- RIGHT COLUMN: ORBITAL CORE (1/3) -->
+            <!-- RIGHT COLUMN: ORBITAL CORE (Full Height, Independent Scroll) -->
             <div class="w-full lg:w-1/3 flex flex-col h-full overflow-hidden">
                 <div class="cyber-card flex-1 relative flex flex-col items-center justify-center p-0 border-blue-500/20 bg-dark bio-bg-grid overflow-hidden min-h-[600px] lg:min-h-0 animate-pan">
                     <div class="absolute top-4 left-4 text-[10px] font-bold text-blue-500 tracking-widest z-20">ORBITAL CORE v5.2</div>
@@ -358,7 +357,7 @@
                         <!-- viewBox 400x600, Center at 200,300 -->
                         <svg viewBox="0 0 400 600" class="w-full h-full drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]">
                             
-                            <!-- CENTER: BRAIN / CPU -->
+                            <!-- CENTER: BRAIN / CPU (Fixed) -->
                             <g transform="translate(200, 300)" class="animate-float">
                                 <circle r="50" fill="rgba(59,130,246,0.05)" stroke="#3b82f6" stroke-width="2" class="animate-pulse-slow" />
                                 <circle r="42" fill="none" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2,2" />
@@ -367,7 +366,8 @@
                             </g>
 
                             <!-- ORBIT 1: AIR (Radius 100) -->
-                            <g class="orbit-group animate-spin-medium">
+                            <!-- 将旋转逻辑应用在 g 上，transform-origin 设为画布中心 200 300 -->
+                            <g class="orbit-group animate-spin-medium" style="transform-origin: 200px 300px;">
                                 <circle cx="200" cy="300" r="100" class="orbit-path" />
                                 <g transform="translate(200, 200)"> <!-- Top: (200, 300-100) -->
                                     <g class="orbit-icon animate-spin-reverse-medium"> <!-- Counter Rotate -->
@@ -379,7 +379,7 @@
                             </g>
 
                             <!-- ORBIT 2: FUEL (Radius 140) -->
-                            <g class="orbit-group animate-spin-slow">
+                            <g class="orbit-group animate-spin-slow" style="transform-origin: 200px 300px;">
                                 <circle cx="200" cy="300" r="140" class="orbit-path" />
                                 <g transform="translate(340, 300)"> <!-- Right: (200+140, 300) -->
                                     <g class="orbit-icon animate-spin-reverse-slow">
@@ -391,7 +391,7 @@
                             </g>
 
                             <!-- ORBIT 3: PWR (Radius 180) -->
-                            <g class="orbit-group animate-spin-fast">
+                            <g class="orbit-group animate-spin-fast" style="transform-origin: 200px 300px;">
                                 <circle cx="200" cy="300" r="180" class="orbit-path" />
                                 <g transform="translate(200, 480)"> <!-- Bottom: (200, 300+180) -->
                                     <g class="orbit-icon animate-spin-reverse-fast">
