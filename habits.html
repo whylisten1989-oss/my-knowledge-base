@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Bio-OS (V9.0 - Stable Core)</title>
+    <title>MindForge Bio-OS (V9.1 - Complete)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -27,7 +27,6 @@
     </script>
 
     <style>
-        /* 强制显示内容，防止白屏 */
         [v-cloak] { display: block !important; }
         
         .plasma-bar {
@@ -38,22 +37,27 @@
         }
 
         .habit-card {
-            background: rgba(20, 20, 23, 0.8); /* 加深背景，防止透明度问题 */
+            background: rgba(20, 20, 23, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(12px);
             transition: all 0.2s ease;
         }
-        .habit-card:active { transform: scale(0.98); } /* 点击反馈 */
+        .habit-card:active { transform: scale(0.99); }
+        
+        .active-glow {
+            border-color: #3b82f6 !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+        }
     </style>
 </head>
 <body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden text-gray-900 dark:text-gray-200 text-sm">
 
-<!-- 尝试加载配置，失败也没关系 -->
 <script src="js/config.js"></script>
 
 <div id="app" class="h-full w-full flex relative z-10 flex-col md:flex-row">
 
-    <!-- 顶部通知条 (替代 alert) -->
+    <!-- 通知 -->
     <div v-if="notification.message" :class="['fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-2xl z-[9999] font-bold text-xs flex items-center gap-2 border', notification.type === 'error' ? 'bg-red-900/90 border-red-500 text-white' : 'bg-blue-900/90 border-blue-500 text-white']">
         <span>{{ notification.icon }}</span>
         <span>{{ notification.message }}</span>
@@ -84,14 +88,18 @@
 
     <main class="flex-1 flex flex-col bg-transparent relative w-full px-2 md:pl-4 md:pt-4 no-scroll-x h-full">
         
-        <!-- HUD -->
+        <!-- HUD: 仪表盘 -->
         <header class="h-auto md:h-32 flex flex-col justify-between p-5 shrink-0 mb-4 cyber-card z-[50] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
             <div class="flex justify-between items-start">
                 <div class="flex items-center gap-4">
                     <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl p-2">☰</button>
                     <div>
                         <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-1">System Status</div>
-                        <div class="text-xl font-black font-mono tracking-tight">{{ currentTime }} <span class="text-[10px] font-normal text-gray-500 ml-1">CST</span></div>
+                        <!-- 美化后的时间显示 -->
+                        <div class="flex items-baseline gap-2">
+                            <div class="text-xl font-black font-mono tracking-tight">{{ currentTime }}</div>
+                            <div class="text-[10px] text-gray-400 font-mono uppercase">{{ currentDate }} CST</div>
+                        </div>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
@@ -105,7 +113,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-2">
                 <div>
                     <div class="flex justify-between items-end mb-1.5">
-                        <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Neural Buffer</span>
+                        <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Neural Buffer [精力]</span>
                         <span :class="['text-xs font-mono font-black', bufferColor]">{{ neuralBuffer.toFixed(1) }}%</span>
                     </div>
                     <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden">
@@ -114,7 +122,7 @@
                 </div>
                 <div>
                     <div class="flex justify-between items-end mb-1.5">
-                        <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Health Integrity</span>
+                        <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest">Health Integrity [健康]</span>
                         <span :class="['text-xs font-mono font-black', healthColor]">{{ healthIntegrity.toFixed(1) }}%</span>
                     </div>
                     <div class="h-4 w-full bg-gray-200 dark:bg-white/5 rounded relative overflow-hidden">
@@ -130,7 +138,7 @@
             <div :class="['cyber-card p-4 border-l-4 transition-all duration-500 relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-4', abstinenceStreak > 0 ? 'border-l-emerald-500' : 'border-l-red-500']">
                 <div class="flex items-center gap-6 w-full md:w-auto">
                     <div class="text-center md:text-left">
-                        <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Abstinence Streak</div>
+                        <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Abstinence Streak [戒烟天数]</div>
                         <div class="flex items-baseline gap-2 justify-center md:justify-start">
                             <span class="text-3xl font-black font-mono">{{ abstinenceStreak }}</span>
                             <span class="text-xs text-gray-400">DAYS</span>
@@ -138,47 +146,51 @@
                     </div>
                 </div>
                 <button @click="triggerNicotine" class="relative z-[50] px-6 py-2 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 text-[10px] font-bold uppercase tracking-widest transition flex items-center justify-center gap-2 cursor-pointer">
-                    <span>⚠️ TOXIN INJECT</span>
+                    <span>⚠️ INJECT TOXIN (Smoke)</span>
                 </button>
             </div>
 
-            <!-- SECTION 2: MAINTENANCE -->
+            <!-- SECTION 2: BIO-MAINTENANCE (生理维持) -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                <!-- Water -->
+                <div class="cyber-card p-4 flex flex-col justify-between h-36">
                     <div class="flex justify-between items-start">
                         <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Hydration</span>
                         <span class="text-lg">💧</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="text-2xl font-black">{{ todayStats.water }}</span>
+                        <span class="text-3xl font-black">{{ todayStats.water }}</span>
                         <span class="text-xs text-gray-500">/ 8</span>
-                        <button @click="drinkWater" class="relative z-[50] ml-auto px-3 py-1 bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 rounded text-[9px] font-bold transition cursor-pointer">+ ADD</button>
                     </div>
+                    <button @click="drinkWater" class="w-full py-2 bg-blue-500/10 hover:bg-blue-500 hover:text-white border border-blue-500/30 rounded text-[9px] font-bold transition cursor-pointer">+ Add Water (+2%)</button>
                 </div>
 
-                <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                <!-- Food -->
+                <div class="cyber-card p-4 flex flex-col justify-between h-36">
                     <div class="flex justify-between items-start">
                         <span class="text-[9px] font-bold text-gray-500 uppercase">Food</span>
                         <span class="text-lg">🍱</span>
                     </div>
-                    <div class="flex gap-2 relative z-[50]">
-                        <input v-model="inputs.food" type="text" placeholder="Meal..." class="flex-1 bg-transparent border-b border-gray-700 text-xs focus:outline-none focus:border-blue-500">
-                        <button @click="eatFood" class="text-[10px] font-bold text-orange-500 hover:text-white hover:bg-orange-500 px-2 py-1 rounded transition cursor-pointer">LOG</button>
+                    <div class="flex flex-col gap-2">
+                        <input v-model="inputs.food" type="text" placeholder="Meal content..." class="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded px-2 py-1 text-xs">
+                        <button @click="eatFood" class="w-full py-2 bg-orange-500/10 hover:bg-orange-500 text-orange-500 hover:text-white border border-orange-500/30 rounded text-[10px] font-bold transition cursor-pointer">Consume (+5%)</button>
                     </div>
                 </div>
 
-                <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                <!-- Sleep -->
+                <div class="cyber-card p-4 flex flex-col justify-between h-36 bg-purple-900/5 border-purple-500/20">
                     <div class="flex justify-between items-start">
                         <span class="text-[9px] font-bold text-purple-500 uppercase">Sleep</span>
                         <span class="text-lg">🌙</span>
                     </div>
-                    <div v-if="!isSleeping" class="relative z-[50]">
-                         <button @click="initiateSleep" class="w-full py-2 bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 rounded text-[10px] font-bold uppercase tracking-widest transition cursor-pointer">
+                    <div v-if="!isSleeping">
+                        <div class="text-[9px] text-gray-500 mb-2">Restores Energy & Health</div>
+                        <button @click="initiateSleep" class="w-full py-2 bg-purple-500/10 hover:bg-purple-500 hover:text-white border border-purple-500/30 rounded text-[10px] font-bold uppercase tracking-widest transition cursor-pointer">
                             START SLEEP
                         </button>
                     </div>
-                    <div v-else class="text-center relative z-[50]">
-                        <div class="text-[10px] text-purple-400 animate-pulse mb-2">SLEEPING...</div>
+                    <div v-else class="text-center">
+                        <div class="text-[10px] text-purple-400 animate-pulse mb-2">SYSTEM HIBERNATING...</div>
                          <button @click="wakeUp" class="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/30 rounded text-[10px] font-bold uppercase tracking-widest transition cursor-pointer">
                             WAKE UP
                         </button>
@@ -186,33 +198,101 @@
                 </div>
             </div>
 
-            <!-- SECTION 3: LOGS -->
-            <div class="cyber-card flex flex-col h-auto">
-                <div class="p-3 border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 flex justify-between items-center">
-                    <span class="text-[10px] font-bold text-gray-500 uppercase">Daily Summary</span>
-                    <div class="flex items-center gap-2 relative z-[50]">
-                        <button @click="changeDate(-1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition cursor-pointer">◀</button>
-                        <span class="text-[10px] font-mono text-blue-500 font-bold">{{ selectedDate }}</span>
-                        <button @click="changeDate(1)" class="w-6 h-6 flex items-center justify-center rounded hover:bg-white/10 transition cursor-pointer">▶</button>
+            <!-- SECTION 3: HYGIENE & HOUSE (生活杂务) - 回归! -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[9px] font-bold text-gray-500 uppercase">Oral Hygiene</span>
+                        <span class="text-lg">🪥</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button @click="toggleToggleHabit('teeth_am')" :class="['rounded p-2 text-center border transition', todayStats.teeth_am ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
+                            <div class="text-xs font-bold">AM</div>
+                        </button>
+                        <button @click="toggleToggleHabit('teeth_pm')" :class="['rounded p-2 text-center border transition', todayStats.teeth_pm ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
+                            <div class="text-xs font-bold">PM</div>
+                        </button>
                     </div>
                 </div>
                 
-                <div class="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
-                        <div class="text-[9px] text-gray-500 uppercase mb-1">Water</div>
-                        <div class="text-xl font-bold">{{ summaryStats.water }}</div>
+                <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[9px] font-bold text-gray-500 uppercase">Face Care</span>
+                        <span class="text-lg">✨</span>
                     </div>
-                    <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
-                        <div class="text-[9px] text-gray-500 uppercase mb-1">Skills</div>
-                        <div class="text-xl font-bold">{{ summaryStats.skills }}m</div>
+                    <button @click="toggleToggleHabit('face')" :class="['w-full py-2 rounded border transition flex items-center justify-center gap-2', todayStats.face ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
+                        <span>{{ todayStats.face ? 'COMPLETED' : 'MARK DONE' }}</span>
+                    </button>
+                </div>
+
+                <div class="cyber-card p-4 flex flex-col justify-between h-32">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[9px] font-bold text-gray-500 uppercase">Housework</span>
+                        <span class="text-lg">🧹</span>
                     </div>
-                    <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
-                        <div class="text-[9px] text-gray-500 uppercase mb-1">Sleep</div>
-                        <div class="text-xl font-bold">{{ summaryStats.sleep }}h</div>
+                    <button @click="toggleToggleHabit('house')" :class="['w-full py-2 rounded border transition flex items-center justify-center gap-2', todayStats.house ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-500']">
+                        <span>{{ todayStats.house ? 'CLEANED' : 'MARK DONE' }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECTION 4: SKILL UPLOAD (技能录入) - 回归! -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <div class="lg:col-span-2 cyber-card p-5">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
+                        <span>Skill Upload</span>
+                        <span :class="neuralBuffer < 30 ? 'text-red-500' : 'text-blue-500'">{{ neuralBuffer < 30 ? 'LOW POWER' : 'READY' }}</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <!-- Piano -->
+                        <div class="flex items-center gap-3">
+                            <span class="w-20 text-xs font-bold text-gray-400">🎹 Piano</span>
+                            <input v-model="inputs.piano" type="number" placeholder="Mins" class="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded px-2 py-1.5 text-xs">
+                            <button @click="addHabit('piano', inputs.piano)" class="w-16 py-1.5 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded text-[10px] font-bold hover:bg-blue-500 hover:text-white transition">LOG</button>
+                        </div>
+                        <!-- Study -->
+                        <div class="flex items-center gap-3">
+                            <span class="w-20 text-xs font-bold text-gray-400">📚 Study</span>
+                            <input v-model="inputs.study" type="number" placeholder="Mins" class="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded px-2 py-1.5 text-xs">
+                            <button @click="addHabit('study', inputs.study)" class="w-16 py-1.5 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded text-[10px] font-bold hover:bg-blue-500 hover:text-white transition">LOG</button>
+                        </div>
+                        <!-- Sport -->
+                        <div class="flex items-center gap-3">
+                            <span class="w-20 text-xs font-bold text-gray-400">🏃 Sport</span>
+                            <input v-model="inputs.sport" type="number" placeholder="Mins (-Energy)" class="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded px-2 py-1.5 text-xs">
+                            <button @click="addHabit('sport', inputs.sport)" class="w-16 py-1.5 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded text-[10px] font-bold hover:bg-blue-500 hover:text-white transition">LOG</button>
+                        </div>
                     </div>
-                    <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
-                        <div class="text-[9px] text-gray-500 uppercase mb-1">Toxin</div>
-                        <div :class="['text-xl font-bold', summaryStats.smoke > 0 ? 'text-red-500' : 'text-green-500']">{{ summaryStats.smoke }}</div>
+                </div>
+
+                <!-- Log Summary -->
+                <div class="cyber-card flex flex-col h-auto">
+                    <div class="p-3 border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 flex justify-between items-center">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase">Daily Log</span>
+                        <div class="flex items-center gap-2">
+                            <button @click="changeDate(-1)" class="text-gray-500 hover:text-white">◀</button>
+                            <span class="text-[10px] font-mono text-blue-500 font-bold">{{ selectedDate }}</span>
+                            <button @click="changeDate(1)" class="text-gray-500 hover:text-white">▶</button>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 grid grid-cols-2 gap-4">
+                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                            <div class="text-[9px] text-gray-500 uppercase mb-1">Water</div>
+                            <div class="text-xl font-bold">{{ summaryStats.water }}</div>
+                        </div>
+                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                            <div class="text-[9px] text-gray-500 uppercase mb-1">Skills</div>
+                            <div class="text-xl font-bold">{{ summaryStats.skills }}m</div>
+                        </div>
+                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                            <div class="text-[9px] text-gray-500 uppercase mb-1">Sleep</div>
+                            <div class="text-xl font-bold">{{ summaryStats.sleep }}h</div>
+                        </div>
+                        <div class="text-center p-2 rounded bg-gray-50 dark:bg-white/5">
+                            <div class="text-[9px] text-gray-500 uppercase mb-1">Toxin</div>
+                            <div :class="['text-xl font-bold', summaryStats.smoke > 0 ? 'text-red-500' : 'text-green-500']">{{ summaryStats.smoke }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -227,88 +307,54 @@
 
     createApp({
         setup() {
-            // --- 核心：安全初始化与 Mock 引擎 ---
+            // Mock Engine & Config Check
             const connectionStatus = ref('CHECKING...');
             const notification = reactive({ message: '', type: '', icon: '' });
-
-            // Toast helper
             const showToast = (msg, type = 'info') => {
-                notification.message = msg;
-                notification.type = type;
-                notification.icon = type === 'error' ? '⚠' : 'ℹ';
+                notification.message = msg; notification.type = type; notification.icon = type === 'error' ? '⚠' : 'ℹ';
                 setTimeout(() => notification.message = '', 3000);
             };
 
-            // Mock Data Helpers
-            const getLocalLogs = () => {
-                try { return JSON.parse(localStorage.getItem('habit_logs') || '[]'); } 
-                catch(e) { return []; }
-            };
+            const getLocalLogs = () => { try { return JSON.parse(localStorage.getItem('habit_logs') || '[]'); } catch(e) { return []; } };
             const saveLocalLogs = (logs) => localStorage.setItem('habit_logs', JSON.stringify(logs));
 
-            // 构建 Supabase 客户端 (带降级)
             let _supabase = null;
             try {
-                if (window._supabase) {
-                    _supabase = window._supabase;
-                    connectionStatus.value = 'ONLINE';
-                } else {
-                    throw new Error("No config");
-                }
+                if (window._supabase) { _supabase = window._supabase; connectionStatus.value = 'ONLINE'; } 
+                else { throw new Error("No config"); }
             } catch (e) {
                 console.warn("Supabase not found, using Local Mock.");
                 connectionStatus.value = 'LOCAL MOCK';
-                
-                // Polyfill for Supabase
                 _supabase = {
                     auth: { getUser: async () => ({ data: { user: { id: 'local-user' } } }) },
                     from: (table) => ({
-                        select: () => ({
-                            eq: (col, val) => ({
-                                order: () => {
-                                    const all = getLocalLogs();
-                                    const filtered = all.filter(l => l.date === val);
-                                    return Promise.resolve({ data: filtered });
-                                }
-                            })
-                        }),
-                        insert: (payload) => {
-                            const all = getLocalLogs();
-                            // 确保 payload 是对象
-                            if (typeof payload === 'object') {
-                                all.push({ ...payload, id: Date.now(), created_at: new Date().toISOString() });
-                                saveLocalLogs(all);
-                            }
-                            return Promise.resolve({ error: null });
-                        }
+                        select: () => ({ eq: (col, val) => ({ order: () => { const all = getLocalLogs(); const filtered = all.filter(l => l.date === val); return Promise.resolve({ data: filtered }); } }) }),
+                        insert: (payload) => { const all = getLocalLogs(); if (typeof payload === 'object') { all.push({ ...payload, id: Date.now(), created_at: new Date().toISOString() }); saveLocalLogs(all); } return Promise.resolve({ error: null }); }
                     })
                 };
             }
 
-            // --- 状态变量 ---
             const isDark = ref(true);
             const mobileMenuOpen = ref(false);
             const currentTime = ref('');
+            const currentDate = ref('');
             
-            // Bio State
             const neuralBuffer = ref(80);
             const healthIntegrity = ref(90);
             const maxCaps = reactive({ energy: 100, health: 100 });
             const isSleeping = ref(false);
             const sleepStartTime = ref(null);
 
-            // --- 核心逻辑 ---
-            
-            // 时钟
+            // 慢速衰减 (0.002 per second approx 7% per hour)
             setInterval(() => {
-                currentTime.value = new Date().toLocaleTimeString('en-US', { hour12: false });
-                // 简单衰减
+                const now = new Date();
+                currentTime.value = now.toLocaleTimeString('en-US', { hour12: false });
+                currentDate.value = now.toLocaleDateString();
                 if(!isSleeping.value && neuralBuffer.value > 0) {
-                    neuralBuffer.value = Math.max(0, neuralBuffer.value - 0.05);
+                    neuralBuffer.value = Math.max(0, neuralBuffer.value - 0.002);
                 }
             }, 1000);
 
-            // 颜色计算
             const bufferColor = computed(() => neuralBuffer.value < 30 ? 'text-red-500' : 'text-blue-500');
             const bufferColorBg = computed(() => neuralBuffer.value < 30 ? 'bg-red-500' : 'bg-stream-blue');
             const bufferColorHex = computed(() => neuralBuffer.value < 30 ? '#ef4444' : '#3b82f6');
@@ -316,23 +362,27 @@
             const healthColorBg = computed(() => healthIntegrity.value < 50 ? 'bg-stream-red' : 'bg-stream-green');
             const healthColorHex = computed(() => healthIntegrity.value < 50 ? '#ef4444' : '#10b981');
 
-            // 数据
             const logs = ref([]);
             const selectedDate = ref(new Date().toISOString().split('T')[0]);
             const inputs = reactive({ piano: '', study: '', sport: '', food: '', sleep: '' });
 
             const summaryStats = computed(() => {
-                const s = { water: 0, skills: 0, sleep: 0, smoke: 0 };
+                const s = { water: 0, skills: 0, sleep: 0, smoke: 0, teeth_am: 0, teeth_pm: 0, face: 0, house: 0 };
                 logs.value.forEach(l => {
                     const v = Number(l.value) || 0;
                     if(l.habit_name === 'water') s.water += v;
                     if(['piano','sport','study'].includes(l.habit_name)) s.skills += v;
                     if(l.habit_name === 'sleep') s.sleep += v;
                     if(l.habit_name === 'debuff_smoke') s.smoke += v;
+                    if(l.habit_name === 'teeth_am') s.teeth_am += v;
+                    if(l.habit_name === 'teeth_pm') s.teeth_pm += v;
+                    if(l.habit_name === 'face') s.face += v;
+                    if(l.habit_name === 'house') s.house += v;
                 });
                 return s;
             });
 
+            // 核心修复: todayStats 必须基于 selectedDate 的 logs 动态计算
             const todayStats = computed(() => summaryStats.value);
 
             const lastBreachDate = ref(null);
@@ -342,27 +392,21 @@
                 return Math.floor(diff / (1000 * 60 * 60 * 24));
             });
 
-            // 动作函数
             const fetchLogs = async () => {
                 try {
                     const { data } = await _supabase.from('habit_logs').select('*').eq('date', selectedDate.value).order('created_at', { ascending: false });
                     if (data) logs.value = data;
-                } catch (e) {
-                    console.error("Fetch Log Error", e);
-                    showToast("Sync Error", "error");
-                }
+                } catch (e) { showToast("Sync Error", "error"); }
             };
 
             const logAction = async (name, value) => {
                 try {
                     await _supabase.from('habit_logs').insert({
-                        user_id: 'user', // Simplified
+                        user_id: 'user', 
                         habit_name: name, value, date: selectedDate.value
                     });
                     fetchLogs();
-                } catch (e) {
-                    console.error("Log Action Error", e);
-                }
+                } catch (e) { console.error(e); }
             };
 
             const changeDate = (days) => {
@@ -372,16 +416,15 @@
                 fetchLogs();
             }
 
-            // 交互
             const drinkWater = async () => {
-                neuralBuffer.value = Math.min(100, neuralBuffer.value + 3);
+                neuralBuffer.value = Math.min(100, neuralBuffer.value + 2);
                 await logAction('water', 1);
                 showToast("Hydration +1");
             };
             
             const eatFood = async () => {
                 if(!inputs.food) return showToast("Enter food name", "error");
-                neuralBuffer.value = Math.min(100, neuralBuffer.value + 10);
+                neuralBuffer.value = Math.min(100, neuralBuffer.value + 5);
                 await logAction('food', 1);
                 inputs.food = '';
                 showToast("Energy Restored");
@@ -389,15 +432,13 @@
 
             const triggerNicotine = async () => {
                 if(!confirm("CONFIRM TOXIN INJECT?")) return;
-                maxCaps.energy -= 0.5;
-                maxCaps.health -= 0.5;
+                maxCaps.energy -= 0.5; maxCaps.health -= 0.5;
                 neuralBuffer.value += 10;
                 await logAction('debuff_smoke', 1);
                 lastBreachDate.value = new Date();
                 showToast("⚠️ SYSTEM COMPROMISED", "error");
             };
 
-            // 睡眠系统
             const initiateSleep = () => {
                 isSleeping.value = true;
                 sleepStartTime.value = new Date();
@@ -407,21 +448,34 @@
             const wakeUp = async () => {
                 const now = new Date();
                 let start = sleepStartTime.value || new Date(localStorage.getItem('sleep_start'));
-                // 安全检查
                 if (!start || isNaN(new Date(start).getTime())) start = new Date();
-
                 const hours = Math.max(0.1, ((now - new Date(start)) / (1000 * 60 * 60)).toFixed(1));
-                const recovery = hours * 10; // 简化算法
-
+                const recovery = hours * 8; 
                 neuralBuffer.value = Math.min(maxCaps.energy, neuralBuffer.value + recovery);
-                
                 isSleeping.value = false;
                 localStorage.removeItem('sleep_start');
                 await logAction('sleep', hours);
                 showToast(`Woke up. +${hours}h Sleep`);
             };
 
-            // 状态恢复
+            // 新增: 技能与杂务逻辑
+            const addHabit = async (name, val) => {
+                if(neuralBuffer.value < 30 && name === 'sport') return showToast("Energy too low for sport", "error");
+                
+                if (name === 'sport') neuralBuffer.value = Math.max(0, neuralBuffer.value - 15); // 运动扣精力
+                else if (name === 'piano') neuralBuffer.value = Math.max(0, neuralBuffer.value - 5); // 练琴微扣
+                
+                await logAction(name, val);
+                inputs[name] = '';
+                showToast(`${name} recorded`);
+            }
+
+            const toggleToggleHabit = async (name) => {
+                if (todayStats.value[name] >= 1) return; // 每日只能做一次
+                await logAction(name, 1);
+                showToast("Task Complete");
+            }
+
             onMounted(() => {
                 fetchLogs();
                 const storedSleep = localStorage.getItem('sleep_start');
@@ -429,14 +483,12 @@
                     isSleeping.value = true;
                     sleepStartTime.value = new Date(storedSleep);
                 }
-                
-                // Theme Init
                 if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
             });
 
             const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
 
-            return { isDark, toggleTheme, mobileMenuOpen, currentTime, neuralBuffer, healthIntegrity, maxCaps, isSleeping, bufferColor, bufferColorBg, bufferColorHex, healthColor, healthColorBg, healthColorHex, todayStats, summaryStats, selectedDate, inputs, drinkWater, eatFood, initiateSleep, wakeUp, triggerNicotine, changeDate, abstinenceStreak, connectionStatus, notification }
+            return { isDark, toggleTheme, mobileMenuOpen, currentTime, currentDate, neuralBuffer, healthIntegrity, maxCaps, isSleeping, bufferColor, bufferColorBg, bufferColorHex, healthColor, healthColorBg, healthColorHex, todayStats, summaryStats, selectedDate, inputs, drinkWater, eatFood, initiateSleep, wakeUp, triggerNicotine, changeDate, abstinenceStreak, connectionStatus, notification, addHabit, toggleToggleHabit }
         }
     }).mount('#app')
 </script>
