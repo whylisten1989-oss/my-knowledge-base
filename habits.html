@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Habit Forge (V1.0)</title>
+    <title>MindForge Bio-OS (V7.1 - Safe Mode)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="css/global.css">
 
     <script>
@@ -16,7 +17,18 @@
             theme: {
                 extend: {
                     colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' },
-                    fontFamily: { sans: ['"JetBrains Mono"', '"Microsoft YaHei"', 'sans-serif'] }
+                    fontFamily: { sans: ['"JetBrains Mono"', '"Microsoft YaHei"', 'sans-serif'] },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'glitch': 'glitch 1s linear infinite',
+                    },
+                    keyframes: {
+                        glitch: {
+                            '2%, 64%': { transform: 'translate(2px,0) skew(0deg)' },
+                            '4%, 60%': { transform: 'translate(-2px,0) skew(0deg)' },
+                            '62%': { transform: 'translate(0,0) skew(5deg)' },
+                        }
+                    }
                 }
             }
         }
@@ -24,195 +36,296 @@
 
     <style>
         [v-cloak] { display: none; }
-        .habit-btn {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid transparent;
+        
+        /* 赛博风格滑块 */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent;
         }
-        .dark .habit-btn { background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.05); }
-        .dark .habit-btn:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); transform: scale(1.02); }
-        .active-status { border-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.1) !important; color: #3b82f6 !important; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #fff; border: 2px solid #000; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.8);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer;
+            background: linear-gradient(90deg, #ef4444 0%, #eab308 50%, #10b981 100%);
+            border-radius: 2px;
+        }
+
+        .habit-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .habit-card:hover { border-color: rgba(59, 130, 246, 0.3); transform: translateY(-2px); }
+        
+        .active-glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); border-color: #3b82f6 !important; background: rgba(59, 130, 246, 0.05) !important; }
+        
+        /* Debuff 警告模式 */
+        .system-failure { border-color: #ef4444 !important; box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }
     </style>
 </head>
-<body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200">
+<body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200 text-sm">
 
 <script src="js/config.js"></script>
 
-<div class="fixed inset-0 pointer-events-none z-0">
-    <div class="absolute inset-0 opacity-0 dark:opacity-100 transition-opacity duration-1000">
-        <div class="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-900/10 blur-[150px] rounded-full"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-900/10 blur-[150px] rounded-full"></div>
-    </div>
-</div>
+<div id="app" v-cloak class="h-full w-full flex relative z-10 flex-col md:flex-row">
 
-<div id="app" v-cloak class="h-full w-full flex relative z-10">
-
-    <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+    <!-- 侧边栏 -->
+    <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-50 h-full bg-bg-light dark:bg-bg-dark border-r border-gray-200 dark:border-white/5', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
         <div>
-            <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
-                <span class="text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">HABITS</span></span>
+            <div class="h-16 md:h-20 flex items-center px-6 md:px-8 border-b border-gray-200 dark:border-white/5">
+                <span class="text-lg md:text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">BIO-OS</span></span>
             </div>
             <nav class="p-4 space-y-2">
-                <a href="index.html" class="nav-item w-full text-left block p-3 text-xs">System Home</a>
-                <button class="nav-item w-full text-left block p-3 text-xs active">Habit Forge 习惯</button>
+                <a href="index.html" class="nav-item w-full text-left block p-3 mb-1 text-xs">System Home</a>
+                <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs">Finance 金融</a>
+                <button class="nav-item w-full text-left block p-3 text-xs active">Habits 习惯</button>
             </nav>
         </div>
-        <div class="p-6 border-t border-gray-200 dark:border-white/5">
-            <div class="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Bio-Sync Active</div>
-        </div>
+        <button @click="mobileMenuOpen = false" class="md:hidden absolute top-4 right-4 text-gray-400 p-2">✕</button>
     </aside>
 
-    <main class="flex-1 flex flex-col bg-transparent relative w-full pl-4 pt-4 no-scroll-x">
+    <main class="flex-1 flex flex-col bg-transparent relative w-full px-2 md:pl-4 md:pt-4 no-scroll-x h-full">
         
-        <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 cyber-card z-[60] sticky top-0 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
-            <div class="flex items-center gap-6">
-                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-2xl">☰</button>
-                <span class="text-[9px] font-bold text-gray-500 uppercase tracking-[0.2em]">Neural Habit Tracker</span>
+        <!-- Top HUD: 生命监控与精力缓冲 -->
+        <header class="h-auto md:h-24 flex flex-col md:flex-row items-start md:items-center justify-between px-4 md:px-8 py-4 shrink-0 mb-4 cyber-card z-[40] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg gap-4">
+            
+            <div class="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-xl">☰</button>
+                
+                <!-- Life Clock -->
+                <div>
+                    <div class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Life Runtime [生命进度]</div>
+                    <div class="flex items-end gap-2">
+                        <span class="text-2xl font-black font-mono">{{ lifeProgress }}%</span>
+                        <div class="h-1.5 w-24 bg-gray-200 dark:bg-white/10 rounded-full mb-1.5 overflow-hidden">
+                            <div class="h-full bg-blue-500" :style="{width: lifeProgress + '%'}"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="flex items-center gap-4">
-                <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition">
-                    <span v-if="isDark">☀</span><span v-else>☾</span>
-                </button>
+
+            <!-- Neural Buffer (精力滑块) -->
+            <div class="flex-1 w-full md:w-auto md:max-w-md flex flex-col justify-center">
+                <div class="flex justify-between items-end mb-2">
+                    <span :class="['text-[9px] font-bold uppercase tracking-widest', bufferStatus.color]">Neural Buffer [精力电压]</span>
+                    <span :class="['text-xs font-mono font-bold', bufferStatus.color]">{{ neuralBuffer }}% / {{ bufferStatus.text }}</span>
+                </div>
+                <input type="range" v-model="neuralBuffer" min="0" max="100" class="w-full" @change="saveBufferLog">
             </div>
+
+            <!-- Theme Toggle -->
+            <button @click="toggleTheme" class="hidden md:flex w-8 h-8 items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500">
+                <span v-if="isDark">☀</span><span v-else>☾</span>
+            </button>
         </header>
 
-        <div class="flex-1 overflow-y-auto pr-4 pb-4 relative z-10 custom-scroll">
-            <div class="w-full space-y-6 animate-fade-in pt-2">
+        <div class="flex-1 overflow-y-auto pr-2 md:pr-4 pb-4 relative z-10 custom-scroll space-y-6">
+            
+            <!-- SECTION 1: BIO-METRICS (基础维持) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- 喝水 -->
+                <div class="cyber-card p-5 flex flex-col justify-between h-40 group relative overflow-hidden">
+                    <!-- 水位背景动画 -->
+                    <div class="absolute bottom-0 left-0 w-full bg-blue-500/10 transition-all duration-700" :style="{height: (todayStats.water / 8 * 100) + '%'}"></div>
+                    
+                    <div class="relative z-10 flex justify-between items-start">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase">H2O Intake</span>
+                        <span class="text-xl">💧</span>
+                    </div>
+                    <div class="relative z-10 text-3xl font-black">{{ todayStats.water }} <span class="text-xs font-normal text-gray-500">/ 8</span></div>
+                    <button @click="addHabit('water', 1)" class="relative z-10 w-full py-2 rounded border border-blue-500/30 text-blue-500 hover:bg-blue-500 hover:text-white text-xs font-bold transition">+ Hydrate</button>
+                </div>
+
+                <!-- 刷牙 (AM/PM) -->
+                <div class="cyber-card p-5 flex flex-col justify-between h-40">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[10px] font-bold text-gray-500 uppercase">Oral Hygiene</span>
+                        <span class="text-xl">🪥</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 h-full pt-4">
+                        <button @click="toggleToggleHabit('teeth_am')" :class="['rounded-lg flex flex-col items-center justify-center border transition', todayStats.teeth_am ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-400 hover:border-gray-400']">
+                            <span class="text-xs font-bold">AM</span>
+                            <span class="text-[8px] mt-1">{{ todayStats.teeth_am ? 'DONE' : 'WAITING' }}</span>
+                        </button>
+                        <button @click="toggleToggleHabit('teeth_pm')" :class="['rounded-lg flex flex-col items-center justify-center border transition', todayStats.teeth_pm ? 'active-glow text-blue-500' : 'border-gray-200 dark:border-white/10 text-gray-400 hover:border-gray-400']">
+                            <span class="text-xs font-bold">PM</span>
+                            <span class="text-[8px] mt-1">{{ todayStats.teeth_pm ? 'DONE' : 'WAITING' }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 基础维护 (洗脸/家务) -->
+                <div class="cyber-card p-5 flex flex-col justify-between h-40 space-y-2">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase">Maintenance</span>
+                    <button @click="toggleToggleHabit('face')" :class="['flex-1 w-full rounded-lg flex items-center justify-between px-4 border transition', todayStats.face ? 'active-glow' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5']">
+                        <span class="text-xs font-bold">Face Care</span>
+                        <span class="text-xs">{{ todayStats.face ? '✓' : '○' }}</span>
+                    </button>
+                    <button @click="toggleToggleHabit('house')" :class="['flex-1 w-full rounded-lg flex items-center justify-between px-4 border transition', todayStats.house ? 'active-glow' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5']">
+                        <span class="text-xs font-bold">Clean Space</span>
+                        <span class="text-xs">{{ todayStats.house ? '✓' : '○' }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECTION 2: FIREWALL (戒除系统 / Debuff) -->
+            <div :class="['cyber-card p-6 border-l-4 transition-all duration-500', abstinenceStreak > 0 ? 'border-l-green-500' : 'border-l-red-500 system-failure']">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xs font-bold text-black dark:text-white uppercase tracking-widest mb-1">
+                            System Firewall [戒除监测]
+                        </h3>
+                        <p class="text-[10px] text-gray-500">Protocol: No Smoking / No Late Night</p>
+                    </div>
+                    <div class="text-right">
+                        <div :class="['text-3xl font-black font-mono', abstinenceStreak > 0 ? 'text-green-500' : 'text-red-500']">
+                            {{ abstinenceStreak }} <span class="text-xs text-gray-500 font-normal">DAYS SECURE</span>
+                        </div>
+                    </div>
+                </div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="cyber-card p-6 flex flex-col justify-between h-48">
-                        <div class="flex justify-between items-start">
-                            <span class="text-xs font-bold text-blue-500 uppercase tracking-widest">H2O Intake</span>
-                            <span class="text-2xl">💧</span>
-                        </div>
-                        <div class="flex items-end gap-2">
-                            <span class="text-4xl font-black font-mono">{{ todayStats.water }}</span>
-                            <span class="text-xs text-gray-500 mb-1">/ 8 CUPS</span>
-                        </div>
-                        <button @click="addHabit('water', 1)" class="w-full py-2 bg-blue-500/10 hover:bg-blue-500 text-blue-500 hover:text-white border border-blue-500/20 text-[10px] font-bold uppercase tracking-widest transition rounded-lg">Add One Cup</button>
-                    </div>
-
-                    <div class="cyber-card p-6 flex flex-col justify-between h-48">
-                        <span class="text-xs font-bold text-green-500 uppercase tracking-widest">Oral Hygiene</span>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button @click="toggleToggleHabit('teeth_am')" :class="['habit-btn py-4 rounded-xl flex flex-col items-center gap-2', todayStats.teeth_am ? 'active-status' : '']">
-                                <span class="text-xs font-bold tracking-tighter">AM 早</span>
-                                <span class="text-[9px] opacity-60">{{ todayStats.teeth_am ? 'DONE' : 'PENDING' }}</span>
-                            </button>
-                            <button @click="toggleToggleHabit('teeth_pm')" :class="['habit-btn py-4 rounded-xl flex flex-col items-center gap-2', todayStats.teeth_pm ? 'active-status' : '']">
-                                <span class="text-xs font-bold tracking-tighter">PM 晚</span>
-                                <span class="text-[9px] opacity-60">{{ todayStats.teeth_pm ? 'DONE' : 'PENDING' }}</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="cyber-card p-6 flex flex-col justify-between h-48">
-                        <span class="text-xs font-bold text-purple-500 uppercase tracking-widest">Environment & Face</span>
-                        <div class="space-y-2">
-                            <button @click="toggleToggleHabit('face')" :class="['habit-btn w-full py-2.5 px-4 rounded-lg flex justify-between items-center text-[10px] font-bold uppercase', todayStats.face ? 'active-status' : '']">
-                                <span>Face Care 洗脸</span>
-                                <span v-if="todayStats.face">✓</span>
-                            </button>
-                            <button @click="toggleToggleHabit('house')" :class="['habit-btn w-full py-2.5 px-4 rounded-lg flex justify-between items-center text-[10px] font-bold uppercase', todayStats.house ? 'active-status' : '']">
-                                <span>Clean House 家务</span>
-                                <span v-if="todayStats.house">✓</span>
-                            </button>
-                        </div>
+                <div class="flex gap-4">
+                    <!-- 如果破戒了，点击这个按钮 -->
+                    <button @click="reportBreach" class="px-4 py-2 rounded border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white text-[10px] font-bold uppercase tracking-widest transition flex items-center gap-2">
+                        <span>⚠️ REPORT BREACH (触发 Debuff)</span>
+                    </button>
+                    
+                    <div v-if="abstinenceStreak >= 7" class="px-4 py-2 rounded bg-green-500/10 border border-green-500/30 text-green-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 animate-pulse">
+                        <span>🛡️ GOLDEN SHIELD ACTIVE (Reward Eligible)</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="cyber-card p-6">
-                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
-                            <span>Piano Session</span> <span>🎹</span>
-                        </h3>
+            <!-- SECTION 3: SKILL UPLOAD (受精力值影响) -->
+            <div class="cyber-card p-6">
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 border-b border-gray-200 dark:border-white/10 pb-2 flex justify-between">
+                    <span>Skill Upload [能力进化]</span>
+                    <span v-if="neuralBuffer < 30" class="text-red-500 animate-pulse">⚠ LOW POWER MODE ENABLED</span>
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Piano -->
+                    <div :class="['space-y-2', neuralBuffer < 30 ? 'opacity-50 grayscale' : '']">
+                        <label class="text-[10px] text-gray-400 font-bold uppercase">Piano Session (Mins)</label>
                         <div class="flex gap-2">
-                            <input v-model="inputs.piano" type="number" placeholder="MINS" class="cyber-input text-center text-sm font-bold">
-                            <button @click="addHabit('piano', inputs.piano)" class="btn-cyber px-4 rounded-lg text-[10px] font-bold bg-white dark:bg-white text-black">LOG</button>
+                            <input v-model="inputs.piano" type="number" placeholder="0" class="cyber-input text-center font-mono">
+                            <button @click="addHabit('piano', inputs.piano)" :disabled="neuralBuffer < 30" class="btn-cyber px-4 rounded bg-white dark:bg-white text-black text-xs font-bold hover:opacity-80 disabled:cursor-not-allowed">LOG</button>
                         </div>
-                        <div class="mt-4 text-[10px] text-gray-400 font-mono uppercase tracking-tighter">Total Today: {{ todayStats.piano }} Minutes</div>
                     </div>
 
-                    <div class="cyber-card p-6">
-                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
-                            <span>Deep Study</span> <span>📚</span>
-                        </h3>
+                    <!-- Study -->
+                    <div class="space-y-2">
+                        <label class="text-[10px] text-gray-400 font-bold uppercase">Deep Study (Mins)</label>
                         <div class="flex gap-2">
-                            <input v-model="inputs.study" type="number" placeholder="MINS" class="cyber-input text-center text-sm font-bold">
-                            <button @click="addHabit('study', inputs.study)" class="btn-cyber px-4 rounded-lg text-[10px] font-bold bg-white dark:bg-white text-black">LOG</button>
+                            <input v-model="inputs.study" type="number" placeholder="0" class="cyber-input text-center font-mono">
+                            <button @click="addHabit('study', inputs.study)" class="btn-cyber px-4 rounded bg-white dark:bg-white text-black text-xs font-bold hover:opacity-80">LOG</button>
                         </div>
-                        <div class="mt-4 text-[10px] text-gray-400 font-mono uppercase tracking-tighter">Focus Time: {{ todayStats.study }} Minutes</div>
                     </div>
 
-                    <div class="cyber-card p-6">
-                        <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
-                            <span>Kinetic Sport</span> <span>🏃</span>
-                        </h3>
+                    <!-- Sport (精力低时锁定) -->
+                    <div :class="['space-y-2', neuralBuffer < 30 ? 'opacity-50 grayscale cursor-not-allowed' : '']">
+                        <label class="text-[10px] text-gray-400 font-bold uppercase flex justify-between">
+                            <span>Kinetic Sport (Mins)</span>
+                            <span v-if="neuralBuffer < 30" class="text-[8px] text-red-500">LOCKED</span>
+                        </label>
                         <div class="flex gap-2">
-                            <input v-model="inputs.sport" type="number" placeholder="MINS" class="cyber-input text-center text-sm font-bold">
-                            <button @click="addHabit('sport', inputs.sport)" class="btn-cyber px-4 rounded-lg text-[10px] font-bold bg-white dark:bg-white text-black">LOG</button>
-                        </div>
-                        <div class="mt-4 text-[10px] text-gray-400 font-mono uppercase tracking-tighter">Movement: {{ todayStats.sport }} Minutes</div>
-                    </div>
-                </div>
-
-                <div class="cyber-card p-6">
-                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
-                        <span>Neural Activity Stream (Today)</span>
-                        <span class="text-blue-500 font-mono">LIVE_LOG</span>
-                    </h3>
-                    <div class="space-y-2 max-h-60 overflow-y-auto custom-scroll pr-2">
-                        <div v-if="todayLogs.length === 0" class="text-center py-8 text-[10px] text-gray-500 font-mono">NO RECENT NEURAL ACTIVITY...</div>
-                        <div v-for="log in todayLogs" :key="log.id" class="flex justify-between items-center p-3 rounded-lg bg-gray-50 dark:bg-white/5 border border-transparent hover:border-white/10 transition">
-                            <div class="flex items-center gap-3">
-                                <span class="text-xs font-bold text-black dark:text-white uppercase">{{ log.habit_name.replace('_', ' ') }}</span>
-                                <span class="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500">+{{ log.value }}</span>
-                            </div>
-                            <span class="text-[9px] font-mono text-gray-500">{{ formatLocalTime(log.created_at) }}</span>
+                            <input v-model="inputs.sport" type="number" placeholder="0" :disabled="neuralBuffer < 30" class="cyber-input text-center font-mono">
+                            <button @click="addHabit('sport', inputs.sport)" :disabled="neuralBuffer < 30" class="btn-cyber px-4 rounded bg-white dark:bg-white text-black text-xs font-bold hover:opacity-80 disabled:bg-gray-600">LOG</button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- SECTION 4: NEURAL STREAM -->
+            <div class="cyber-card flex flex-col h-60">
+                <div class="p-4 border-b border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-white/5 flex justify-between items-center">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Neural Activity Stream</h3>
+                    <span class="text-[10px] font-mono text-blue-500">LIVE SYNC</span>
+                </div>
+                <div class="flex-1 overflow-y-auto p-4 custom-scroll space-y-2">
+                    <div v-if="logs.length === 0" class="text-center text-xs text-gray-500 py-4">No activity recorded today.</div>
+                    <div v-for="log in logs" :key="log.id" class="flex justify-between items-center text-xs font-mono border-b border-gray-200 dark:border-white/5 pb-1 last:border-0">
+                        <span class="text-blue-500">[{{ formatTime(log.created_at) }}]</span>
+                        <span class="text-black dark:text-white uppercase">{{ log.habit_name.replace(/_/g, ' ') }}</span>
+                        <span class="font-bold text-green-500">+{{ log.value }}</span>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </main>
 </div>
 
 <script>
-    const { createApp, ref, onMounted, reactive, computed } = Vue
+    const { createApp, ref, onMounted, reactive, computed, watch } = Vue
 
     createApp({
         setup() {
-            const _supabase = window._supabase;
+            // 核心修改：安全初始化，即使配置错误也不崩溃
+            let _supabase = null;
+            if (window._supabase) {
+                _supabase = window._supabase;
+            } else {
+                console.error("Supabase Client Not Found");
+                // 可以选择添加一个Mock对象或者直接让功能失效但页面不黑
+            }
+
             const isDark = ref(true)
             const mobileMenuOpen = ref(false)
-            const logs = ref([])
-            const inputs = reactive({ piano: '', study: '', sport: '' })
+            
+            // 1. Life Clock
+            const birthYear = 1995; 
+            const lifeExpectancy = 80;
+            const lifeProgress = computed(() => {
+                const now = new Date();
+                const age = now.getFullYear() - birthYear;
+                return ((age / lifeExpectancy) * 100).toFixed(1);
+            });
 
-            // 模式切换初始化 (同步主页)
-            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
-            const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
+            // 2. Neural Buffer
+            const neuralBuffer = ref(80); 
+            const bufferStatus = computed(() => {
+                const val = neuralBuffer.value;
+                if (val >= 70) return { text: 'OPTIMAL', color: 'text-green-500' };
+                if (val >= 30) return { text: 'NOMINAL', color: 'text-yellow-500' };
+                return { text: 'CRITICAL', color: 'text-red-500' };
+            });
 
-            // 今天的统计数据
+            // 3. Habits Logic
+            const logs = ref([]);
+            const inputs = reactive({ piano: '', study: '', sport: '' });
             const todayStats = computed(() => {
                 const stats = { water: 0, teeth_am: 0, teeth_pm: 0, face: 0, house: 0, piano: 0, study: 0, sport: 0 };
                 logs.value.forEach(log => {
-                    if (stats[log.habit_name] !== undefined) {
-                        stats[log.habit_name] += log.value;
-                    }
+                    if (stats[log.habit_name] !== undefined) stats[log.habit_name] += log.value;
                 });
                 return stats;
             });
 
-            // 今天的流水日志
-            const todayLogs = computed(() => [...logs.value].reverse());
+            // 4. Debuff Logic
+            const lastBreachDate = ref(null); 
+            const abstinenceStreak = computed(() => {
+                if (!lastBreachDate.value) return 12; 
+                const today = new Date();
+                const last = new Date(lastBreachDate.value);
+                const diffTime = Math.abs(today - last);
+                return Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            });
 
+            // Actions - Add safety checks
             const fetchLogs = async () => {
+                if (!_supabase) return; // 没连上就不查
                 const today = new Date().toISOString().split('T')[0];
-                const { data } = await _supabase.from('habit_logs').select('*').eq('date', today).order('created_at', { ascending: true });
+                const { data } = await _supabase.from('habit_logs').select('*').eq('date', today).order('created_at', { ascending: false });
                 if (data) logs.value = data;
             };
 
-            // 累加类习惯 (水、练琴、运动、学习)
             const addHabit = async (name, val) => {
+                if (!_supabase) return alert("Database Disconnected");
+                if(neuralBuffer.value < 30 && (name === 'sport' || name === 'piano')) return alert('Energy too low for this task.');
+                
                 const value = parseFloat(val);
                 if (!value || value <= 0) return;
                 const { error } = await _supabase.from('habit_logs').insert({
@@ -227,30 +340,42 @@
                 }
             };
 
-            // 开关类习惯 (刷牙、洗脸、家务)
             const toggleToggleHabit = async (name) => {
-                const isAlreadyDone = todayStats.value[name] >= 1;
-                // 如果已经做了，不再重复记 (或者你想做取消逻辑也可以，目前设定为点击即完成)
-                if (isAlreadyDone) return; 
+                if (todayStats.value[name] >= 1) return; 
+                await addHabit(name, 1);
+            };
+
+            const reportBreach = async () => {
+                if (!_supabase) return alert("Database Disconnected");
+                if(!confirm("CONFIRM BREACH REPORT? This will reset your streak.")) return;
                 
                 const { error } = await _supabase.from('habit_logs').insert({
                     user_id: (await _supabase.auth.getUser()).data.user.id,
-                    habit_name: name,
+                    habit_name: 'debuff_breach',
                     value: 1,
                     date: new Date().toISOString().split('T')[0]
                 });
-                if (!error) fetchLogs();
+                if(!error) {
+                    lastBreachDate.value = new Date(); 
+                    alert("BREACH RECORDED. SYSTEM INTEGRITY COMPROMISED.");
+                    fetchLogs();
+                }
             };
 
-            const formatLocalTime = (isoStr) => {
-                return new Date(isoStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            };
+            const saveBufferLog = () => {
+                console.log("Buffer saved:", neuralBuffer.value);
+            }
+
+            const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
+            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
+
+            const formatTime = (iso) => new Date(iso).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
             onMounted(() => {
                 fetchLogs();
             });
 
-            return { isDark, toggleTheme, mobileMenuOpen, todayStats, todayLogs, inputs, addHabit, toggleToggleHabit, formatLocalTime }
+            return { isDark, toggleTheme, mobileMenuOpen, lifeProgress, neuralBuffer, bufferStatus, todayStats, logs, inputs, addHabit, toggleToggleHabit, reportBreach, abstinenceStreak, saveBufferLog, formatTime }
         }
     }).mount('#app')
 </script>
