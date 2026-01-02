@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MindForge Bio-OS (V12.4 - Visual Fix)</title>
+    <title>MindForge Bio-OS (V12.5 - Hard Fix)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -23,14 +23,20 @@
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'pan': 'pan 20s linear infinite',
                         'spin-slow': 'spin 20s linear infinite',
+                        'spin-medium': 'spin 15s linear infinite',
+                        'spin-fast': 'spin 10s linear infinite',
                         'spin-reverse-slow': 'spin 20s linear infinite reverse',
+                        'spin-reverse-medium': 'spin 15s linear infinite reverse',
+                        'spin-reverse-fast': 'spin 10s linear infinite reverse',
                         'data-pop': 'dataPop 0.3s ease-out',
+                        'float': 'float 3s ease-in-out infinite',
                     },
                     keyframes: {
                         flow: { '0%': { backgroundPosition: '0% 50%' }, '100%': { backgroundPosition: '100% 50%' } },
                         flashRed: { '0%, 100%': { opacity: 0 }, '50%': { opacity: 0.3, backgroundColor: 'red' } },
                         pan: { '0%': { backgroundPosition: '0% 0%' }, '100%': { backgroundPosition: '100% 100%' } },
-                        dataPop: { '0%': { transform: 'scale(0.9)', opacity: 0.5 }, '50%': { transform: 'scale(1.1)' }, '100%': { transform: 'scale(1)', opacity: 1 } }
+                        dataPop: { '0%': { transform: 'scale(0.9)', opacity: 0.5 }, '50%': { transform: 'scale(1.1)' }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } }
                     }
                 }
             }
@@ -56,7 +62,8 @@
             border: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(12px);
             transition: all 0.2s ease;
-            overflow: visible; /* 修复裁剪问题关键 */
+            /* 关键修复: 移除 hidden 防止裁剪阴影和下拉 */
+            overflow: visible; 
         }
         .habit-card:active { transform: scale(0.99); }
         
@@ -78,9 +85,18 @@
             background-size: 40px 40px;
         }
         
-        /* Orbital System Corrected */
-        .orbit-group { transform-origin: 200px 300px; }
-        .orbit-icon { transform-box: fill-box; transform-origin: center; }
+        /* 核心修复：轨道动画 */
+        .orbit-group { transform-origin: 200px 300px; } /* SVG中心点 */
+        .organ-wrapper { transform-box: fill-box; transform-origin: center; } /* 自身中心 */
+
+        .scan-line-v {
+            position: absolute; left: 0; top: 0; width: 100%; height: 50%;
+            background: linear-gradient(to bottom, transparent, rgba(59,130,246,0.1), transparent);
+            border-bottom: 1px solid rgba(59,130,246,0.2);
+            animation: scanVertical 4s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scanVertical { 0% { top: -50%; } 100% { top: 100%; } }
     </style>
 </head>
 <body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden text-gray-900 dark:text-gray-200 text-sm">
@@ -120,10 +136,10 @@
         <!-- 全局布局 -->
         <div class="flex flex-col lg:flex-row gap-4 h-full pb-4">
             
-            <!-- LEFT COLUMN: CONTROLS -->
-            <div class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scroll pr-2 pb-24">
+            <!-- LEFT COLUMN: CONTROL DECK (2/3) -->
+            <div class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scroll pr-2 pb-32"> <!-- 增加底部Padding防止遮挡 -->
                 
-                <!-- HUD -->
+                <!-- HUD: 仪表盘 -->
                 <header class="shrink-0 p-5 cyber-card z-[50] bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg">
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex items-center gap-4">
@@ -254,7 +270,7 @@
                 </div>
 
                 <!-- SECTION 4: SKILL UPLOAD -->
-                <div class="cyber-card p-5 pb-8"> <!-- 增加 pb-8 防止内容被遮挡 -->
+                <div class="cyber-card p-5 pb-8"> <!-- 增加底部留白 -->
                     <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex justify-between">
                         <span>Skill Upload [能力进化]</span>
                         <span :class="neuralBuffer < 30 ? 'text-red-500' : 'text-blue-500'">{{ neuralBuffer < 30 ? '⚠ LOW POWER' : '● READY' }}</span>
@@ -288,7 +304,7 @@
                 </div>
 
                 <!-- SECTION 5: DAILY SUMMARY -->
-                <div class="cyber-card p-4 pb-6 flex flex-col justify-between"> <!-- 增加 pb-6 -->
+                <div class="cyber-card p-4 pb-6 flex flex-col justify-between">
                     <div class="flex justify-between items-center mb-4">
                         <span class="text-[9px] font-bold text-gray-500 uppercase">Detailed Log Summary</span>
                         <div class="flex items-center gap-2 relative z-[50]">
@@ -331,18 +347,18 @@
 
             </div>
             
-            <!-- RIGHT COLUMN: ORBITAL CORE (全屏高度 + 动效背景) -->
+            <!-- RIGHT COLUMN: ORBITAL CORE (1/3) -->
             <div class="w-full lg:w-1/3 flex flex-col h-full overflow-hidden">
                 <div class="cyber-card flex-1 relative flex flex-col items-center justify-center p-0 border-blue-500/20 bg-dark bio-bg-grid overflow-hidden min-h-[600px] lg:min-h-0 animate-pan">
-                    <div class="absolute top-4 left-4 text-[10px] font-bold text-blue-500 tracking-widest z-20">ORBITAL CORE v5.0</div>
+                    <div class="absolute top-4 left-4 text-[10px] font-bold text-blue-500 tracking-widest z-20">ORBITAL CORE v5.2</div>
                     <div class="scan-line-v z-10"></div>
                     
-                    <!-- SVG ORBITAL SYSTEM (Centered Galaxy) -->
+                    <!-- SVG ORBITAL SYSTEM (绝对居中 & 公转修正) -->
                     <div class="relative w-full h-full flex items-center justify-center z-10">
                         <!-- viewBox 400x600, Center at 200,300 -->
                         <svg viewBox="0 0 400 600" class="w-full h-full drop-shadow-[0_0_20px_rgba(59,130,246,0.3)]">
                             
-                            <!-- CENTER: BRAIN / CPU (Fixed Center) -->
+                            <!-- CENTER: BRAIN / CPU -->
                             <g transform="translate(200, 300)" class="animate-float">
                                 <circle r="50" fill="rgba(59,130,246,0.05)" stroke="#3b82f6" stroke-width="2" class="animate-pulse-slow" />
                                 <circle r="42" fill="none" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2,2" />
@@ -351,11 +367,10 @@
                             </g>
 
                             <!-- ORBIT 1: AIR (Radius 100) -->
-                            <g class="animate-spin-slow" style="transform-origin: 200px 300px;">
+                            <g class="orbit-group animate-spin-medium">
                                 <circle cx="200" cy="300" r="100" class="orbit-path" />
-                                <!-- Icon at Top (200, 200) -->
-                                <g transform="translate(200, 200)">
-                                    <g class="organ-wrapper animate-spin-reverse-slow"> <!-- Counter Rotate -->
+                                <g transform="translate(200, 200)"> <!-- Top: (200, 300-100) -->
+                                    <g class="orbit-icon animate-spin-reverse-medium"> <!-- Counter Rotate -->
                                         <circle r="22" :fill="summaryStats.smoke > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'" :stroke="summaryStats.smoke > 0 ? '#ef4444' : '#10b981'" stroke-width="1.5" />
                                         <text y="0" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold">AIR [肺]</text>
                                         <text y="10" text-anchor="middle" :fill="summaryStats.smoke > 0 ? '#ef4444' : '#10b981'" font-size="6">{{ summaryStats.smoke > 0 ? 'TOXIC' : 'CLEAN' }}</text>
@@ -364,11 +379,10 @@
                             </g>
 
                             <!-- ORBIT 2: FUEL (Radius 140) -->
-                            <g class="animate-spin-medium" style="transform-origin: 200px 300px;">
+                            <g class="orbit-group animate-spin-slow">
                                 <circle cx="200" cy="300" r="140" class="orbit-path" />
-                                <!-- Icon at Bottom Right approx -->
-                                <g transform="translate(340, 300)"> 
-                                    <g class="organ-wrapper animate-spin-reverse-medium">
+                                <g transform="translate(340, 300)"> <!-- Right: (200+140, 300) -->
+                                    <g class="orbit-icon animate-spin-reverse-slow">
                                         <circle r="20" :fill="inputs.food ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)'" stroke="#f59e0b" stroke-width="1.5" />
                                         <text y="0" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold">FUEL [胃]</text>
                                         <text y="9" text-anchor="middle" fill="#f59e0b" font-size="6">{{ inputs.food ? 'ON' : 'OFF' }}</text>
@@ -377,11 +391,10 @@
                             </g>
 
                             <!-- ORBIT 3: PWR (Radius 180) -->
-                            <g class="animate-spin-fast" style="transform-origin: 200px 300px;">
+                            <g class="orbit-group animate-spin-fast">
                                 <circle cx="200" cy="300" r="180" class="orbit-path" />
-                                <!-- Icon at Left -->
-                                <g transform="translate(20, 300)"> 
-                                    <g class="organ-wrapper animate-spin-reverse-fast">
+                                <g transform="translate(200, 480)"> <!-- Bottom: (200, 300+180) -->
+                                    <g class="orbit-icon animate-spin-reverse-fast">
                                         <circle r="24" :fill="summaryStats.sport > 0 ? 'rgba(236,72,153,0.2)' : 'rgba(255,255,255,0.05)'" stroke="#ec4899" stroke-width="1.5" />
                                         <text y="0" text-anchor="middle" fill="#fff" font-size="7" font-weight="bold">PWR [肌]</text>
                                         <text y="10" text-anchor="middle" fill="#ec4899" font-size="6">{{ summaryStats.sport }}m</text>
@@ -506,10 +519,16 @@
 
             const logAction = async (name, value) => {
                 try {
+                    // Force lowercase for consistency
+                    const n = name.toLowerCase();
                     await _supabase.from('habit_logs').insert({
-                        user_id: 'user', habit_name: name, value, date: selectedDate.value
+                        user_id: 'user', habit_name: n, value, date: selectedDate.value
                     });
-                    fetchLogs();
+                    
+                    // Optimistic UI Update (Immediate visual feedback)
+                    logs.value.unshift({ habit_name: n, value, created_at: new Date().toISOString() });
+                    
+                    // fetchLogs(); // Optional: sync later
                 } catch (e) { console.error(e); }
             };
 
@@ -571,10 +590,13 @@
             const addHabit = async (name, val) => {
                 if(neuralBuffer.value < 30 && name === 'sport') return showToast("Energy too low", "error");
                 
-                if (name === 'sport') neuralBuffer.value = Math.max(0, neuralBuffer.value - 15); 
-                else if (name === 'piano') neuralBuffer.value = Math.max(0, neuralBuffer.value - 5); 
+                // Force name to lowercase for consistency
+                const n = name.toLowerCase();
                 
-                await logAction(name, val);
+                if (n === 'sport') neuralBuffer.value = Math.max(0, neuralBuffer.value - 15); 
+                else if (n === 'piano') neuralBuffer.value = Math.max(0, neuralBuffer.value - 5); 
+                
+                await logAction(n, val);
                 showToast(`${name} ${val}m`);
             }
 
