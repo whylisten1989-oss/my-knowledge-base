@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (V30.7 - Holographic Matrix)</title>
+    <title>MindForge OS (V30.6 - Crystal Core)</title>
     <!-- 基础库 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -21,6 +21,10 @@
                     fontFamily: { sans: ['"Microsoft YaHei"', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'] },
                     animation: {
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
                     }
                 }
             }
@@ -34,7 +38,7 @@
         #canvas-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 0; pointer-events: none;
-            /* 背景微调：极深空蓝 */
+            /* 背景微调：更深的深空蓝 */
             background: radial-gradient(circle at center, #0B1026 0%, #000000 90%);
         }
         
@@ -165,7 +169,7 @@
                         </div>
                     </div>
 
-                    <!-- 中间留空 (3D地球展示区) -->
+                    <!-- 中间留空 (3D地球) -->
                     <div class="flex-1 min-h-[300px] flex items-center justify-center pointer-events-none"></div>
 
                     <!-- 底部仪表盘 -->
@@ -208,8 +212,8 @@
     const systemConfig = {
         bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
         inventory: [ 
-            { name: "KERNEL", status: "MindForge v30.7" }, 
-            { name: "RENDER", status: "HOLOGRAPHIC MATRIX" }, 
+            { name: "KERNEL", status: "MindForge v30.6" }, 
+            { name: "RENDER", status: "PARTICLE SPHERE" }, 
             { name: "DEPLOY", status: "VERCEL EDGE" },
             { name: "SECURITY", status: "RLS ENABLED" }
         ]
@@ -250,14 +254,14 @@
         }
     }).mount('#app')
 
-    // --- 3D 矩阵全息地球引擎 ---
+    // --- 3D 粒子地球引擎 (水晶核心修正版) ---
     function initThreeJS() {
         const container = document.getElementById('canvas-container');
         if (!container) return;
         container.innerHTML = '';
 
         const scene = new THREE.Scene();
-        // 迷雾效果
+        // 迷雾效果，增加深邃感
         if (document.documentElement.classList.contains('dark')) {
             scene.fog = new THREE.FogExp2(0x000000, 0.002);
         }
@@ -273,50 +277,60 @@
         const group = new THREE.Group();
         scene.add(group);
 
-        // 1. 矩阵网格内核 (Wireframe Grid) - 移除实心球
-        const geometry = new THREE.IcosahedronGeometry(9, 2); // 细分2次，网格明显
-        const material = new THREE.MeshBasicMaterial({ 
-            color: 0x1e40af, // 深蓝色线框
-            wireframe: true,
+        // 1. 核心球体 (Crystal Core) - 深蓝偏黑，有质感
+        const coreGeo = new THREE.IcosahedronGeometry(8.5, 3);
+        const coreMat = new THREE.MeshBasicMaterial({ 
+            color: 0x051025, // 深海蓝
             transparent: true,
-            opacity: 0.15
+            opacity: 0.95
         });
-        const globe = new THREE.Mesh(geometry, material);
-        group.add(globe);
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        group.add(core);
 
-        // 2. 核心点云 (Holographic Points) - 发光节点
-        const particleGeo = new THREE.IcosahedronGeometry(9, 5); // 细分5次，高密度点
+        // 2. 粒子外壳 (Clean Particle Shell) - 去掉乱线，增加光泽
+        const particleGeo = new THREE.IcosahedronGeometry(9, 5); // 细分5次，密度适中
         const particleMat = new THREE.PointsMaterial({
-            color: 0x60a5fa, // 亮蓝
-            size: 0.06,
+            color: 0x3b82f6, // 亮蓝
+            size: 0.08,
             transparent: true,
-            opacity: 0.8,
-            blending: THREE.AdditiveBlending // 光叠加，产生发光感
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending // 发光叠加
         });
         const particles = new THREE.Points(particleGeo, particleMat);
         group.add(particles);
 
-        // 3. 动态数据环 (Data Rings)
-        const ringGeo = new THREE.TorusGeometry(14, 0.05, 16, 100);
-        const ringMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.3 });
-        
-        const ring1 = new THREE.Mesh(ringGeo, ringMat);
-        ring1.rotation.x = Math.PI / 2;
-        ring1.rotation.y = Math.PI / 8;
+        // 3. 氛围光晕 (Atmosphere) - 仅点阵，无杂乱线框
+        const atmosphereGeo = new THREE.IcosahedronGeometry(11, 3);
+        const atmosphereMat = new THREE.PointsMaterial({
+            color: 0x60a5fa,
+            size: 0.04,
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending
+        });
+        const atmosphere = new THREE.Points(atmosphereGeo, atmosphereMat);
+        group.add(atmosphere);
+
+        // 5. 外层星环 (保留您喜欢的)
+        const ring1Geo = new THREE.RingGeometry(13, 13.1, 64);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+        const ring1 = new THREE.Mesh(ring1Geo, ringMat);
+        ring1.rotation.x = Math.PI / 1.8;
         scene.add(ring1);
 
-        const ring2 = new THREE.Mesh(ringGeo, ringMat);
-        ring2.rotation.x = Math.PI / 2;
-        ring2.rotation.y = -Math.PI / 8;
+        const ring2Geo = new THREE.RingGeometry(15, 15.05, 64);
+        const ring2 = new THREE.Mesh(ring2Geo, ringMat);
+        ring2.rotation.x = Math.PI / 2.2;
+        ring2.rotation.y = Math.PI / 6;
         scene.add(ring2);
 
-        // 4. 星空背景
+        // 6. 星空背景
         const starGeo = new THREE.BufferGeometry();
-        const starCount = 1000;
+        const starCount = 1500;
         const posArray = new Float32Array(starCount * 3);
-        for(let i=0; i<starCount*3; i++) posArray[i] = (Math.random() - 0.5) * 400; 
+        for(let i=0; i<starCount*3; i++) posArray[i] = (Math.random() - 0.5) * 300; 
         starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const starMat = new THREE.PointsMaterial({ size: 0.08, color: 0xffffff, transparent: true, opacity: 0.3 });
+        const starMat = new THREE.PointsMaterial({ size: 0.05, color: 0x888888, transparent: true, opacity: 0.4 });
         const stars = new THREE.Points(starGeo, starMat);
         scene.add(stars);
 
@@ -329,16 +343,14 @@
         const animate = () => {
             requestAnimationFrame(animate);
 
-            // 自转：网格和点云差速旋转，产生层次感
-            globe.rotation.y += 0.001; 
-            particles.rotation.y += 0.0005; 
+            // 自转
+            group.rotation.y += 0.001; 
+            atmosphere.rotation.y -= 0.0005; // 大气层反向慢转
             stars.rotation.y += 0.0001;
             
             // 星环旋转
-            ring1.rotation.x += 0.002;
-            ring1.rotation.y += 0.002;
-            ring2.rotation.x -= 0.002;
-            ring2.rotation.y -= 0.002;
+            ring1.rotation.z += 0.002;
+            ring2.rotation.z -= 0.003;
 
             // 视差
             group.rotation.x += (mouseY - group.rotation.x) * 0.05;
