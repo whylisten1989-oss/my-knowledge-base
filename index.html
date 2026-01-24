@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (Restored)</title>
+    <title>MindForge OS (V30.5 - High-Fi)</title>
     <!-- 基础库 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
@@ -21,6 +21,10 @@
                     fontFamily: { sans: ['"Microsoft YaHei"', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'] },
                     animation: {
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
                     }
                 }
             }
@@ -30,17 +34,17 @@
     <style>
         body { margin: 0; overflow: hidden; }
         
-        /* 3D 背景容器 (仅在暗色模式显示) */
+        /* 3D 背景容器 */
         #canvas-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 0; pointer-events: none;
             background: radial-gradient(circle at center, #0f172a 0%, #000000 90%);
         }
         
-        /* 日光模式下隐藏 3D 星空 */
-        html:not(.dark) #canvas-container { display: none; }
+        /* 日光模式适配 */
+        html:not(.dark) #canvas-container { opacity: 0.1; filter: invert(1); }
 
-        /* 扫描线滤镜 (仅暗色模式) */
+        /* 扫描线滤镜 */
         .scanlines {
             position: fixed; left: 0; top: 0; width: 100%; height: 100%;
             background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
@@ -49,18 +53,10 @@
         }
         html:not(.dark) .scanlines { display: none; }
 
-        /* Logo 样式 */
-        .cyber-logo {
-            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
-            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            animation: shine 4s linear infinite alternate;
-        }
-        @keyframes shine { to { background-position: 200% center; } }
-
         .nav-item { transition: all 0.2s; border-left: 3px solid transparent; font-size: 13px; font-weight: 500; }
         
-        /* 导航栏样式 (参考 Finance 页) */
-        .dark .nav-item { color: #9ca3af; } /* gray-400 */
+        /* 导航栏样式 */
+        .dark .nav-item { color: #9ca3af; }
         .dark .nav-item:hover { color: white; background: rgba(255,255,255,0.05); padding-left: 16px; }
         .dark .nav-item.active { color: white; border-left-color: #fff; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); padding-left: 16px; font-weight: bold; }
         
@@ -71,29 +67,16 @@
         /* 玻璃面板 */
         .glass-panel {
             backdrop-filter: blur(12px);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
             transition: all 0.3s;
-        }
-        .dark .glass-panel {
-            background: rgba(10, 10, 10, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        html:not(.dark) .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            border: 1px solid rgba(0, 0, 0, 0.05);
-        }
+        .dark .glass-panel { background: rgba(10, 10, 10, 0.6); }
+        html:not(.dark) .glass-panel { background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(0,0,0,0.05); }
 
-        /* 滚动条 */
         ::-webkit-scrollbar { width: 4px; }
         .dark ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
         html:not(.dark) ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-
-        .monitor-bar { height: 100%; width: 4px; border-radius: 2px; position: relative; overflow: hidden; }
-        .dark .monitor-bar { background: rgba(255,255,255,0.05); }
-        html:not(.dark) .monitor-bar { background: rgba(0,0,0,0.05); }
-        
-        .monitor-fill { position: absolute; bottom: 0; left: 0; width: 100%; background: #10b981; animation: equalizer 1s ease-in-out infinite alternate; }
-        @keyframes equalizer { 0% { height: 10%; opacity: 0.3; } 100% { height: 90%; opacity: 1; } }
 
         [v-cloak] { display: none !important; }
     </style>
@@ -102,30 +85,27 @@
 
 <script src="js/config.js"></script>
 
-<!-- 1. 3D 粒子地球 (仅暗色模式可见) -->
+<!-- 1. 3D 粒子地球 -->
 <div id="canvas-container"></div>
-<!-- 2. 扫描线 (仅暗色模式可见) -->
+<!-- 2. 扫描线 -->
 <div class="scanlines"></div>
 
 <div id="app" v-cloak class="h-full w-full flex relative z-10">
 
     <template v-if="appReady">
         
-        <!-- 侧边栏：完全还原 Finance 样式 -->
-        <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+        <!-- 左侧侧边栏 (保持不变) -->
+        <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40 bg-white/90 dark:bg-sidebar/90 backdrop-blur-md border-r border-gray-200 dark:border-white/10', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
             <div>
                 <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
-                    <span class="text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">OS</span></span>
+                    <span class="text-xl font-black tracking-tighter text-black dark:text-white">MindForge OS</span>
                 </div>
                 
                 <nav class="p-4 space-y-6">
                     <div>
                         <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">Core</div>
-                        
                         <button class="nav-item w-full text-left block p-3 mb-1 text-xs active">System Home</button>
-                        
                         <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs">Finance 金融</a>
-                        
                         <a href="habits.html" class="nav-item w-full text-left block p-3 text-xs">Habits 习惯</a>
                     </div>
 
@@ -138,7 +118,7 @@
                 </nav>
             </div>
             
-            <div class="p-6 border-t border-gray-200 dark:border-white/5">
+            <div class="p-6 border-t border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-black/40">
                 <a href="profile.html" class="flex items-center gap-3 cursor-pointer mb-4 opacity-80 hover:opacity-100 transition group">
                     <div class="w-8 h-8 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden border border-gray-300 dark:border-white/10">
                         <img :src="profile.avatar" class="w-full h-full object-cover">
@@ -155,8 +135,8 @@
         <!-- 主内容区 -->
         <main class="flex-1 flex flex-col bg-transparent relative overflow-hidden w-full pl-4 pt-4 no-scroll-x">
             
-            <!-- 顶部栏：还原样式 -->
-            <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 cyber-card z-50 sticky top-0 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg !overflow-visible">
+            <!-- 顶部栏 -->
+            <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 glass-panel rounded-xl z-50 sticky top-0 bg-white/80 dark:bg-[#0a0a0a]/80 border border-gray-200 dark:border-white/10 shadow-lg !overflow-visible">
                 <div class="flex items-center gap-6">
                     <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-2xl">☰</button>
                     <span class="text-xs font-bold text-gray-500 uppercase tracking-[0.2em]">Command Console</span>
@@ -174,40 +154,49 @@
 
             <div class="flex-1 overflow-y-auto pr-4 pb-4 relative z-10 custom-scroll">
                 
-                <div class="w-full h-full flex flex-col justify-between">
+                <!-- 布局调整：左右分栏 -->
+                <div class="w-full h-full flex flex-col lg:flex-row relative">
                     
-                    <!-- 顶部：Intro 卡片 -->
-                    <div class="glass-panel p-6 rounded-2xl relative group overflow-hidden max-w-md animate-fade-in mt-4 ml-4 border-l-4 border-l-blue-500">
-                        <div class="relative z-10 flex flex-col gap-3 items-start">
-                            <h1 class="text-2xl font-black text-gray-900 dark:text-white tracking-tighter cyber-logo bg-clip-text text-transparent">MindForge <span class="text-gray-800 dark:text-white">OS</span></h1>
-                            <div class="text-gray-600 dark:text-gray-300 text-xs leading-relaxed font-serif italic">
-                                {{ systemConfig.bio }}
+                    <!-- 左侧：Intro 卡片 (浮动) -->
+                    <div class="lg:absolute lg:left-0 lg:top-10 lg:w-80 z-20 pointer-events-none">
+                        <div class="glass-panel p-8 rounded-2xl relative group overflow-hidden border-l-4 border-l-blue-500 pointer-events-auto animate-float">
+                            <div class="relative z-10 flex flex-col gap-4 items-start">
+                                <h1 class="text-3xl font-black text-black dark:text-white tracking-tighter">MindForge <span class="text-gray-500 dark:text-gray-400">OS</span></h1>
+                                <div class="text-gray-600 dark:text-gray-300 text-sm leading-loose font-serif italic">
+                                    {{ systemConfig.bio }}
+                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- 中间留空 (3D地球展示区) -->
                     <div class="flex-1 min-h-[300px]"></div>
 
-                    <!-- 底部：仪表盘 -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 animate-fade-in">
+                    <!-- 右侧：Dashboard (竖排) -->
+                    <div class="lg:absolute lg:right-0 lg:top-0 lg:h-full lg:w-80 flex flex-col gap-4 p-4 pointer-events-none">
                         
-                        <!-- Hardware -->
-                        <div class="glass-panel p-6 rounded-xl flex flex-col justify-center">
-                            <h3 class="text-[10px] font-bold text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-3">System Architecture</h3>
-                            <ul class="space-y-2 text-[10px] text-gray-600 dark:text-gray-400 font-mono">
-                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-gray-200 dark:border-white/5 pb-1">
-                                    <span>{{ item.name }}</span><span class="text-black dark:text-white">{{ item.status }}</span>
+                        <!-- System Architecture -->
+                        <div class="glass-panel p-6 rounded-xl pointer-events-auto hover:bg-white/10 dark:hover:bg-white/5 transition duration-500">
+                            <h3 class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Architecture
+                            </h3>
+                            <ul class="space-y-3 text-xs font-mono text-gray-600 dark:text-gray-400">
+                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-gray-200 dark:border-white/10 pb-1">
+                                    <span>{{ item.name }}</span><span class="text-black dark:text-white font-bold">{{ item.status }}</span>
                                 </li>
                             </ul>
                         </div>
 
-                        <!-- Changelog -->
-                         <div class="glass-panel p-6 rounded-xl flex flex-col justify-center">
-                            <h3 class="text-[10px] font-bold text-orange-600 dark:text-orange-500 uppercase tracking-widest mb-3">Recent Logs</h3>
-                            <div class="space-y-2 text-[10px] text-gray-600 dark:text-gray-500 font-mono">
-                                <div v-for="log in logs" :key="log.id" class="flex gap-4">
-                                    <span class="text-black dark:text-white whitespace-nowrap">{{ new Date(log.created_at).toLocaleDateString() }}</span>
-                                    <span class="truncate">{{ log.title }}</span>
+                        <!-- Recent Logs -->
+                        <div class="glass-panel p-6 rounded-xl flex-1 flex flex-col pointer-events-auto hover:bg-white/10 dark:hover:bg-white/5 transition duration-500">
+                            <h3 class="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest mb-4">Live Stream</h3>
+                            <div class="space-y-3 text-[10px] text-gray-600 dark:text-gray-500 font-mono overflow-y-auto custom-scroll flex-1">
+                                <div v-if="logs.length === 0">System Idle...</div>
+                                <div v-for="log in logs" :key="log.id" class="flex gap-3 items-start group">
+                                    <span class="text-blue-500 whitespace-nowrap opacity-60">[{{ new Date(log.created_at).getHours() }}:{{ new Date(log.created_at).getMinutes() }}]</span>
+                                    <span class="text-gray-800 dark:text-gray-300 group-hover:text-white transition break-words">
+                                        <span class="text-orange-500">[{{ log.sub_category || 'SYS' }}]</span> {{ log.title }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -219,7 +208,8 @@
         </main>
     </template>
 
-    <div v-else class="w-full h-full flex items-center justify-center z-50 bg-bg-light dark:bg-bg-dark">
+    <!-- Loading -->
+    <div v-else class="w-full h-full flex items-center justify-center z-50">
         <div class="text-blue-500 text-xs font-mono animate-pulse tracking-widest">INITIALIZING SYSTEM...</div>
     </div>
 
@@ -231,8 +221,8 @@
     const systemConfig = {
         bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
         inventory: [ 
-            { name: "KERNEL", status: "MindForge v30.4" }, 
-            { name: "RENDER", status: "THREE.JS WEBGL" }, 
+            { name: "KERNEL", status: "MindForge v30.5" }, 
+            { name: "RENDER", status: "THREE.JS HIGH-FI" }, 
             { name: "DEPLOY", status: "VERCEL EDGE" },
             { name: "SECURITY", status: "RLS ENABLED" }
         ]
@@ -257,18 +247,14 @@
             }
 
             const fetchProfile = async () => { const { data } = await _supabase.from('notes').select('*').eq('category', 'profile').single(); if (data && data.content) try { Object.assign(profile, JSON.parse(data.content)) } catch(e){} }
-            const fetchSystemLogs = async () => { const { data } = await _supabase.from('notes').select('*').eq('category', 'changelog').order('created_at', { ascending: false }).limit(3); if (data) logs.value = data; }
+            const fetchSystemLogs = async () => { const { data } = await _supabase.from('notes').select('*').eq('category', 'changelog').order('created_at', { ascending: false }).limit(20); if (data) logs.value = data; }
             const handleLogout = async () => { await _supabase.auth.signOut(); window.location.href = 'login.html'; }
 
             onMounted(async () => {
                 initThreeJS();
-
                 const { data: { session } } = await _supabase.auth.getSession();
                 if(session) { 
-                    user.value = session.user; 
-                    fetchProfile(); 
-                    fetchSystemLogs(); 
-                    appReady.value = true;
+                    user.value = session.user; fetchProfile(); fetchSystemLogs(); appReady.value = true;
                 } else { window.location.href = 'login.html'; } 
             })
 
@@ -277,56 +263,125 @@
         }
     }).mount('#app')
 
+    // --- High-Fidelity 3D Engine ---
     function initThreeJS() {
         const container = document.getElementById('canvas-container');
         if (!container) return;
         container.innerHTML = '';
 
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000000, 0.002);
+        // 只有暗色模式才加雾气，亮色模式保持清爽
+        if (document.documentElement.classList.contains('dark')) {
+            scene.fog = new THREE.FogExp2(0x000000, 0.002);
+        }
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 22;
+        camera.position.z = 20;
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         container.appendChild(renderer.domElement);
 
-        const geometry = new THREE.IcosahedronGeometry(9, 4); 
-        const material = new THREE.PointsMaterial({ color: 0x3b82f6, size: 0.1, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
-        const globe = new THREE.Points(geometry, material);
-        scene.add(globe);
+        const group = new THREE.Group();
+        scene.add(group);
 
-        const wireGeo = new THREE.IcosahedronGeometry(9.2, 2);
-        const wireMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, wireframe: true, transparent: true, opacity: 0.08 });
-        const wireGlobe = new THREE.Mesh(wireGeo, wireMat);
-        scene.add(wireGlobe);
+        // 1. 核心球体 (Core Sphere) - 深色遮挡层
+        const coreGeo = new THREE.IcosahedronGeometry(9, 2);
+        const coreMat = new THREE.MeshBasicMaterial({ color: 0x000510 });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        group.add(core);
 
-        const moonGeo = new THREE.SphereGeometry(0.3, 8, 8);
-        const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const moon1 = new THREE.Mesh(moonGeo, moonMat);
-        const orbit1 = new THREE.Object3D(); orbit1.add(moon1); scene.add(orbit1); moon1.position.x = 14; 
-        const moon2 = new THREE.Mesh(moonGeo, moonMat);
-        const orbit2 = new THREE.Object3D(); orbit2.rotation.z = Math.PI / 4; orbit2.add(moon2); scene.add(orbit2); moon2.position.x = 16; 
+        // 2. 粒子外壳 (Particle Shell) - 高密度
+        const particleGeo = new THREE.IcosahedronGeometry(9.1, 6); // 细分度 6，更多点
+        const particleMat = new THREE.PointsMaterial({
+            color: 0x3b82f6,
+            size: 0.08,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+        const particles = new THREE.Points(particleGeo, particleMat);
+        group.add(particles);
 
+        // 3. 科技线框 (Tech Wireframe) - 稀疏大网格
+        const wireGeo = new THREE.IcosahedronGeometry(10, 2);
+        const wireMat = new THREE.MeshBasicMaterial({
+            color: 0x60a5fa,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.1
+        });
+        const wireframe = new THREE.Mesh(wireGeo, wireMat);
+        group.add(wireframe);
+
+        // 4. 精细卫星系统 (Satellites)
+        function createSatellite(radius, speed, color, tilt) {
+            const orbitGroup = new THREE.Group();
+            orbitGroup.rotation.z = tilt; // 轨道倾角
+            
+            // 轨道线
+            const pathGeo = new THREE.RingGeometry(radius, radius + 0.05, 64);
+            const pathMat = new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide, transparent: true, opacity: 0.1 });
+            const path = new THREE.Mesh(pathGeo, pathMat);
+            path.rotation.x = Math.PI / 2;
+            orbitGroup.add(path);
+
+            // 卫星本体 (八面体)
+            const satGeo = new THREE.OctahedronGeometry(0.4, 0);
+            const satMat = new THREE.MeshBasicMaterial({ color: color, wireframe: true });
+            const sat = new THREE.Mesh(satGeo, satMat);
+            sat.position.set(radius, 0, 0);
+            
+            // 卫星光晕
+            const glowGeo = new THREE.SphereGeometry(0.8, 8, 8);
+            const glowMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.1 });
+            const glow = new THREE.Mesh(glowGeo, glowMat);
+            sat.add(glow);
+
+            orbitGroup.userData = { speed: speed, sat: sat, radius: radius };
+            scene.add(orbitGroup);
+            return orbitGroup;
+        }
+
+        const sat1 = createSatellite(14, 0.005, 0x3b82f6, 0);          // Blue (0度)
+        const sat2 = createSatellite(16, -0.003, 0x10b981, Math.PI/4); // Green (45度)
+
+        // 5. 动态星空
         const starGeo = new THREE.BufferGeometry();
-        const starCount = 1500;
+        const starCount = 1000;
         const posArray = new Float32Array(starCount * 3);
-        for(let i=0; i<starCount*3; i++) posArray[i] = (Math.random() - 0.5) * 200; 
+        for(let i=0; i<starCount*3; i++) posArray[i] = (Math.random() - 0.5) * 300;
         starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const starMat = new THREE.PointsMaterial({ size: 0.05, color: 0x888888, transparent: true, opacity: 0.5 });
-        const stars = new THREE.Points(starGeo, starMat);
+        const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({size: 0.1, color: 0xffffff, transparent: true, opacity: 0.4}));
         scene.add(stars);
 
         let mouseX = 0, mouseY = 0;
-        document.addEventListener('mousemove', (e) => { mouseX = (e.clientX - window.innerWidth / 2) * 0.0005; mouseY = (e.clientY - window.innerHeight / 2) * 0.0005; });
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX - window.innerWidth / 2) * 0.0005;
+            mouseY = (e.clientY - window.innerHeight / 2) * 0.0005;
+        });
 
         const animate = () => {
             requestAnimationFrame(animate);
-            globe.rotation.y += 0.001; wireGlobe.rotation.y -= 0.0015; stars.rotation.y += 0.0002;
-            orbit1.rotation.y += 0.005; orbit2.rotation.y += 0.003;
-            globe.rotation.x += (mouseY - globe.rotation.x) * 0.05; globe.rotation.z += (mouseX - globe.rotation.z) * 0.05;
+
+            // 地球自转
+            group.rotation.y += 0.001;
+            particles.rotation.y += 0.0005; // 差速旋转
+            wireframe.rotation.y -= 0.001;  // 反向旋转
+
+            // 卫星公转
+            [sat1, sat2].forEach(orbit => {
+                orbit.rotation.y += orbit.userData.speed;
+                // 卫星自转
+                orbit.userData.sat.rotation.x += 0.02;
+                orbit.userData.sat.rotation.y += 0.02;
+            });
+
+            // 视差
+            group.rotation.x += (mouseY - group.rotation.x) * 0.05;
+            group.rotation.z += (mouseX - group.rotation.z) * 0.05;
+
             renderer.render(scene, camera);
         };
         animate();
