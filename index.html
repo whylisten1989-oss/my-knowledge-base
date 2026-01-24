@@ -3,150 +3,190 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS (Holographic)</title>
+    <title>MindForge OS (V30.2 - Classic 3D)</title>
     <!-- 基础库 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <!-- 🌟 新增：Three.js 3D 引擎 -->
+    <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <link rel="stylesheet" href="css/global.css">
     <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'bg-dark': '#000000', 'bg-light': '#0f172a' } } } }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { 'void': '#000000', 'sidebar': '#0a0a0a', 'border-dim': 'rgba(255,255,255,0.1)' },
+                    fontFamily: { sans: ['"Microsoft YaHei"', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'] },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
     </script>
+
     <style>
-        [v-cloak] { display: none; }
+        body { background-color: #000; color: #e4e4e7; overflow: hidden; margin: 0; }
         
         /* 3D 背景容器 */
         #canvas-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 0; pointer-events: none; /* 让鼠标穿透去点击 UI */
-            background: radial-gradient(circle at center, #1e1b4b 0%, #000000 70%); /* 深空背景 */
+            z-index: 0; pointer-events: none;
+            background: radial-gradient(circle at center, #0f172a 0%, #000000 80%);
         }
 
-        /* 扫描线滤镜 (增强科技感) */
+        /* 扫描线滤镜 */
         .scanlines {
             position: fixed; left: 0; top: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
             background-size: 100% 4px;
-            z-index: 1; pointer-events: none; opacity: 0.6;
+            z-index: 1; pointer-events: none; opacity: 0.5;
         }
 
-        /* 玻璃拟态侧边栏 (让地球透出来) */
-        .glass-sidebar {
-            background: rgba(10, 10, 10, 0.6);
+        /* V30 经典样式回归 */
+        .cyber-logo {
+            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite alternate;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        .nav-item { transition: all 0.2s; border-left: 3px solid transparent; color: #888; font-size: 13px; font-weight: 500; }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.05); padding-left: 16px; }
+        .nav-item.active { color: white; border-left-color: #fff; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); padding-left: 16px; font-weight: bold; }
+
+        /* 半透明卡片 (适配 3D 背景) */
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.75); /* 深色半透明 */
             backdrop-filter: blur(12px);
-            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
-        
-        /* 玻璃卡片 */
-        .glass-card {
-            background: rgba(20, 20, 20, 0.5);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-        }
+
+        /* 监控条动画 */
+        .monitor-bar { height: 100%; width: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; position: relative; overflow: hidden; }
+        .monitor-fill { position: absolute; bottom: 0; left: 0; width: 100%; background: #10b981; animation: equalizer 1s ease-in-out infinite alternate; }
+        @keyframes equalizer { 0% { height: 10%; opacity: 0.3; } 100% { height: 90%; opacity: 1; } }
+
+        [v-cloak] { display: none !important; }
     </style>
 </head>
 <body class="bg-black h-screen flex overflow-hidden text-gray-200">
 
 <script src="js/config.js"></script>
 
-<!-- 1. 3D 粒子地球背景 -->
+<!-- 1. 3D 粒子地球 -->
 <div id="canvas-container"></div>
-<!-- 2. 扫描线滤镜 -->
+<!-- 2. 扫描线 -->
 <div class="scanlines"></div>
 
 <div id="app" v-cloak class="h-full w-full flex relative z-10">
 
     <template v-if="appReady">
         
-        <!-- 侧边栏：玻璃化 -->
-        <aside :class="['glass-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+        <!-- 侧边栏：回归 V30 样式 (半透明背景以适配 3D) -->
+        <aside :class="['w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40 bg-sidebar/80 backdrop-blur-md border-r border-white/10', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
             <div>
-                <div class="h-24 flex items-center px-8 border-b border-white/5">
-                    <span class="text-xl font-black tracking-tighter text-white cyber-logo drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]">MindForge <span class="text-[10px] text-blue-400 ml-1 font-normal tracking-widest">HOLOGRAPHIC</span></span>
+                <div class="h-20 flex items-center px-8 border-b border-white/5">
+                    <span class="text-xl font-black tracking-tighter cyber-logo italic">MindForge OS <span class="text-[10px] text-white/50 ml-1 font-normal not-italic">BETA</span></span>
                 </div>
                 
                 <nav class="p-4 space-y-6">
                     <div>
-                        <div class="text-[10px] font-bold text-blue-500/80 uppercase tracking-[0.2em] mb-3 pl-4">Core Systems</div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3 pl-4">Core Systems</div>
                         
-                        <button class="nav-item w-full text-left block p-3 mb-1 text-xs text-white bg-white/10 border-l-2 border-blue-500 font-bold shadow-[0_0_15px_rgba(59,130,246,0.2)]">System Home</button>
-                        
-                        <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs text-gray-400 hover:text-white hover:bg-white/5 transition">Finance 金融</a>
-                        
-                        <a href="habits.html" class="nav-item w-full text-left block p-3 text-xs text-gray-400 hover:text-white hover:bg-white/5 transition">Habits 习惯</a>
+                        <button class="nav-item w-full text-left block p-3 mb-1 text-xs active">System Home</button>
+                        <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs">Finance 金融</a>
+                        <a href="habits.html" class="nav-item w-full text-left block p-3 text-xs">Habits 习惯</a>
                     </div>
 
                     <div>
-                        <div class="text-[10px] font-bold text-blue-500/80 uppercase tracking-[0.2em] mb-3 pl-4">Data Modules</div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3 pl-4">Data Modules</div>
                         <div class="flex flex-col gap-1">
-                            <a href="wiki.html" class="nav-item w-full text-left block p-3 text-xs text-gray-400 hover:text-white hover:bg-white/5 transition">Knowledge Base</a>
+                            <a href="wiki.html" class="nav-item w-full text-left block p-3 text-xs">Knowledge Base</a>
                         </div>
                     </div>
                 </nav>
             </div>
             
-            <div class="p-6 border-t border-white/5 bg-black/20">
+            <div class="p-6 border-t border-white/5 bg-black/40">
                 <a href="profile.html" class="flex items-center gap-3 cursor-pointer mb-4 opacity-80 hover:opacity-100 transition group">
-                    <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-500/30 group-hover:border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
+                    <div class="w-8 h-8 rounded-full overflow-hidden border border-white/20 group-hover:border-white transition">
                         <img :src="profile.avatar" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="text-xs font-bold text-white truncate">{{ profile.name }}</div>
-                        <div class="text-[9px] text-blue-400 truncate font-mono animate-pulse">● SIGNAL STRONG</div>
+                        <div class="text-[9px] text-green-500 truncate font-mono">● ONLINE</div>
                     </div>
                 </a>
-                <button @click="handleLogout" class="w-full text-left text-[9px] font-bold text-red-500 hover:text-red-400 tracking-[0.2em] uppercase transition py-2 hover:bg-red-500/10 pl-2">Terminate Session</button>
+                <button @click="handleLogout" class="w-full text-left text-[9px] font-bold text-red-500 hover:text-red-400 tracking-widest uppercase transition py-1">Terminate Session</button>
             </div>
         </aside>
 
         <!-- 主内容区 -->
         <main class="flex-1 flex flex-col bg-transparent relative overflow-hidden w-full pl-4 pt-4 no-scroll-x">
             
-            <!-- 顶部栏：透明悬浮 -->
-            <header class="h-20 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 glass-card rounded-xl z-50 sticky top-4">
+            <!-- 顶部栏：回归 V30 样式 -->
+            <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 glass-panel rounded-xl z-50 sticky top-0">
                 <div class="flex items-center gap-6">
                     <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-2xl text-white">☰</button>
-                    <div class="flex flex-col">
-                         <span class="text-xs font-bold text-gray-400 uppercase tracking-[0.3em]">Command Console</span>
-                         <span class="text-[9px] text-blue-500 font-mono">V30.1 PARTICLE ENGINE ONLINE</span>
-                    </div>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Command Console</span>
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <a href="changelog.html" class="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white transition group" title="Dev Changelog">
+                    <a href="changelog.html" class="w-8 h-8 flex items-center justify-center rounded-full border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white transition group" title="Dev Changelog">
                         <span class="group-hover:text-blue-400">📜</span>
                     </a>
+                    <!-- 日光模式切换按钮回归 -->
+                    <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white transition">
+                        <span v-if="isDark">☀</span><span v-else>☾</span>
+                    </button>
                 </div>
             </header>
 
             <div class="flex-1 overflow-y-auto pr-4 pb-4 relative z-10 custom-scroll">
                 <div class="w-full space-y-6 animate-fade-in pt-2">
                     
-                    <!-- 主卡片：为了展示地球，把背景设为半透明 -->
-                    <div class="glass-card p-12 rounded-2xl relative group overflow-hidden border-t border-white/20">
-                        <div class="relative z-10 flex flex-col md:flex-row gap-10 items-center">
-                            <!-- 全息徽章 -->
-                            <div class="w-24 h-24 bg-blue-500/10 flex items-center justify-center text-5xl shadow-[0_0_30px_rgba(59,130,246,0.3)] shrink-0 text-white rounded-full border border-blue-400/30 backdrop-blur-md">🧠</div>
-                            <div class="flex-1 text-center md:text-left">
-                                <h1 class="text-5xl font-black mb-4 text-white tracking-tighter drop-shadow-lg">MindForge <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">OS</span></h1>
-                                <div class="text-gray-300 text-sm leading-loose font-serif italic max-w-2xl mx-auto md:mx-0 opacity-90">{{ systemConfig.bio }}</div>
+                    <!-- Bio 卡片 (缩小版，不遮挡地球) -->
+                    <div class="glass-panel p-6 rounded-2xl relative group overflow-hidden max-w-2xl">
+                        <div class="relative z-10 flex flex-col md:flex-row gap-6 items-start">
+                            <div class="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-3xl shadow-lg shrink-0 text-black">🧠</div>
+                            <div class="flex-1">
+                                <h1 class="text-2xl font-black mb-2 text-white tracking-tighter">MindForge OS <span class="text-[10px] text-blue-400 align-top">BETA</span></h1>
+                                <!-- 诗句 -->
+                                <div class="text-gray-400 text-xs leading-relaxed border-l-2 border-blue-500/50 pl-4 font-serif italic">
+                                    {{ systemConfig.bio }}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- 为了不挡住地球，下面的卡片可以做得更小或更透明 -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-64">
-                         <!-- 这里留空或者放半透明小组件，让用户欣赏地球 -->
-                         <div class="glass-card p-6 rounded-xl flex items-center justify-center border-dashed border-2 border-white/5 opacity-50 hover:opacity-100 transition">
-                             <span class="text-xs text-gray-500 tracking-widest">SYSTEM MODULE SLOT A</span>
-                         </div>
-                         <div class="glass-card p-6 rounded-xl flex items-center justify-center border-dashed border-2 border-white/5 opacity-50 hover:opacity-100 transition">
-                             <span class="text-xs text-gray-500 tracking-widest">SYSTEM MODULE SLOT B</span>
-                         </div>
+
+                    <!-- 底部 Grid (System Monitor) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-80">
+                        <!-- Neural Monitor -->
+                        <div class="lg:col-span-2 glass-panel relative flex flex-col p-6 rounded-xl">
+                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-6 flex justify-between">
+                                <span>System Neural Monitor</span> <span class="text-green-500 animate-pulse">● LIVE</span>
+                            </h3>
+                            <div class="flex-1 flex items-end justify-between gap-1 px-2 pb-2">
+                                <div v-for="i in 40" :key="i" class="monitor-bar flex-1">
+                                    <div class="monitor-fill" :style="{ animationDuration: (0.5 + Math.random()) + 's', animationDelay: i * 0.05 + 's' }"></div>
+                                </div>
+                            </div>
+                            <div class="text-center text-[10px] text-gray-600 font-mono tracking-widest mt-2 border-t border-white/5 pt-2">CORE ACTIVITY LEVEL</div>
+                        </div>
+
+                        <!-- Hardware -->
+                        <div class="glass-panel p-6 rounded-xl flex flex-col justify-center">
+                            <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-4">Hardware Specs</h3>
+                            <ul class="space-y-3 text-xs text-gray-400 font-mono">
+                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-white/5 pb-1">
+                                    <span>{{ item.name }}</span><span class="text-white">{{ item.status }}</span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
 
                 </div>
@@ -155,7 +195,7 @@
     </template>
 
     <div v-else class="w-full h-full flex items-center justify-center z-50">
-        <div class="text-blue-500 text-xs font-mono animate-pulse tracking-widest">INITIALIZING HOLOGRAPHIC CORE...</div>
+        <div class="text-blue-500 text-xs font-mono animate-pulse tracking-widest">INITIALIZING SYSTEM...</div>
     </div>
 
 </div>
@@ -164,7 +204,13 @@
     const { createApp, ref, onMounted, reactive } = Vue
 
     const systemConfig = {
-        bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`
+        bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
+        inventory: [ 
+            { name: "KERNEL", status: "MindForge v30.2" }, 
+            { name: "DATABASE", status: "SUPABASE PG" }, 
+            { name: "DEPLOY", status: "VERCEL EDGE" },
+            { name: "SECURITY", status: "RLS ENABLED" }
+        ]
     }
 
     createApp({
@@ -173,7 +219,16 @@
             const _supabase = window._supabase;
             const appReady = ref(false)
             const mobileMenuOpen = ref(false)
+            const isDark = ref(true)
             const profile = reactive({ name: 'Admin', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Admin' })
+
+            // Theme Toggle Logic
+            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
+            const toggleTheme = () => { 
+                isDark.value = !isDark.value; 
+                if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}
+                else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} 
+            }
 
             const fetchProfile = async () => { const { data } = await _supabase.from('notes').select('*').eq('category', 'profile').single(); if (data && data.content) try { Object.assign(profile, JSON.parse(data.content)) } catch(e){} }
             const handleLogout = async () => { await _supabase.auth.signOut(); window.location.href = 'login.html'; }
@@ -189,21 +244,20 @@
             })
 
             const user = ref(null);
-            return { user, mobileMenuOpen, profile, systemConfig, handleLogout, appReady, toggleTheme: () => {} }
+            return { user, mobileMenuOpen, profile, systemConfig, handleLogout, appReady, isDark, toggleTheme }
         }
     }).mount('#app')
 
-    // --- 3D 粒子地球引擎 ---
+    // --- 3D 粒子地球引擎 (位置微调) ---
     function initThreeJS() {
         const container = document.getElementById('canvas-container');
         if (!container) return;
 
         const scene = new THREE.Scene();
-        // 增加迷雾效果，让地球远处虚化
-        scene.fog = new THREE.FogExp2(0x000000, 0.001);
+        scene.fog = new THREE.FogExp2(0x000000, 0.002);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 20; // 调整相机距离
+        camera.position.z = 18; // 稍微拉远一点
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -211,10 +265,10 @@
         container.appendChild(renderer.domElement);
 
         // 1. 粒子地球核心
-        const geometry = new THREE.IcosahedronGeometry(10, 4); // 半径10，细分4次
+        const geometry = new THREE.IcosahedronGeometry(8, 4); // 半径缩小到 8，避免被遮挡
         const material = new THREE.PointsMaterial({
-            color: 0x3b82f6, // Tailwind Blue-500
-            size: 0.15,
+            color: 0x3b82f6, 
+            size: 0.12,
             transparent: true,
             opacity: 0.8,
             blending: THREE.AdditiveBlending
@@ -222,10 +276,10 @@
         const globe = new THREE.Points(geometry, material);
         scene.add(globe);
 
-        // 2. 外层大气光晕 (线框)
-        const wireGeo = new THREE.IcosahedronGeometry(10.2, 2);
+        // 2. 外层大气光晕
+        const wireGeo = new THREE.IcosahedronGeometry(8.1, 2);
         const wireMat = new THREE.MeshBasicMaterial({
-            color: 0x60a5fa, // Blue-400
+            color: 0x60a5fa,
             wireframe: true,
             transparent: true,
             opacity: 0.05
@@ -244,20 +298,14 @@
         // 4. 动画循环
         const animate = () => {
             requestAnimationFrame(animate);
-
-            // 自转
             globe.rotation.y += 0.002;
-            wireGlobe.rotation.y -= 0.001; // 外层反向转
-            
-            // 鼠标视差响应
+            wireGlobe.rotation.y -= 0.001; 
             globe.rotation.x += (mouseY - globe.rotation.x) * 0.05;
             globe.rotation.z += (mouseX - globe.rotation.z) * 0.05;
-
             renderer.render(scene, camera);
         };
         animate();
 
-        // 5. 窗口自适应
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
