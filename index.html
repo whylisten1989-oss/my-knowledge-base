@@ -3,86 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindForge OS Dashboard</title>
+    <title>MindForge OS (V30.3 - Holographic)</title>
+    <!-- 基础库 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Three.js 3D 引擎 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
     <link rel="stylesheet" href="css/global.css">
     <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' } } } }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { 'void': '#000000', 'sidebar': '#0a0a0a', 'border-dim': 'rgba(255,255,255,0.1)' },
+                    fontFamily: { sans: ['"Microsoft YaHei"', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'] },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
     </script>
+
     <style>
-        [v-cloak] { display: none; }
+        body { background-color: #000; color: #e4e4e7; overflow: hidden; margin: 0; }
+        
+        /* 3D 背景容器 */
+        #canvas-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; pointer-events: none; /* 让鼠标穿透去点击 UI */
+            background: radial-gradient(circle at center, #0f172a 0%, #000000 90%);
+        }
+
+        /* 扫描线滤镜 */
+        .scanlines {
+            position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px;
+            z-index: 1; pointer-events: none; opacity: 0.4;
+        }
+
+        /* Logo 样式 */
+        .cyber-logo {
+            background: linear-gradient(90deg, #3b82f6, #f97316, #3b82f6);
+            background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: shine 4s linear infinite alternate;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        .nav-item { transition: all 0.2s; border-left: 3px solid transparent; color: #888; font-size: 13px; font-weight: 500; }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.05); padding-left: 16px; }
+        .nav-item.active { color: white; border-left-color: #fff; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); padding-left: 16px; font-weight: bold; }
+
+        /* 玻璃面板 (适配 3D 背景，增加透明度) */
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.6); /* 更透明，让地球透出来 */
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 内容区滚动条 */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        [v-cloak] { display: none !important; }
     </style>
 </head>
-<body class="bg-bg-light dark:bg-bg-dark h-screen flex overflow-hidden transition-colors duration-500 text-gray-900 dark:text-gray-200">
+<body class="bg-black h-screen flex overflow-hidden text-gray-200">
 
 <script src="js/config.js"></script>
 
-<div class="fixed inset-0 pointer-events-none z-0 transition-opacity duration-1000">
-    <div class="absolute inset-0 opacity-0 dark:opacity-100 transition-opacity duration-1000">
-        <div class="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-900/10 blur-[150px] rounded-full"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-900/10 blur-[150px] rounded-full"></div>
-    </div>
-</div>
+<!-- 1. 3D 粒子地球 -->
+<div id="canvas-container"></div>
+<!-- 2. 扫描线 -->
+<div class="scanlines"></div>
 
 <div id="app" v-cloak class="h-full w-full flex relative z-10">
 
     <template v-if="appReady">
         
-        <aside :class="['floating-sidebar w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
+        <!-- 侧边栏：保持原样 -->
+        <aside :class="['w-64 flex flex-col justify-between transition-transform duration-300 fixed md:relative z-40 bg-sidebar/90 backdrop-blur-md border-r border-white/10', mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
             <div>
-                <div class="h-20 flex items-center px-8 border-b border-gray-200 dark:border-white/5">
-                    <span class="text-xl font-black tracking-tighter text-black dark:text-white cyber-logo">MindForge <span class="text-[10px] opacity-60 ml-1 font-normal">OS</span></span>
+                <div class="h-20 flex items-center px-8 border-b border-white/5">
+                    <span class="text-xl font-black tracking-tighter cyber-logo italic">MindForge OS <span class="text-[10px] text-white/50 ml-1 font-normal not-italic">BETA</span></span>
                 </div>
                 
-<nav class="p-4 space-y-6">
-    <div>
-        <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">Core</div>
-        
-        <button class="nav-item w-full text-left block p-3 mb-1 text-xs active">System Home</button>
-        
-        <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs">Finance 金融</a>
-        
-        <a href="habits.html" class="nav-item w-full text-left block p-3 text-xs">Habits 习惯</a>
-    </div>
+                <nav class="p-4 space-y-6">
+                    <div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3 pl-4">Core Systems</div>
+                        
+                        <button class="nav-item w-full text-left block p-3 mb-1 text-xs active">System Home</button>
+                        <a href="finance.html" class="nav-item w-full text-left block p-3 text-xs">Finance 金融</a>
+                        <a href="habits.html" class="nav-item w-full text-left block p-3 text-xs">Habits 习惯</a>
+                    </div>
 
-    <div>
-        <div class="text-[10px] font-bold text-gray-400 dark:text-gray-600 uppercase tracking-widest mb-3 pl-4">Modules</div>
-        <div class="flex flex-col gap-1">
-            <a href="wiki.html" class="nav-item w-full text-left block p-3 text-xs">Knowledge Base</a>
-        </div>
-    </div>
-</nav>
+                    <div>
+                        <div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3 pl-4">Data Modules</div>
+                        <div class="flex flex-col gap-1">
+                            <a href="wiki.html" class="nav-item w-full text-left block p-3 text-xs">Knowledge Base</a>
+                        </div>
+                    </div>
+                </nav>
             </div>
             
-            <div class="p-6 border-t border-gray-200 dark:border-white/5">
+            <div class="p-6 border-t border-white/5 bg-black/40">
                 <a href="profile.html" class="flex items-center gap-3 cursor-pointer mb-4 opacity-80 hover:opacity-100 transition group">
-                    <div class="w-8 h-8 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden border border-gray-300 dark:border-white/10">
+                    <div class="w-8 h-8 rounded-full overflow-hidden border border-white/20 group-hover:border-white transition">
                         <img :src="profile.avatar" class="w-full h-full object-cover">
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="text-xs font-bold text-black dark:text-white truncate">{{ profile.name }}</div>
-                        <div class="text-[9px] text-green-600 dark:text-green-500 truncate font-mono">ONLINE</div>
+                        <div class="text-xs font-bold text-white truncate">{{ profile.name }}</div>
+                        <div class="text-[9px] text-green-500 truncate font-mono">● ONLINE</div>
                     </div>
                 </a>
-                <button @click="handleLogout" class="w-full text-left text-[9px] font-bold text-red-500 hover:text-red-700 tracking-widest uppercase transition py-2">Terminate Session</button>
+                <button @click="handleLogout" class="w-full text-left text-[9px] font-bold text-red-500 hover:text-red-400 tracking-widest uppercase transition py-1">Terminate Session</button>
             </div>
         </aside>
 
+        <!-- 主内容区 -->
         <main class="flex-1 flex flex-col bg-transparent relative overflow-hidden w-full pl-4 pt-4 no-scroll-x">
             
-            <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 cyber-card z-50 sticky top-0 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-lg !overflow-visible">
+            <!-- 顶部栏：保持原样 -->
+            <header class="h-16 flex items-center justify-between px-8 shrink-0 mb-4 mr-4 glass-panel rounded-xl z-50 sticky top-0">
                 <div class="flex items-center gap-6">
-                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-2xl">☰</button>
-                    <span class="text-xs font-bold text-gray-500 uppercase tracking-[0.2em]">Command Console</span>
+                    <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-2xl text-white">☰</button>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Command Console</span>
                 </div>
 
                 <div class="flex items-center gap-4">
-                    <a href="changelog.html" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition group" title="Dev Changelog">
-                        <span class="group-hover:text-blue-500">📜</span>
+                    <a href="changelog.html" class="w-8 h-8 flex items-center justify-center rounded-full border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white transition group" title="Dev Changelog">
+                        <span class="group-hover:text-blue-400">📜</span>
                     </a>
-                    <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 dark:border-white/20 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition">
+                    <button @click="toggleTheme" class="w-8 h-8 flex items-center justify-center rounded-full border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white transition">
                         <span v-if="isDark">☀</span><span v-else>☾</span>
                     </button>
                 </div>
@@ -90,61 +146,56 @@
 
             <div class="flex-1 overflow-y-auto pr-4 pb-4 relative z-10 custom-scroll">
                 
-                <div class="w-full space-y-6 animate-fade-in pt-2">
+                <!-- 布局调整：给 3D 地球留出中间区域 -->
+                <div class="w-full h-full flex flex-col justify-between">
                     
-                    <div class="cyber-card p-10 relative group">
-                        <div class="relative z-10 flex flex-col md:flex-row gap-10 items-start">
-                            <div class="w-20 h-20 bg-white dark:bg-white flex items-center justify-center text-4xl shadow-xl shrink-0 text-black rounded-2xl group-hover:scale-105 transition-transform duration-500">🧠</div>
-                            <div class="flex-1">
-                                <h1 class="text-4xl font-black mb-4 text-black dark:text-white tracking-tighter cyber-logo">MindForge OS <span class="text-[12px] bg-blue-500/10 text-blue-500 px-2 py-1 rounded ml-2 align-middle font-normal">BETA</span></h1>
-                                <div class="text-gray-600 dark:text-gray-400 text-sm leading-loose border-l-4 border-blue-500 pl-6 font-serif italic max-w-2xl">{{ systemConfig.bio }}</div>
+                    <!-- 顶部：Intro 卡片 (透明化，缩小，不遮挡) -->
+                    <div class="glass-panel p-6 rounded-2xl relative group overflow-hidden max-w-xl animate-fade-in mt-4 ml-4">
+                        <div class="relative z-10 flex flex-col gap-2 items-start">
+                            <h1 class="text-3xl font-black text-white tracking-tighter cyber-logo bg-clip-text text-transparent">MindForge <span class="text-white">OS</span></h1>
+                            <!-- 诗句 -->
+                            <div class="text-gray-300 text-xs leading-loose border-l-2 border-blue-500 pl-4 font-serif italic">
+                                {{ systemConfig.bio }}
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-96">
-                        <div class="lg:col-span-2 cyber-card relative h-96 lg:h-full flex flex-col p-8">
-                            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-8 flex justify-between">
-                                <span>System Neural Monitor</span> <span class="text-green-600 dark:text-green-500 animate-pulse">● ONLINE</span>
-                            </h3>
-                            <div class="flex-1 flex items-end justify-between gap-1 px-2 pb-4">
-                                <div v-for="i in 30" :key="i" class="monitor-bar" :style="{ animationDelay: (i * 0.1) + 's', height: '20%' }"></div>
-                            </div>
-                            <div class="text-center text-[10px] text-gray-400 dark:text-gray-600 font-mono tracking-widest mt-2 border-t border-gray-200 dark:border-white/5 pt-2">CORE ACTIVITY LEVEL</div>
+                    <!-- 中间留白 (给地球) -->
+                    <div class="flex-1 min-h-[300px]"></div>
+
+                    <!-- 底部：仪表盘 (Architecture & Changelog) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 animate-fade-in">
+                        
+                        <!-- Hardware -->
+                        <div class="glass-panel p-6 rounded-xl flex flex-col justify-center">
+                            <h3 class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-3">System Architecture</h3>
+                            <ul class="space-y-2 text-[10px] text-gray-400 font-mono">
+                                <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-white/5 pb-1">
+                                    <span>{{ item.name }}</span><span class="text-white">{{ item.status }}</span>
+                                </li>
+                            </ul>
                         </div>
 
-                        <div class="flex flex-col gap-6 h-full">
-                            <div class="cyber-card p-6 flex-1 flex flex-col justify-center">
-                                <h3 class="text-[10px] font-bold text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-4">Architecture</h3>
-                                <ul class="space-y-3 text-[10px] font-mono text-gray-500 dark:text-gray-400">
-                                    <li v-for="item in systemConfig.inventory" :key="item.name" class="flex justify-between border-b border-gray-200 dark:border-white/5 pb-2 last:border-0">
-                                        <span class="font-bold text-gray-700 dark:text-gray-500">{{ item.name }}</span>
-                                        <span class="text-black dark:text-white tracking-wide">{{ item.status }}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            
-                            <div class="cyber-card p-6 flex-1 flex flex-col justify-center overflow-hidden">
-                                <h3 class="text-[10px] font-bold text-orange-600 dark:text-orange-500 uppercase tracking-widest mb-4">System Changelog</h3>
-                                <div class="space-y-3 text-[10px] text-gray-600 dark:text-gray-500 font-mono h-32 overflow-y-auto pr-2 custom-scroll">
-                                    <div v-if="logs.length === 0">Loading...</div>
-                                    <div v-for="log in logs" :key="log.id" class="flex gap-4 border-b border-gray-200 dark:border-white/5 pb-2 last:border-0">
-                                        <span class="text-black dark:text-white whitespace-nowrap">{{ new Date(log.created_at).toLocaleDateString() }}</span>
-                                        <span class="text-gray-500 dark:text-gray-400 line-clamp-1 hover:text-orange-500 transition cursor-help" :title="log.content">
-                                            [{{ log.sub_category || 'SYS' }}] {{ log.title }}
-                                        </span>
-                                    </div>
+                        <!-- Changelog -->
+                         <div class="glass-panel p-6 rounded-xl flex flex-col justify-center">
+                            <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-3">Recent Logs</h3>
+                            <div class="space-y-2 text-[10px] text-gray-500 font-mono">
+                                <div v-for="log in logs" :key="log.id" class="flex gap-4">
+                                    <span class="text-white">{{ new Date(log.created_at).toLocaleDateString() }}</span>
+                                    <span class="truncate">{{ log.title }}</span>
                                 </div>
                             </div>
                         </div>
+
                     </div>
+
                 </div>
             </div>
         </main>
     </template>
 
-    <div v-else class="w-full h-full flex items-center justify-center">
-        <div class="text-blue-500 text-xs font-mono animate-pulse tracking-widest">INITIALIZING SYSTEM...</div>
+    <div v-else class="w-full h-full flex items-center justify-center z-50">
+        <div class="text-blue-500 text-xs font-mono animate-pulse tracking-widest">INITIALIZING HOLOGRAPHIC CORE...</div>
     </div>
 
 </div>
@@ -154,7 +205,12 @@
 
     const systemConfig = {
         bio: `我们不满足于平凡积累，\n而是以创造为刃、以进步为火，\n锤炼出属于自己的智慧之剑。\n\n长风破浪会有时，\n直挂云帆济沧海。\n—— 李白`,
-        inventory: [ { name: "KERNEL", status: "MindForge v30.0" }, { name: "DATABASE", status: "SUPABASE PG 15" }, { name: "DEPLOY", status: "VERCEL EDGE" }, { name: "SECURITY", status: "RLS ENABLED" } ]
+        inventory: [ 
+            { name: "KERNEL", status: "MindForge v30.3" }, 
+            { name: "RENDER", status: "THREE.JS WEBGL" }, 
+            { name: "DEPLOY", status: "VERCEL EDGE" },
+            { name: "SECURITY", status: "RLS ENABLED" }
+        ]
     }
 
     createApp({
@@ -162,20 +218,22 @@
             if (!window._supabase) return {};
             const _supabase = window._supabase;
             
-            // 核心修改 1：新增一个变量控制是否准备好了
             const appReady = ref(false)
-
-            const isDark = ref(true)
-            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
-            const toggleTheme = () => { isDark.value = !isDark.value; if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} }
-
-            const user = ref(null)
             const mobileMenuOpen = ref(false)
+            const isDark = ref(true)
             const logs = ref([])
-            const profile = reactive({ name: 'Admin', avatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=Admin', bio: 'Loading...' })
+            const profile = reactive({ name: 'Admin', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Admin' })
+
+            // Theme Toggle Logic
+            if (localStorage.getItem('theme') === 'light') { isDark.value = false; document.documentElement.classList.remove('dark'); }
+            const toggleTheme = () => { 
+                isDark.value = !isDark.value; 
+                if(isDark.value){document.documentElement.classList.add('dark');localStorage.setItem('theme','dark')}
+                else{document.documentElement.classList.remove('dark');localStorage.setItem('theme','light')} 
+            }
 
             const fetchProfile = async () => { const { data } = await _supabase.from('notes').select('*').eq('category', 'profile').single(); if (data && data.content) try { Object.assign(profile, JSON.parse(data.content)) } catch(e){} }
-            const fetchSystemLogs = async () => { const { data } = await _supabase.from('notes').select('*').eq('category', 'changelog').order('created_at', { ascending: false }).limit(10); if (data) logs.value = data; }
+            const fetchSystemLogs = async () => { const { data } = await _supabase.from('notes').select('*').eq('category', 'changelog').order('created_at', { ascending: false }).limit(3); if (data) logs.value = data; }
             const handleLogout = async () => { await _supabase.auth.signOut(); window.location.href = 'login.html'; }
 
             onMounted(async () => {
@@ -184,18 +242,129 @@
                     user.value = session.user; 
                     fetchProfile(); 
                     fetchSystemLogs(); 
-                    // 核心修改 2：登录确认无误后，才显示页面
                     appReady.value = true;
+                    // 初始化 3D 场景 (仅在 DOM 准备好后)
+                    setTimeout(() => initThreeJS(), 100);
                 }
                 else { 
                     window.location.href = 'login.html'; 
-                    // 这里不设置 appReady 为 true，所以页面会保持 Loading 状态直到跳转完成
                 } 
             })
 
-            return { user, mobileMenuOpen, logs, profile, systemConfig, isDark, toggleTheme, handleLogout, appReady }
+            const user = ref(null);
+            return { user, mobileMenuOpen, profile, logs, systemConfig, isDark, toggleTheme, handleLogout, appReady }
         }
     }).mount('#app')
+
+    // --- 3D 粒子地球引擎 ---
+    function initThreeJS() {
+        const container = document.getElementById('canvas-container');
+        if (!container) return;
+
+        // 清理旧场景 (防止热重载堆叠)
+        container.innerHTML = '';
+
+        const scene = new THREE.Scene();
+        // 增加迷雾效果，让地球远处虚化
+        scene.fog = new THREE.FogExp2(0x000000, 0.001);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 22; // 调整相机距离
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        // 1. 粒子地球核心
+        const geometry = new THREE.IcosahedronGeometry(9, 4); // 细分4次
+        const material = new THREE.PointsMaterial({
+            color: 0x3b82f6, // 科技蓝
+            size: 0.1,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+        const globe = new THREE.Points(geometry, material);
+        scene.add(globe);
+
+        // 2. 外层大气光晕线框
+        const wireGeo = new THREE.IcosahedronGeometry(9.2, 2);
+        const wireMat = new THREE.MeshBasicMaterial({
+            color: 0x60a5fa, // 浅蓝
+            wireframe: true,
+            transparent: true,
+            opacity: 0.08
+        });
+        const wireGlobe = new THREE.Mesh(wireGeo, wireMat);
+        scene.add(wireGlobe);
+
+        // 3. 卫星 (公转小球)
+        const moonGeo = new THREE.SphereGeometry(0.3, 8, 8);
+        const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        
+        // 卫星 A
+        const moon1 = new THREE.Mesh(moonGeo, moonMat);
+        const orbit1 = new THREE.Object3D();
+        orbit1.add(moon1);
+        scene.add(orbit1);
+        moon1.position.x = 14; // 轨道半径
+
+        // 卫星 B
+        const moon2 = new THREE.Mesh(moonGeo, moonMat);
+        const orbit2 = new THREE.Object3D();
+        orbit2.rotation.z = Math.PI / 4; // 倾斜轨道
+        orbit2.add(moon2);
+        scene.add(orbit2);
+        moon2.position.x = 16; 
+
+        // 4. 星空背景
+        const starGeo = new THREE.BufferGeometry();
+        const starCount = 1500;
+        const posArray = new Float32Array(starCount * 3);
+        for(let i=0; i<starCount*3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 200; 
+        }
+        starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const starMat = new THREE.PointsMaterial({ size: 0.05, color: 0x888888, transparent: true, opacity: 0.5 });
+        const stars = new THREE.Points(starGeo, starMat);
+        scene.add(stars);
+
+        // 5. 交互与动画
+        let mouseX = 0;
+        let mouseY = 0;
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX - window.innerWidth / 2) * 0.0005;
+            mouseY = (event.clientY - window.innerHeight / 2) * 0.0005;
+        });
+
+        const animate = () => {
+            requestAnimationFrame(animate);
+
+            // 自转
+            globe.rotation.y += 0.001;
+            wireGlobe.rotation.y -= 0.0015; // 反向旋转
+            stars.rotation.y += 0.0002;
+
+            // 卫星公转
+            orbit1.rotation.y += 0.005;
+            orbit2.rotation.y += 0.003;
+            
+            // 鼠标视差响应 (平滑)
+            globe.rotation.x += (mouseY - globe.rotation.x) * 0.05;
+            globe.rotation.z += (mouseX - globe.rotation.z) * 0.05;
+
+            renderer.render(scene, camera);
+        };
+        animate();
+
+        // 窗口自适应
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    }
 </script>
 </body>
 </html>
