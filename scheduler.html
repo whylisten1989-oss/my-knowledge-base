@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindForge Public Scheduler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/global.css">
+    
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'bg-dark': '#000000', 'bg-light': '#f8fafc' } } } }
+    </script>
+
+    <style>
+        body { font-family: 'Space Grotesk', sans-serif; overflow: hidden; }
+        [v-cloak] { display: none; }
+
+        /* 启动按钮特效 */
+        .btn-launch {
+            background: linear-gradient(45deg, #0ea5e9, #2563eb);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.3);
+        }
+        .btn-launch:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.6);
+        }
+        .btn-launch::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
+        }
+        .btn-launch:hover::after { left: 100%; }
+
+        /* 进入动画 */
+        .slide-up-enter-active { transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .slide-up-leave-active { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .slide-up-enter-from { transform: translateY(100%); opacity: 0; }
+        .slide-up-leave-to { transform: translateY(-20px); opacity: 0; }
+
+        .fade-enter-active { transition: opacity 0.5s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+    </style>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark h-screen w-screen relative">
+
+<div class="fixed inset-0 pointer-events-none z-0">
+    <div class="absolute top-[-10%] left-[20%] w-[60vw] h-[60vw] bg-cyan-900/10 blur-[150px] rounded-full animate-pulse"></div>
+    <div class="absolute bottom-[-10%] right-[20%] w-[50vw] h-[50vw] bg-blue-900/10 blur-[150px] rounded-full animate-pulse" style="animation-delay: 2s"></div>
+</div>
+
+<div id="app" v-cloak class="relative z-10 w-full h-full flex flex-col items-center justify-center">
+
+    <transition name="fade" mode="out-in">
+        <div v-if="!isLaunched" class="cyber-card p-12 rounded-2xl max-w-md w-full text-center border border-white/10 shadow-2xl backdrop-blur-xl" key="landing">
+            
+            <div class="mb-8 relative">
+                <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
+                <h1 class="text-4xl font-black text-black dark:text-white tracking-tighter relative z-10 mb-2">
+                    SCHEDULER<span class="text-blue-500">.AI</span>
+                </h1>
+                <p class="text-gray-500 text-[10px] font-bold tracking-[0.3em] uppercase">
+                    Public Access Terminal
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="grid grid-cols-2 gap-4 text-[10px] font-mono text-gray-400 border-y border-gray-800 py-4 my-6">
+                    <div class="border-r border-gray-800">
+                        <div class="text-blue-400 font-bold text-lg">V21.0</div>
+                        <div>KERNEL VERSION</div>
+                    </div>
+                    <div>
+                        <div class="text-emerald-400 font-bold text-lg">READY</div>
+                        <div>SYSTEM STATUS</div>
+                    </div>
+                </div>
+
+                <button @click="launchSystem" class="btn-launch w-full py-4 rounded-xl font-bold text-sm tracking-[0.2em] text-white uppercase group">
+                    <span v-if="!loading">Initialize System</span>
+                    <span v-else>Loading Module...</span>
+                </button>
+            </div>
+            
+            <p class="mt-6 text-gray-600 text-[9px] uppercase tracking-widest">
+                No Login Required • Session Isolated
+            </p>
+        </div>
+
+        <div v-else class="w-full h-full flex flex-col bg-white dark:bg-[#0f0f0f]" key="app">
+            
+            <div class="h-14 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6 bg-white/80 dark:bg-black/80 backdrop-blur-md z-20">
+                <div class="flex items-center space-x-3">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span class="font-bold text-xs tracking-widest text-gray-800 dark:text-gray-200">MINDFORGE WORKSPACE</span>
+                </div>
+                
+                <button @click="isLaunched = false" class="text-[10px] font-bold text-red-500 hover:text-red-400 border border-red-500/20 px-3 py-1.5 rounded hover:bg-red-500/10 transition uppercase">
+                    Exit Terminal
+                </button>
+            </div>
+
+            <div class="flex-1 relative w-full h-full overflow-hidden">
+                <iframe 
+                    src="https://schedule-ai-daixuan.streamlit.app/?embed=true&dark_theme=true" 
+                    class="w-full h-full border-none"
+                    allow="clipboard-read; clipboard-write"
+                ></iframe>
+            </div>
+        </div>
+    </transition>
+
+</div>
+
+<script>
+    const { createApp, ref } = Vue
+
+    createApp({
+        setup() {
+            const isLaunched = ref(false);
+            const loading = ref(false);
+
+            const launchSystem = () => {
+                loading.value = true;
+                // 模拟一个极短的系统初始化过程，增加仪式感
+                setTimeout(() => {
+                    isLaunched.value = true;
+                    loading.value = false;
+                }, 800);
+            }
+
+            return { isLaunched, launchSystem, loading }
+        }
+    }).mount('#app')
+</script>
+</body>
+</html>
