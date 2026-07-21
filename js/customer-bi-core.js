@@ -228,6 +228,231 @@
         };
     };
 
+    const metricDate = (item) => item?.business_date || item?.businessDate || '';
+
+    const normalizeStoredMetric = (item) => {
+        const agent = item?.bi_agents || item?.agent || {};
+        const agentId = item?.agent_id || item?.agentId || agent.id || null;
+        const sourceAccount = cleanText(
+            item?.source_account || item?.sourceAccount || agent.source_account || agent.sourceAccount || agentId
+        );
+        const displayName = cleanText(
+            item?.display_name || item?.displayName || agent.display_name || agent.displayName || sourceAccount
+        );
+        const numberOrNull = (...values) => {
+            const value = values.find((candidate) => candidate !== undefined && candidate !== null && candidate !== '');
+            return value === undefined ? null : toNumber(value);
+        };
+        return {
+            businessDate: metricDate(item),
+            agentId,
+            sourceAccount,
+            displayName,
+            team: cleanText(item?.team || agent.team),
+            platform: cleanText(item?.platform || agent.platform),
+            goodCount: numberOrNull(item?.good_count, item?.goodCount),
+            badCount: numberOrNull(item?.bad_count, item?.badCount),
+            inquiryCount: numberOrNull(item?.inquiry_count, item?.inquiryCount),
+            orderCount: numberOrNull(item?.order_count, item?.orderCount),
+            avgResponseSeconds: numberOrNull(item?.avg_response_seconds, item?.avgResponseSeconds)
+        };
+    };
+
+    const uniqueBusinessDates = (dates) => [...new Set((dates || []).filter(Boolean))].sort();
+
+    const aggregateAgentMetrics = (metrics, dates) => {
+        const dateSet = new Set(uniqueBusinessDates(dates));
+        const groups = new Map();
+
+        (metrics || []).map(normalizeStoredMetric).forEach((item) => {
+            if (!item.businessDate || (dateSet.size && !dateSet.has(item.businessDate))) return;
+            const key = item.agentId || item.sourceAccount.toLocaleLowerCase('zh-CN');
+            if (!key) return;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    agentId: item.agentId,
+                    sourceAccount: item.sourceAccount,
+                    displayName: item.displayName,
+                    team: item.team,
+                    platform: item.platform,
+                    dates: new Set(),
+                    goodCount: 0,
+                    badCount: 0,
+                    inquiryCount: 0,
+                    orderCount: 0,
+                    ratingDays: 0,
+                    conversionDays: 0,
+                    responses: []
+                });
+            }
+            const group = groups.get(key);
+            group.dates.add(item.businessDate);
+            if (item.goodCount != null && item.badCount != null) {
+                group.goodCount += item.goodCount;
+                group.badCount += item.badCount;
+                group.ratingDays += 1;
+            }
+            if (item.inquiryCount != null && item.orderCount != null) {
+                group.inquiryCount += item.inquiryCount;
+                group.orderCount += item.orderCount;
+                group.conversionDays += 1;
+            }
+            if (item.avgResponseSeconds != null) group.responses.push(item.avgResponseSeconds);
+        });
+
+        return [...groups.values()].map((group) => {
+            const metric = calculateAgent({
+                agentId: group.agentId,
+                sourceAccount: group.sourceAccount,
+                displayName: group.displayName,
+                team: group.team,
+                platform: group.platform,
+                goodCount: group.ratingDays ? group.goodCount : null,
+                badCount: group.ratingDays ? group.badCount : null,
+                inquiryCount: group.conversionDays ? group.inquiryCount : null,
+                orderCount: group.conversionDays ? group.orderCount : null,
+                avgResponseSeconds: group.responses.length
+                    ? group.responses.reduce((sum, value) => sum + value, 0) / group.responses.length
+                    : null,
+                warnings: []
+            });
+            return {
+                ...metric,
+                participationDays: group.dates.size,
+                ratingParticipationDays: group.ratingDays,
+                conversionParticipationDays: group.conversionDays,
+                responseParticipationDays: group.responses.length,
+                businessDates: [...group.dates].sort()
+            };
+        });
+    };
+
+    const aggregateTeamMetrics = (metrics, dates) => {
+        const dateSet = new Set(uniqueBusinessDates(dates));
+        const rows = (metrics || []).map(normalizeStoredMetric).filter((item) =>
+            item.businessDate && (!dateSet.size || dateSet.has(item.businessDate))
+        );
+        const validRatings = rows.filter((item) => item.goodCount != null && item.badCount != null);
+        const validConversions = rows.filter((item) => item.inquiryCount != null && item.orderCount != null);
+        const responses = rows.map((item) => item.avgResponseSeconds).filter((value) => value != null);
+        const goodCount = validRatings.reduce((sum, item) => sum + item.goodCount, 0);
+        const badCount = validRatings.reduce((sum, item) => sum + item.badCount, 0);
+        const inquiryCount = validConversions.reduce((sum, item) => sum + item.inquiryCount, 0);
+        const orderCount = validConversions.reduce((sum, item) => sum + item.orderCount, 0);
+        const aggregate = calculateAgent({
+            sourceAccount: 'team',
+            displayName: '团队',
+            goodCount: validRatings.length ? goodCount : null,
+            badCount: validRatings.length ? badCount : null,
+            inquiryCount: validConversions.length ? inquiryCount : null,
+            orderCount: validConversions.length ? orderCount : null,
+            avgResponseSeconds: responses.length
+                ? responses.reduce((sum, value) => sum + value, 0) / responses.length
+                : null,
+            warnings: []
+        });
+        const people = aggregateAgentMetrics(rows, dates);
+        return {
+            ...aggregate,
+            participantCount: people.length,
+            businessDayCount: uniqueBusinessDates(rows.map((item) => item.businessDate)).length,
+            personDayCount: rows.length,
+            avgTotalScore: aggregate.totalScore,
+            allTargetsCount: people.filter((item) =>
+                item.satisfactionRate >= RULES.targets.satisfaction &&
+                item.conversionRate >= RULES.targets.conversion &&
+                item.avgResponseSeconds <= RULES.targets.responseSeconds
+            ).length
+        };
+    };
+
+    const previousMonthKey = (monthKey) => {
+        const [year, month] = monthKey.split('-').map(Number);
+        const date = new Date(Date.UTC(year, month - 2, 1));
+        return date.toISOString().slice(0, 7);
+    };
+
+    const resolvePeriodScope = (dates, period = 'yesterday', baseDate = null) => {
+        const sorted = uniqueBusinessDates(dates).filter((date) => !baseDate || date <= baseDate);
+        if (!sorted.length) {
+            return {
+                period,
+                baseDate: null,
+                currentDates: [],
+                previousDates: [],
+                comparisonComplete: false,
+                minimumParticipationDays: period === 'last7' ? 2 : period === 'month' ? 3 : 1,
+                provisional: false
+            };
+        }
+        const latest = baseDate && sorted.includes(baseDate) ? baseDate : sorted.at(-1);
+        const latestIndex = sorted.indexOf(latest);
+        if (period === 'last7') {
+            const currentStart = Math.max(0, latestIndex - 6);
+            const currentDates = sorted.slice(currentStart, latestIndex + 1);
+            const previousDates = sorted.slice(Math.max(0, currentStart - 7), currentStart);
+            return {
+                period,
+                baseDate: latest,
+                currentDates,
+                previousDates,
+                comparisonComplete: previousDates.length === 7,
+                minimumParticipationDays: 2,
+                provisional: false
+            };
+        }
+        if (period === 'month') {
+            const monthKey = latest.slice(0, 7);
+            const cutoffDay = Number(latest.slice(8, 10));
+            const priorKey = previousMonthKey(monthKey);
+            const currentDates = sorted.filter((date) => date.startsWith(monthKey));
+            const previousDates = sorted.filter((date) =>
+                date.startsWith(priorKey) && Number(date.slice(8, 10)) <= cutoffDay
+            );
+            return {
+                period,
+                baseDate: latest,
+                monthKey,
+                previousMonthKey: priorKey,
+                currentDates,
+                previousDates,
+                comparisonComplete: previousDates.length > 0,
+                minimumParticipationDays: Math.max(3, Math.ceil(currentDates.length * 0.5)),
+                provisional: currentDates.length > 0 && currentDates.length <= 2
+            };
+        }
+        return {
+            period: 'yesterday',
+            baseDate: latest,
+            currentDates: [latest],
+            previousDates: latestIndex > 0 ? [sorted[latestIndex - 1]] : [],
+            comparisonComplete: latestIndex > 0,
+            minimumParticipationDays: 1,
+            provisional: false
+        };
+    };
+
+    const buildPeriodRanking = (metrics, dates, minimumParticipationDays = 1, provisional = false) => {
+        const allRows = rankAgents(aggregateAgentMetrics(metrics, dates)).map((item) => ({
+            ...item,
+            isQualified: item.participationDays >= minimumParticipationDays,
+            isProvisional: provisional
+        }));
+        const formalRows = provisional
+            ? []
+            : rankAgents(allRows.filter((item) => item.isQualified)).map((item) => ({ ...item, formalRankPosition: item.rankPosition }));
+        const formalRankByKey = new Map(formalRows.map((item) => [item.agentId || item.sourceAccount, item.formalRankPosition]));
+        return {
+            allRows: allRows.map((item) => ({
+                ...item,
+                formalRankPosition: formalRankByKey.get(item.agentId || item.sourceAccount) || null
+            })),
+            formalRows,
+            minimumParticipationDays,
+            provisional
+        };
+    };
+
     const startOfISOWeek = (dateText) => {
         const date = new Date(`${dateText}T00:00:00Z`);
         const day = date.getUTCDay() || 7;
@@ -268,6 +493,12 @@
         calculateAgent,
         rankAgents,
         calculateTeam,
+        normalizeStoredMetric,
+        uniqueBusinessDates,
+        aggregateAgentMetrics,
+        aggregateTeamMetrics,
+        resolvePeriodScope,
+        buildPeriodRanking,
         aggregateHistory
     };
 });
