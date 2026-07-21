@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">Dashboard 方案 A：管理驾驶舱</title><desc id="desc">高信息密度桌面 Dashboard，包含顶部筛选、六项 KPI、趋势、排行榜、达标矩阵、提醒和人员卡片。</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07111f"/><stop offset="1" stop-color="#111b31"/></linearGradient><linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#06b6d4"/></linearGradient><style>text{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;fill:#e7eefb}.title{font-size:25px;font-weight:700}.small{font-size:13px;fill:#90a3bd}.label{font-size:15px;font-weight:700}.value{font-size:26px;font-weight:700}.panel{fill:#121f36;stroke:#2b4163;stroke-width:1.5}.metric{fill:#162641;stroke:#31496c}.primary{fill:url(#accent)}.line{fill:none;stroke:#38bdf8;stroke-width:4}.line2{fill:none;stroke:#34d399;stroke-width:3}.grid{stroke:#293e5e;stroke-width:1}.good{fill:#10b981}.warn{fill:#f59e0b}.bad{fill:#ef4444}.chip{fill:#223552}.person{fill:#172943;stroke:#2d466a}</style></defs>
+  <rect width="1600" height="1120" fill="url(#bg)"/>
+  <rect x="28" y="24" width="1544" height="82" rx="18" class="panel"/>
+  <text x="56" y="61" class="title">客服绩效驾驶舱</text><text x="56" y="87" class="small">2026-07-22 · 官方快照</text>
+  <rect x="680" y="43" width="190" height="44" rx="12" class="chip"/><text x="775" y="70" text-anchor="middle" class="label">今日 / 周 / 月</text>
+  <rect x="890" y="43" width="260" height="44" rx="12" class="chip"/><text x="1020" y="70" text-anchor="middle" class="label">商丘客服组 · 18 人</text>
+  <rect x="1170" y="43" width="190" height="44" rx="12" class="chip"/><text x="1265" y="70" text-anchor="middle" class="label">选择人员名单</text>
+  <rect x="1380" y="43" width="160" height="44" rx="12" class="primary"/><text x="1460" y="70" text-anchor="middle" class="label">上传数据</text>
+
+  <g transform="translate(28 126)">
+<g><rect width="240" height="118" rx="18" class="primary"/><text x="20" y="34" class="small" style="fill:#e6fbff">团队综合健康度</text><text x="20" y="76" class="value">86.4</text><text x="20" y="101" class="small" style="fill:#e6fbff">较昨日 +2.8</text></g>
+    <g transform="translate(260)"><rect width="240" height="118" rx="18" class="metric"/><text x="20" y="34" class="small">满意率</text><text x="20" y="76" class="value">91.8%</text><text x="20" y="101" class="small">目标 90%</text></g>
+    <g transform="translate(520)"><rect width="240" height="118" rx="18" class="metric"/><text x="20" y="34" class="small">平均响应时长</text><text x="20" y="76" class="value">19.6 秒</text><text x="20" y="101" class="small">简单平均 · 未加权</text></g>
+    <g transform="translate(780)"><rect width="240" height="118" rx="18" class="metric"/><text x="20" y="34" class="small">转化率</text><text x="20" y="76" class="value">38.2%</text><text x="20" y="101" class="small">目标 35%</text></g>
+    <g transform="translate(1040)"><rect width="240" height="118" rx="18" class="metric"/><text x="20" y="34" class="small">达标人数</text><text x="20" y="76" class="value">14 / 18</text><text x="20" y="101" class="small">三项全部达标</text></g>
+    <g transform="translate(1300)"><rect width="244" height="118" rx="18" class="metric"/><text x="20" y="34" class="small">今日第一名</text><text x="20" y="76" class="value">售后楠楠</text><text x="20" y="101" class="small">综合得分 96.2</text></g>
+  </g>
+
+  <rect x="28" y="264" width="990" height="340" rx="20" class="panel"/><text x="56" y="302" class="label">团队指标趋势</text><text x="840" y="302" class="small">● 满意率　◆ 均响　▲ 转化率</text>
+  <line x1="75" y1="550" x2="970" y2="550" class="grid"/><line x1="75" y1="480" x2="970" y2="480" class="grid"/><line x1="75" y1="410" x2="970" y2="410" class="grid"/><line x1="75" y1="340" x2="970" y2="340" class="grid"/>
+  <path d="M80 490 C160 470 190 390 270 415 S390 460 470 395 S590 350 670 370 S790 450 875 365 S930 345 970 330" class="line"/>
+  <path d="M80 520 C170 500 220 535 300 480 S430 450 520 470 S650 520 735 450 S850 420 970 435" class="line2"/>
+  <text x="80" y="578" class="small">07/15</text><text x="925" y="578" class="small">07/22</text>
+
+  <rect x="1038" y="264" width="534" height="340" rx="20" class="panel"/><text x="1066" y="302" class="label">综合排行榜 · Top 5</text>
+  <rect x="1064" y="320" width="480" height="36" rx="10" class="chip"/><text x="1090" y="344" class="small">综合　满意率　均响　转化率</text>
+  <g class="small"><text x="1072" y="390">01</text><text x="1120" y="390" class="label">售后楠楠</text><rect x="1270" y="375" width="210" height="14" rx="7" fill="#1f3654"/><rect x="1270" y="375" width="196" height="14" rx="7" class="good"/><text x="1505" y="390">96.2</text>
+  <text x="1072" y="434">02</text><text x="1120" y="434" class="label">等等</text><rect x="1270" y="419" width="210" height="14" rx="7" fill="#1f3654"/><rect x="1270" y="419" width="187" height="14" rx="7" fill="#38bdf8"/><text x="1505" y="434">92.8</text>
+  <text x="1072" y="478">03</text><text x="1120" y="478" class="label">售后小舒</text><rect x="1270" y="463" width="210" height="14" rx="7" fill="#1f3654"/><rect x="1270" y="463" width="177" height="14" rx="7" fill="#38bdf8"/><text x="1505" y="478">89.4</text>
+  <text x="1072" y="522">04</text><text x="1120" y="522" class="label">桂花</text><rect x="1270" y="507" width="210" height="14" rx="7" fill="#1f3654"/><rect x="1270" y="507" width="166" height="14" rx="7" class="warn"/><text x="1505" y="522">84.1</text>
+  <text x="1072" y="566">05</text><text x="1120" y="566" class="label">竹青</text><rect x="1270" y="551" width="210" height="14" rx="7" fill="#1f3654"/><rect x="1270" y="551" width="158" height="14" rx="7" class="warn"/><text x="1505" y="566">80.6</text></g>
+
+  <rect x="28" y="624" width="990" height="230" rx="20" class="panel"/><text x="56" y="662" class="label">KPI 达标矩阵 · 18 人</text>
+  <g class="small"><text x="60" y="706">满意率</text><text x="60" y="752">均响</text><text x="60" y="798">转化率</text></g>
+  <g transform="translate(145 684)">
+    <g fill="#10b981"><circle cx="20" cy="16" r="11"/><circle cx="65" cy="16" r="11"/><circle cx="110" cy="16" r="11"/><circle cx="155" cy="16" r="11"/><circle cx="200" cy="16" r="11"/><circle cx="245" cy="16" r="11"/><circle cx="290" cy="16" r="11"/><circle cx="335" cy="16" r="11"/><circle cx="380" cy="16" r="11"/><circle cx="425" cy="16" r="11"/><circle cx="470" cy="16" r="11"/><circle cx="515" cy="16" r="11"/><circle cx="560" cy="16" r="11"/><circle cx="605" cy="16" r="11"/></g><g fill="#ef4444"><circle cx="650" cy="16" r="11"/><circle cx="695" cy="16" r="11"/><circle cx="740" cy="16" r="11"/><circle cx="785" cy="16" r="11"/></g>
+    <g transform="translate(0 46)" fill="#10b981"><circle cx="20" cy="16" r="11"/><circle cx="65" cy="16" r="11"/><circle cx="110" cy="16" r="11"/><circle cx="155" cy="16" r="11"/><circle cx="200" cy="16" r="11"/><circle cx="245" cy="16" r="11"/><circle cx="290" cy="16" r="11"/><circle cx="335" cy="16" r="11"/><circle cx="380" cy="16" r="11"/><circle cx="425" cy="16" r="11"/><circle cx="470" cy="16" r="11"/></g><g transform="translate(0 46)" fill="#f59e0b"><circle cx="515" cy="16" r="11"/><circle cx="560" cy="16" r="11"/><circle cx="605" cy="16" r="11"/></g><g transform="translate(0 46)" fill="#ef4444"><circle cx="650" cy="16" r="11"/><circle cx="695" cy="16" r="11"/><circle cx="740" cy="16" r="11"/><circle cx="785" cy="16" r="11"/></g>
+    <g transform="translate(0 92)" fill="#10b981"><circle cx="20" cy="16" r="11"/><circle cx="65" cy="16" r="11"/><circle cx="110" cy="16" r="11"/><circle cx="155" cy="16" r="11"/><circle cx="200" cy="16" r="11"/><circle cx="245" cy="16" r="11"/><circle cx="290" cy="16" r="11"/><circle cx="335" cy="16" r="11"/><circle cx="380" cy="16" r="11"/><circle cx="425" cy="16" r="11"/><circle cx="470" cy="16" r="11"/><circle cx="515" cy="16" r="11"/></g><g transform="translate(0 92)" fill="#f59e0b"><circle cx="560" cy="16" r="11"/><circle cx="605" cy="16" r="11"/></g><g transform="translate(0 92)" fill="#ef4444"><circle cx="650" cy="16" r="11"/><circle cx="695" cy="16" r="11"/><circle cx="740" cy="16" r="11"/><circle cx="785" cy="16" r="11"/></g>
+  </g>
+  <text x="56" y="830" class="small">● 达标　● 接近目标　● 未达标　（未参与人员不显示）</text>
+
+  <rect x="1038" y="624" width="534" height="230" rx="20" class="panel"/><text x="1066" y="662" class="label">今日洞察</text>
+  <rect x="1064" y="682" width="480" height="46" rx="12" fill="#143a35"/><text x="1084" y="711" class="small">亮点　售后楠楠三项全部达标，连续第 3 次第一</text>
+  <rect x="1064" y="738" width="480" height="46" rx="12" fill="#3b2c18"/><text x="1084" y="767" class="small">提醒　4 人满意率未达标，山茶还需 10 个好评</text>
+  <rect x="1064" y="794" width="480" height="46" rx="12" fill="#17304c"/><text x="1084" y="823" class="small">黑马　桂花较上个参与日上升 5 名</text>
+
+  <rect x="28" y="874" width="1544" height="218" rx="20" class="panel"/><text x="56" y="912" class="label">人员卡片 · 点击进入个人详情</text>
+  <g transform="translate(56 936)"><g><rect width="280" height="125" rx="16" class="person"/><circle cx="42" cy="38" r="22" fill="#2563eb"/><text x="78" y="36" class="label">售后楠楠</text><text x="78" y="58" class="small">第 1 名 · 96.2</text><text x="20" y="94" class="small">满意 100%　均响 13s　转化 30.8%</text></g><g transform="translate(300)"><rect width="280" height="125" rx="16" class="person"/><circle cx="42" cy="38" r="22" fill="#06b6d4"/><text x="78" y="36" class="label">等等</text><text x="78" y="58" class="small">第 2 名 · 92.8</text><text x="20" y="94" class="small">满意 100%　均响 13s　转化 62.5%</text></g><g transform="translate(600)"><rect width="280" height="125" rx="16" class="person"/><circle cx="42" cy="38" r="22" fill="#10b981"/><text x="78" y="36" class="label">售后小舒</text><text x="78" y="58" class="small">第 3 名 · 89.4</text><text x="20" y="94" class="small">满意 91.3%　均响 15s　转化 31%</text></g><g transform="translate(900)"><rect width="280" height="125" rx="16" class="person"/><text x="20" y="40" class="label">查看更多人员</text><text x="20" y="70" class="small">其余 15 人 · 卡片 / 明细切换</text></g></g>
+</svg>

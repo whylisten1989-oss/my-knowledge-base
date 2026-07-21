@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="920" viewBox="0 0 1800 920" role="img" aria-labelledby="title desc">
+  <title id="title">客服绩效 BI Excel 导入数据流</title>
+  <desc id="desc">从上传 Excel、选择日期、选择人员、字段映射、校验、计算、预览、确认入库到历史快照、排名荣誉和 Dashboard。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7f9fd"/><stop offset="1" stop-color="#edf3fb"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#1e3a5f" flood-opacity=".14"/></filter>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto"><path d="M0,0 L11,5.5 L0,11 Z" fill="#3b82f6"/></marker>
+    <style>
+      text{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;fill:#18324f}.title{font-size:34px;font-weight:700}.sub{font-size:16px;fill:#61748c}.step{fill:#fff;stroke:#bdd0e8;stroke-width:2}.select{fill:#eff6ff;stroke:#3b82f6;stroke-width:3}.confirm{fill:#ecfdf5;stroke:#10b981;stroke-width:3}.num{fill:#2563eb}.numText{font-size:16px;font-weight:700;fill:#fff}.label{font-size:20px;font-weight:700}.small{font-size:14px;fill:#657890}.arrow{fill:none;stroke:#3b82f6;stroke-width:3;marker-end:url(#arrow)}.audit{fill:#fff7ed;stroke:#f59e0b;stroke-width:2;stroke-dasharray:7 5}
+    </style>
+  </defs>
+  <rect width="1800" height="920" fill="url(#bg)"/>
+  <text x="70" y="70" class="title">Excel 导入与确认数据流</text>
+  <text x="70" y="104" class="sub">人员范围先于 KPI 计算；正式快照只在二次确认后生成</text>
+
+  <g filter="url(#shadow)">
+    <g transform="translate(70 170)"><rect width="230" height="135" rx="22" class="step"/><circle cx="32" cy="30" r="19" class="num"/><text x="32" y="36" text-anchor="middle" class="numText">1</text><text x="115" y="66" text-anchor="middle" class="label">上传 Excel</text><text x="115" y="98" text-anchor="middle" class="small">文件名 · 大小 · 哈希</text></g>
+    <g transform="translate(365 170)"><rect width="230" height="135" rx="22" class="step"/><circle cx="32" cy="30" r="19" class="num"/><text x="32" y="36" text-anchor="middle" class="numText">2</text><text x="115" y="66" text-anchor="middle" class="label">选择日期</text><text x="115" y="98" text-anchor="middle" class="small">自动识别 + 人工确认</text></g>
+    <g transform="translate(660 170)"><rect width="260" height="135" rx="22" class="select"/><circle cx="32" cy="30" r="19" class="num"/><text x="32" y="36" text-anchor="middle" class="numText">3</text><text x="130" y="60" text-anchor="middle" class="label">选择纳入人员</text><text x="130" y="90" text-anchor="middle" class="small">默认名单 · 搜索 · 反选</text><text x="130" y="114" text-anchor="middle" class="small">新人 / 缺失 / 停用提示</text></g>
+    <g transform="translate(985 170)"><rect width="230" height="135" rx="22" class="step"/><circle cx="32" cy="30" r="19" class="num"/><text x="32" y="36" text-anchor="middle" class="numText">4</text><text x="115" y="66" text-anchor="middle" class="label">字段映射</text><text x="115" y="98" text-anchor="middle" class="small">标准列 / 忽略列</text></g>
+    <g transform="translate(1280 170)"><rect width="230" height="135" rx="22" class="step"/><circle cx="32" cy="30" r="19" class="num"/><text x="32" y="36" text-anchor="middle" class="numText">5</text><text x="115" y="66" text-anchor="middle" class="label">数据校验</text><text x="115" y="98" text-anchor="middle" class="small">身份 · 类型 · 重复 · 冲突</text></g>
+  </g>
+  <path d="M300 237 H365" class="arrow"/><path d="M595 237 H660" class="arrow"/><path d="M920 237 H985" class="arrow"/><path d="M1215 237 H1280" class="arrow"/>
+
+  <path d="M1395 305 V390 H1490" class="arrow"/>
+  <g filter="url(#shadow)">
+    <g transform="translate(1280 430)"><rect width="230" height="135" rx="22" class="step"/><circle cx="32" cy="30" r="19" class="num"/><text x="32" y="36" text-anchor="middle" class="numText">6</text><text x="115" y="66" text-anchor="middle" class="label">KPI 计算</text><text x="115" y="98" text-anchor="middle" class="small">仅当前勾选人员</text></g>
+    <g transform="translate(985 430)"><rect width="230" height="135" rx="22" class="select"/><circle cx="32" cy="30" r="19" class="num"/><text x="32" y="36" text-anchor="middle" class="numText">7</text><text x="115" y="66" text-anchor="middle" class="label">校验预览</text><text x="115" y="95" text-anchor="middle" class="small">团队指标 · 前三名 · 荣誉</text></g>
+    <g transform="translate(660 430)"><rect width="260" height="135" rx="22" class="confirm"/><circle cx="32" cy="30" r="19" fill="#059669"/><text x="32" y="36" text-anchor="middle" class="numText">8</text><text x="130" y="60" text-anchor="middle" class="label">确认入库</text><text x="130" y="89" text-anchor="middle" class="small">规则版本 · 人员范围 · revision</text><text x="130" y="114" text-anchor="middle" class="small">二次确认 / 原子事务</text></g>
+    <g transform="translate(365 430)"><rect width="230" height="135" rx="22" class="confirm"/><circle cx="32" cy="30" r="19" fill="#059669"/><text x="32" y="36" text-anchor="middle" class="numText">9</text><text x="115" y="66" text-anchor="middle" class="label">历史快照</text><text x="115" y="98" text-anchor="middle" class="small">不可变 KPI / 人员范围</text></g>
+    <g transform="translate(70 430)"><rect width="230" height="135" rx="22" class="confirm"/><circle cx="32" cy="30" r="19" fill="#059669"/><text x="32" y="36" text-anchor="middle" class="numText">10</text><text x="115" y="66" text-anchor="middle" class="label">排名与荣誉</text><text x="115" y="98" text-anchor="middle" class="small">官方榜单 / 参与人数</text></g>
+  </g>
+  <path d="M1280 497 H1215" class="arrow"/><path d="M985 497 H920" class="arrow"/><path d="M660 497 H595" class="arrow"/><path d="M365 497 H300" class="arrow"/>
+
+  <g transform="translate(660 700)" filter="url(#shadow)"><rect width="500" height="130" rx="24" class="confirm"/><circle cx="42" cy="34" r="21" fill="#059669"/><text x="42" y="41" text-anchor="middle" class="numText">11</text><text x="250" y="58" text-anchor="middle" class="label">Dashboard 展示</text><text x="250" y="90" text-anchor="middle" class="small">官方快照 · 动态分析 · 日/周/月 · 个人详情</text></g>
+  <path d="M185 565 V765 H660" class="arrow"/>
+
+  <g transform="translate(1280 690)"><rect width="430" height="145" rx="20" class="audit"/><text x="215" y="40" text-anchor="middle" class="label">解析旁路：忽略字段</text><text x="215" y="73" text-anchor="middle" class="small">微信小店均响 / 空白列 / 非核心运营与金额列</text><text x="215" y="103" text-anchor="middle" class="small">保留在 ignored_payload 审计，不阻断主流程</text></g>
+  <path d="M1100 305 V365 H1495 V690" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#arrow)"/>
+</svg>
+

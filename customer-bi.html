@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark light">
+    <title>客服绩效 BI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/customer-bi.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Microsoft YaHei"', '"PingFang SC"', 'sans-serif'] }
+                }
+            }
+        };
+    </script>
+</head>
+<body>
+<div id="app" v-cloak>
+    <header class="bi-topbar">
+        <div class="brand-block">
+            <a class="brand-mark" href="customer-bi.html" aria-label="客服绩效 BI 首页">CS</a>
+            <div>
+                <div class="brand-title">客服绩效 BI</div>
+                <div class="brand-subtitle">Customer Service Performance</div>
+            </div>
+        </div>
+        <nav class="top-nav" aria-label="主导航">
+            <button :class="{ active: view === 'dashboard' }" @click="openDashboard">Dashboard</button>
+            <button :class="{ active: view === 'import' }" @click="openImport">导入数据</button>
+            <a href="index.html">返回 MindForge</a>
+        </nav>
+        <button class="account-button" @click="showAuth = true">
+            <span :class="['status-dot', session ? 'online' : 'offline']"></span>
+            {{ session ? (session.user.email || '已登录') : '登录后保存' }}
+        </button>
+    </header>
+
+    <main>
+        <section v-if="view === 'dashboard'" class="dashboard-shell page-enter">
+            <div class="dashboard-toolbar">
+                <div>
+                    <div class="eyebrow">MANAGEMENT COCKPIT</div>
+                    <h1>客服绩效驾驶舱</h1>
+                    <p>{{ dashboardDate || '暂无官方快照' }} · {{ currentTeam.participantCount }} 人参与排名</p>
+                </div>
+                <div class="toolbar-actions">
+                    <label class="compact-field">
+                        <span>业务日期</span>
+                        <select v-model="dashboardDate" :disabled="!availableDates.length">
+                            <option v-for="date in availableDates" :key="date" :value="date">{{ date }}</option>
+                        </select>
+                    </label>
+                    <button class="button button-ghost" @click="loadDashboard" :disabled="dashboardLoading">刷新</button>
+                    <button class="button button-primary" @click="openImport">上传数据</button>
+                </div>
+            </div>
+
+            <div v-if="dashboardLoading" class="dashboard-skeleton" aria-label="Dashboard 加载中">
+                <div v-for="index in 12" :key="index" class="skeleton-block"></div>
+            </div>
+
+            <template v-else-if="currentMetrics.length">
+                <div class="kpi-grid stagger-enter">
+                    <article class="kpi-card kpi-card-primary">
+                        <span>团队综合健康度</span>
+                        <animated-number :value="currentTeam.avgTotalScore" :decimals="1"></animated-number>
+                        <small>满分口径 110 · 三项加权</small>
+                    </article>
+                    <article class="kpi-card">
+                        <span>满意率</span>
+                        <animated-number :value="percentValue(currentTeam.satisfactionRate)" suffix="%" :decimals="1"></animated-number>
+                        <small>目标 90% · 权重 50%</small>
+                    </article>
+                    <article class="kpi-card">
+                        <span>工作时间均响</span>
+                        <animated-number :value="currentTeam.avgResponseSeconds" suffix=" 秒" :decimals="1"></animated-number>
+                        <small>简单平均 · 未按会话量加权</small>
+                    </article>
+                    <article class="kpi-card">
+                        <span>转化率</span>
+                        <animated-number :value="percentValue(currentTeam.conversionRate)" suffix="%" :decimals="1"></animated-number>
+                        <small>目标 30% · 权重 25%</small>
+                    </article>
+                    <article class="kpi-card">
+                        <span>三项达标人数</span>
+                        <animated-number :value="currentTeam.allTargetsCount" :decimals="0"></animated-number>
+                        <small>共 {{ currentTeam.participantCount }} 人参与</small>
+                    </article>
+                    <article class="kpi-card">
+                        <span>今日第一名</span>
+                        <strong class="name-value">{{ rankedByTotal[0]?.displayName || '—' }}</strong>
+                        <small>综合得分 {{ formatScore(rankedByTotal[0]?.totalScore) }}</small>
+                    </article>
+                </div>
+
+                <div class="main-visual-grid">
+                    <article class="cockpit-panel trend-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>团队指标趋势</h2>
+                                <p>满意率、工作时间均响、转化率</p>
+                            </div>
+                            <div class="segmented" aria-label="趋势周期">
+                                <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: trendPeriod === mode.value }" @click="trendPeriod = mode.value">{{ mode.label }}</button>
+                            </div>
+                        </div>
+                        <div ref="trendChartEl" class="chart chart-main" role="img" aria-label="团队 KPI 趋势图"></div>
+                    </article>
+
+                    <article class="cockpit-panel ranking-panel">
+                        <div class="panel-header ranking-heading">
+                            <div><h2>综合排行榜</h2><p>前 {{ Math.min(10, rankingRows.length) }} 名</p></div>
+                            <span class="scope-pill">{{ currentMetrics.length }} 人</span>
+                        </div>
+                        <div class="ranking-tabs">
+                            <button v-for="metric in rankingOptions" :key="metric.value" :class="{ active: rankingMetric === metric.value }" @click="rankingMetric = metric.value">{{ metric.label }}</button>
+                        </div>
+                        <transition-group name="rank-list" tag="ol" class="ranking-list">
+                            <li v-for="(person, index) in rankingRows.slice(0, 10)" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
+                                <span class="rank-index">{{ index + 1 }}</span>
+                                <span class="rank-name">{{ person.displayName }}</span>
+                                <span v-if="rankingMetric === 'total'" :class="['rank-change', rankChangeClass(person)]">{{ rankChangeText(person) }}</span>
+                                <span class="rank-value">{{ rankingValue(person) }}</span>
+                            </li>
+                        </transition-group>
+                    </article>
+                </div>
+
+                <div class="secondary-grid">
+                    <article class="cockpit-panel matrix-panel">
+                        <div class="panel-header"><div><h2>KPI 达标矩阵</h2><p>只包含当日参与人员</p></div></div>
+                        <div class="matrix-scroll">
+                            <div class="matrix-row matrix-header"><span>人员</span><span>满意</span><span>均响</span><span>转化</span></div>
+                            <div v-for="person in rankedByTotal" :key="person.agentId || person.sourceAccount" class="matrix-row" @click="openAgent(person)">
+                                <span>{{ person.displayName }}</span>
+                                <i :class="targetClass(person.satisfactionRate >= rules.targets.satisfaction)"></i>
+                                <i :class="targetClass(person.avgResponseSeconds <= rules.targets.responseSeconds)"></i>
+                                <i :class="targetClass(person.conversionRate >= rules.targets.conversion)"></i>
+                            </div>
+                        </div>
+                    </article>
+                    <article class="cockpit-panel insight-panel">
+                        <div class="panel-header"><div><h2>今日洞察</h2><p>由当前官方快照生成</p></div></div>
+                        <div class="insight insight-good"><b>亮点</b><span>{{ topInsight }}</span></div>
+                        <div class="insight insight-risk"><b>风险</b><span>{{ riskInsight }}</span></div>
+                        <div class="insight insight-move"><b>排名</b><span>{{ movementInsight }}</span></div>
+                    </article>
+                </div>
+
+                <article class="cockpit-panel people-panel">
+                    <div class="panel-header">
+                        <div><h2>人员卡片</h2><p>点击查看个人趋势与历史排名</p></div>
+                        <span class="scope-pill">{{ currentMetrics.length }} 人</span>
+                    </div>
+                    <div class="people-grid">
+                        <button v-for="person in rankedByTotal" :key="person.agentId || person.sourceAccount" class="person-card" @click="openAgent(person)">
+                            <span class="avatar">{{ person.displayName.slice(0, 1) }}</span>
+                            <span class="person-copy"><b>{{ person.displayName }}</b><small>第 {{ person.rankPosition }} 名 · {{ formatScore(person.totalScore) }}</small></span>
+                            <span class="person-metrics">满意 {{ formatPercent(person.satisfactionRate) }}<br>均响 {{ formatSeconds(person.avgResponseSeconds) }} · 转化 {{ formatPercent(person.conversionRate) }}</span>
+                        </button>
+                    </div>
+                </article>
+            </template>
+
+            <div v-else class="dashboard-empty cockpit-panel">
+                <div class="empty-icon">↗</div>
+                <h2>还没有可展示的官方快照</h2>
+                <p v-if="!session">你可以先解析 Excel；确认保存和读取历史数据时再登录。</p>
+                <p v-else>上传当天 Excel，选择人员并确认保存后，这里会显示 Dashboard。</p>
+                <button class="button button-primary" @click="openImport">开始导入</button>
+            </div>
+        </section>
+
+        <section v-else class="import-shell page-enter">
+            <div class="import-header">
+                <div>
+                    <div class="eyebrow dark-text">EXCEL IMPORT</div>
+                    <h1>导入客服绩效数据</h1>
+                    <p>{{ fileInfo ? `${fileInfo.name} · ${formatBytes(fileInfo.size)}` : '上传固定格式 Excel，确认后才会保存当天快照' }}</p>
+                </div>
+                <button class="button button-light" @click="openDashboard">返回 Dashboard</button>
+            </div>
+
+            <ol class="stepper" aria-label="导入步骤">
+                <li v-for="(item, index) in steps" :key="item" :class="{ active: importStep === index + 1, done: importStep > index + 1 }">
+                    <span>{{ importStep > index + 1 ? '✓' : index + 1 }}</span><b>{{ item }}</b>
+                </li>
+            </ol>
+
+            <transition name="step-slide" mode="out-in">
+                <section :key="importStep" class="wizard-card">
+                    <template v-if="importStep === 1">
+                        <div class="wizard-title"><span>01</span><div><h2>上传 Excel</h2><p>支持 .xlsx 和 .xls；微信小店相关字段会被忽略。</p></div></div>
+                        <label :class="['drop-zone', { dragging: isDragging }]" @dragenter.prevent="isDragging = true" @dragover.prevent @dragleave.prevent="isDragging = false" @drop.prevent="handleDrop">
+                            <input type="file" accept=".xlsx,.xls" @change="handleFileInput">
+                            <span class="upload-orbit" :class="{ loading: isParsing }">↑</span>
+                            <template v-if="isParsing">
+                                <h3>正在解析真实 Excel…</h3><p>识别人员、工作时间平响与核心 KPI 字段</p>
+                            </template>
+                            <template v-else-if="fileInfo">
+                                <h3>{{ fileInfo.name }}</h3><p>{{ formatBytes(fileInfo.size) }} · 已识别 {{ parsedAgents.length }} 名人员</p>
+                            </template>
+                            <template v-else>
+                                <h3>拖拽文件到这里，或点击选择</h3><p>文件只在浏览器解析；确认保存前不会写入数据库</p>
+                            </template>
+                        </label>
+                        <div v-if="parseError" class="validation-banner error">{{ parseError }}</div>
+                    </template>
+
+                    <template v-else-if="importStep === 2">
+                        <div class="wizard-title"><span>02</span><div><h2>选择业务日期</h2><p>文件名中的数字不会自动作为日期。</p></div></div>
+                        <div class="date-stage">
+                            <label><span>业务日期</span><input v-model="businessDate" type="date" :max="today"></label>
+                            <div class="date-note"><b>日期将用于快照和排行榜</b><p>同一登录账号、同一日期只保留一个 V1 快照；重复上传时会再次提示。</p></div>
+                        </div>
+                    </template>
+
+                    <template v-else-if="importStep === 3">
+                        <div class="wizard-title"><span>03</span><div><h2>选择参与统计的人员</h2><p>Excel 共识别 {{ parsedAgents.length }} 人，未勾选人员不参与计算、排名或正式 KPI。</p></div></div>
+                        <div class="selection-toolbar">
+                            <label class="search-field"><span>⌕</span><input v-model.trim="agentSearch" placeholder="搜索客服账号或昵称"></label>
+                            <div class="selection-actions">
+                                <button @click="selectFiltered">全选</button><button @click="clearFiltered">取消全选</button><button @click="invertFiltered">反选</button>
+                            </div>
+                            <div class="selection-count"><b>{{ selectedAccounts.length }}</b> 已选 <i></i><b>{{ parsedAgents.length - selectedAccounts.length }}</b> 排除</div>
+                        </div>
+                        <div class="agent-selection-grid">
+                            <label v-for="agent in filteredAgents" :key="agent.key" :class="['agent-select-card', { selected: isSelected(agent), warning: agent.warnings.length }]">
+                                <input type="checkbox" :checked="isSelected(agent)" @change="toggleAgent(agent)">
+                                <span class="fake-check">✓</span>
+                                <span class="agent-main"><b>{{ agent.displayName }}</b><small>{{ agent.sourceAccount }}</small></span>
+                                <span class="agent-preview">满意 {{ previewPercent(agent) }}<br>均响 {{ formatSeconds(agent.avgResponseSeconds) }} · 转化 {{ previewConversion(agent) }}</span>
+                                <em v-if="agent.warnings.length">需确认</em>
+                            </label>
+                        </div>
+                        <div v-if="!filteredAgents.length" class="no-search-result">没有匹配人员</div>
+                    </template>
+
+                    <template v-else-if="importStep === 4">
+                        <div class="wizard-title"><span>04</span><div><h2>校验与 KPI 预览</h2><p>按已确认 V1 规则计算，只包含已选择人员。</p></div></div>
+                        <div class="preview-summary-grid">
+                            <div><span>参与人数</span><b>{{ previewMetrics.length }}</b></div>
+                            <div><span>团队满意率</span><b>{{ formatPercent(previewTeam.satisfactionRate) }}</b></div>
+                            <div><span>工作时间均响</span><b>{{ formatSeconds(previewTeam.avgResponseSeconds) }}</b></div>
+                            <div><span>团队转化率</span><b>{{ formatPercent(previewTeam.conversionRate) }}</b></div>
+                        </div>
+                        <p class="weight-note">综合得分 = 满意率评分 × 50% + 转化率评分 × 25% + 均响评分 × 25%。团队均响为所选人员简单平均，暂未按会话量加权。</p>
+                        <details v-if="validationRows.length" class="validation-details" open>
+                            <summary><span>{{ validationRows.length }} 人存在校验问题</span><b>展开/收起</b></summary>
+                            <div class="validation-list">
+                                <div v-for="person in validationRows" :key="person.key"><b>{{ person.displayName }}</b><span>{{ person.validation.join('；') }}</span></div>
+                            </div>
+                        </details>
+                        <div v-else class="validation-banner success">✓ 所有已选择人员均通过核心字段校验</div>
+                        <div class="preview-ranking">
+                            <h3>预计综合前三名</h3>
+                            <div class="preview-podium">
+                                <div v-for="person in previewRanking.slice(0, 3)" :key="person.key"><span>第 {{ person.rankPosition }} 名</span><b>{{ person.displayName }}</b><strong>{{ formatScore(person.totalScore) }}</strong></div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="wizard-title"><span>05</span><div><h2>确认保存</h2><p>二次确认后写入独立 Supabase 项目。</p></div></div>
+                        <div class="confirm-layout">
+                            <div class="confirm-card"><span>业务日期</span><b>{{ businessDate }}</b></div>
+                            <div class="confirm-card"><span>参与范围</span><b>{{ previewMetrics.length }} 人参与 / {{ parsedAgents.length - previewMetrics.length }} 人排除</b></div>
+                            <div class="confirm-card"><span>规则版本</span><b>{{ rules.version }}</b></div>
+                            <div class="confirm-card"><span>数据来源</span><b>{{ fileInfo?.name }}</b></div>
+                        </div>
+                        <div class="final-warning"><b>确认事项</b><p>微信小店字段不会入库；未选择人员只保留在批次审计记录中，不写入正式 KPI、排名或荣誉。</p></div>
+                        <button class="button save-button" :disabled="isSaving || hasBlockingValidation" @click="requestSave">
+                            <span v-if="isSaving" class="button-spinner"></span>{{ isSaving ? '正在保存…' : (session ? '确认保存当天快照' : '登录并保存') }}
+                        </button>
+                    </template>
+
+                    <footer class="wizard-footer">
+                        <button class="button button-light" :disabled="importStep === 1 || isSaving" @click="previousStep">上一步</button>
+                        <span>步骤 {{ importStep }} / 5</span>
+                        <button v-if="importStep < 5" class="button button-dark" :disabled="!canContinue" @click="nextStep">下一步</button>
+                    </footer>
+                </section>
+            </transition>
+        </section>
+    </main>
+
+    <transition name="drawer">
+        <div v-if="detailAgent" class="drawer-layer" @click.self="closeAgent">
+            <aside class="agent-drawer" aria-label="人员详情">
+                <button class="drawer-close" @click="closeAgent">×</button>
+                <div class="detail-hero">
+                    <span class="detail-avatar">{{ detailAgent.displayName.slice(0, 1) }}</span>
+                    <div><small>人员详情</small><h2>{{ detailAgent.displayName }}</h2><p>{{ detailAgent.sourceAccount }}</p></div>
+                    <div class="detail-rank"><span>当前排名</span><b>第 {{ detailAgent.rankPosition || '—' }} / {{ currentMetrics.length }}</b></div>
+                </div>
+                <div class="detail-kpis">
+                    <div><span>满意率</span><b>{{ formatPercent(detailAgent.satisfactionRate) }}</b><small>目标 90%</small></div>
+                    <div><span>工作时间均响</span><b>{{ formatSeconds(detailAgent.avgResponseSeconds) }}</b><small>目标 15 秒</small></div>
+                    <div><span>转化率</span><b>{{ formatPercent(detailAgent.conversionRate) }}</b><small>目标 30%</small></div>
+                    <div><span>综合得分</span><b>{{ formatScore(detailAgent.totalScore) }}</b><small>满分口径 110</small></div>
+                </div>
+                <article class="detail-panel"><div class="panel-header light"><div><h3>个人 KPI 趋势</h3><p>已有每日正式快照</p></div></div><div ref="detailChartEl" class="chart detail-chart"></div></article>
+                <article class="detail-panel history-panel"><div class="panel-header light"><div><h3>最近参与记录</h3><p>未纳入统计的日期不记失败</p></div></div><div class="history-chips"><span v-for="item in detailHistory.slice(-12)" :key="item.business_date"><b>{{ item.business_date.slice(5) }}</b>{{ formatScore(item.total_score) }}</span></div></article>
+            </aside>
+        </div>
+    </transition>
+
+    <transition name="modal">
+        <div v-if="showAuth" class="modal-layer" @click.self="showAuth = false">
+            <section class="auth-modal">
+                <button class="drawer-close" @click="showAuth = false">×</button>
+                <template v-if="session">
+                    <span class="auth-icon">✓</span><h2>已连接 Customer BI</h2><p>{{ session.user.email }}</p>
+                    <button class="button button-dark" @click="signOut">退出登录</button>
+                </template>
+                <template v-else>
+                    <span class="auth-icon">◎</span><h2>{{ authMode === 'login' ? '登录后保存数据' : '创建 Customer BI 账号' }}</h2><p>账号仅属于全新的 Customer BI Supabase 项目。</p>
+                    <label><span>邮箱</span><input v-model.trim="authForm.email" type="email" autocomplete="email"></label>
+                    <label><span>密码</span><input v-model="authForm.password" type="password" minlength="6" autocomplete="current-password"></label>
+                    <button class="button button-dark" :disabled="authLoading" @click="submitAuth">{{ authLoading ? '处理中…' : (authMode === 'login' ? '登录' : '注册') }}</button>
+                    <button class="text-button" @click="authMode = authMode === 'login' ? 'register' : 'login'">{{ authMode === 'login' ? '没有账号？注册' : '已有账号？登录' }}</button>
+                </template>
+            </section>
+        </div>
+    </transition>
+
+    <transition name="modal">
+        <div v-if="duplicateBatch" class="modal-layer">
+            <section class="confirm-modal">
+                <span class="warning-icon">!</span><h2>{{ businessDate }} 已有快照</h2>
+                <p>V1 替换会删除该日期原批次及其 KPI、排名后重新保存。其他日期不会受影响。</p>
+                <div><button class="button button-light" @click="duplicateBatch = null">取消</button><button class="button button-danger" @click="saveBatch(true)">确认替换</button></div>
+            </section>
+        </div>
+    </transition>
+
+    <div class="toast-stack" aria-live="polite">
+        <transition-group name="toast">
+            <div v-for="toast in toasts" :key="toast.id" :class="['toast-message', toast.type]"><b>{{ toast.type === 'success' ? '✓' : toast.type === 'error' ? '×' : 'i' }}</b><span>{{ toast.message }}</span></div>
+        </transition-group>
+    </div>
+</div>
+
+<script src="js/customer-bi-core.js"></script>
+<script src="js/customer-bi-config.js"></script>
+<script src="js/customer-bi.js"></script>
+</body>
+</html>
