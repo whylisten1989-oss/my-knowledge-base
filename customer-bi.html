@@ -48,15 +48,15 @@
                 <div>
                     <div class="eyebrow">MANAGEMENT COCKPIT</div>
                     <h1>客服绩效驾驶舱</h1>
-                    <p>{{ dashboardDate || '暂无官方快照' }} · {{ currentTeam.participantCount }} 人参与排名</p>
+                    <p>{{ periodRangeText }} · {{ dashboardStatusText }}</p>
+                </div>
+                <div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
+                    <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="dashboardPeriod = mode.value">
+                        {{ mode.label }}
+                    </button>
                 </div>
                 <div class="toolbar-actions">
-                    <label class="compact-field">
-                        <span>业务日期</span>
-                        <select v-model="dashboardDate" :disabled="!availableDates.length">
-                            <option v-for="date in availableDates" :key="date" :value="date">{{ date }}</option>
-                        </select>
-                    </label>
+                    <div class="current-scope"><span>当前人员范围</span><b>已确认批次人员</b></div>
                     <button class="button button-ghost" @click="loadDashboard" :disabled="dashboardLoading">刷新</button>
                     <button class="button button-primary" @click="openImport">上传数据</button>
                 </div>
@@ -66,37 +66,38 @@
                 <div v-for="index in 12" :key="index" class="skeleton-block"></div>
             </div>
 
-            <template v-else-if="currentMetrics.length">
+            <div v-else-if="currentMetrics.length" :key="dashboardPeriod" class="period-content period-fade-enter">
                 <div class="kpi-grid stagger-enter">
                     <article class="kpi-card kpi-card-primary">
                         <span>团队综合健康度</span>
                         <animated-number :value="currentTeam.avgTotalScore" :decimals="1"></animated-number>
-                        <small>满分口径 110 · 三项加权</small>
+                        <small>满分口径 110 · 三项加权</small><em :class="['kpi-change', kpiComparison('score').state]">{{ kpiComparison('score').text }}</em>
                     </article>
                     <article class="kpi-card">
                         <span>满意率</span>
                         <animated-number :value="percentValue(currentTeam.satisfactionRate)" suffix="%" :decimals="1"></animated-number>
-                        <small>目标 90% · 权重 50%</small>
+                        <small>目标 90% · 权重 50%</small><em :class="['kpi-change', kpiComparison('satisfaction').state]">{{ kpiComparison('satisfaction').text }}</em>
                     </article>
                     <article class="kpi-card">
                         <span>工作时间均响</span>
                         <animated-number :value="currentTeam.avgResponseSeconds" suffix=" 秒" :decimals="1"></animated-number>
-                        <small>简单平均 · 未按会话量加权</small>
+                        <small>简单平均 · 未按会话量加权</small><em :class="['kpi-change', kpiComparison('response').state]">{{ kpiComparison('response').text }}</em>
                     </article>
                     <article class="kpi-card">
                         <span>转化率</span>
                         <animated-number :value="percentValue(currentTeam.conversionRate)" suffix="%" :decimals="1"></animated-number>
-                        <small>目标 30% · 权重 25%</small>
+                        <small>目标 30% · 权重 25%</small><em :class="['kpi-change', kpiComparison('conversion').state]">{{ kpiComparison('conversion').text }}</em>
                     </article>
                     <article class="kpi-card">
                         <span>三项达标人数</span>
                         <animated-number :value="currentTeam.allTargetsCount" :decimals="0"></animated-number>
-                        <small>共 {{ currentTeam.participantCount }} 人参与</small>
+                        <small>共 {{ currentTeam.participantCount }} 人参与</small><em :class="['kpi-change', kpiComparison('targets').state]">{{ kpiComparison('targets').text }}</em>
                     </article>
                     <article class="kpi-card">
-                        <span>今日第一名</span>
-                        <strong class="name-value">{{ rankedByTotal[0]?.displayName || '—' }}</strong>
-                        <small>综合得分 {{ formatScore(rankedByTotal[0]?.totalScore) }}</small>
+                        <span>{{ periodName }}第一名</span>
+                        <strong class="name-value">{{ currentChampion?.displayName || '—' }}</strong>
+                        <small v-if="currentChampion">综合得分 {{ formatScore(currentChampion.totalScore) }}{{ periodScope.provisional ? ' · 临时排行' : '' }}</small>
+                        <small v-else>{{ periodScope.provisional ? '月度样本积累中' : '暂无符合参与条件的人员' }}</small>
                     </article>
                 </div>
 
@@ -104,11 +105,8 @@
                     <article class="cockpit-panel trend-panel">
                         <div class="panel-header">
                             <div>
-                                <h2>团队指标趋势</h2>
-                                <p>满意率、工作时间均响、转化率</p>
-                            </div>
-                            <div class="segmented" aria-label="趋势周期">
-                                <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: trendPeriod === mode.value }" @click="trendPeriod = mode.value">{{ mode.label }}</button>
+                                <h2>{{ periodName }}指标趋势</h2>
+                                <p>{{ periodRangeText }} · 满意率、工作时间均响、转化率</p>
                             </div>
                         </div>
                         <div ref="trendChartEl" class="chart chart-main" role="img" aria-label="团队 KPI 趋势图"></div>
@@ -116,7 +114,7 @@
 
                     <article class="cockpit-panel ranking-panel">
                         <div class="panel-header ranking-heading">
-                            <div><h2>综合排行榜</h2><p>前 {{ Math.min(10, rankingRows.length) }} 名</p></div>
+                            <div><h2>{{ periodName }}排行榜</h2><p>{{ rankingTitle }}</p></div>
                             <span class="scope-pill">{{ currentMetrics.length }} 人</span>
                         </div>
                         <div class="ranking-tabs">
@@ -126,6 +124,7 @@
                             <li v-for="(person, index) in rankingRows.slice(0, 10)" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
                                 <span class="rank-index">{{ index + 1 }}</span>
                                 <span class="rank-name">{{ person.displayName }}</span>
+                                <span v-if="!person.isQualified" class="sample-badge">样本不足</span>
                                 <span v-if="rankingMetric === 'total'" :class="['rank-change', rankChangeClass(person)]">{{ rankChangeText(person) }}</span>
                                 <span class="rank-value">{{ rankingValue(person) }}</span>
                             </li>
@@ -135,7 +134,7 @@
 
                 <div class="secondary-grid">
                     <article class="cockpit-panel matrix-panel">
-                        <div class="panel-header"><div><h2>KPI 达标矩阵</h2><p>只包含当日参与人员</p></div></div>
+                        <div class="panel-header"><div><h2>KPI 达标矩阵</h2><p>只包含{{ periodName }}实际参与人员</p></div></div>
                         <div class="matrix-scroll">
                             <div class="matrix-row matrix-header"><span>人员</span><span>满意</span><span>均响</span><span>转化</span></div>
                             <div v-for="person in rankedByTotal" :key="person.agentId || person.sourceAccount" class="matrix-row" @click="openAgent(person)">
@@ -147,7 +146,7 @@
                         </div>
                     </article>
                     <article class="cockpit-panel insight-panel">
-                        <div class="panel-header"><div><h2>今日洞察</h2><p>由当前官方快照生成</p></div></div>
+                        <div class="panel-header"><div><h2>{{ periodName }}洞察</h2><p>由当前周期真实快照生成</p></div></div>
                         <div class="insight insight-good"><b>亮点</b><span>{{ topInsight }}</span></div>
                         <div class="insight insight-risk"><b>风险</b><span>{{ riskInsight }}</span></div>
                         <div class="insight insight-move"><b>排名</b><span>{{ movementInsight }}</span></div>
@@ -156,18 +155,18 @@
 
                 <article class="cockpit-panel people-panel">
                     <div class="panel-header">
-                        <div><h2>人员卡片</h2><p>点击查看个人趋势与历史排名</p></div>
+                        <div><h2>人员卡片</h2><p>点击查看昨日、近 7 日和本月详情</p></div>
                         <span class="scope-pill">{{ currentMetrics.length }} 人</span>
                     </div>
                     <div class="people-grid">
                         <button v-for="person in rankedByTotal" :key="person.agentId || person.sourceAccount" class="person-card" @click="openAgent(person)">
                             <span class="avatar">{{ person.displayName.slice(0, 1) }}</span>
-                            <span class="person-copy"><b>{{ person.displayName }}</b><small>第 {{ person.rankPosition }} 名 · {{ formatScore(person.totalScore) }}</small></span>
+                            <span class="person-copy"><b>{{ person.displayName }}</b><small>第 {{ person.rankPosition }} 名 · {{ formatScore(person.totalScore) }}<i v-if="!person.isQualified"> · 样本不足</i></small></span>
                             <span class="person-metrics">满意 {{ formatPercent(person.satisfactionRate) }}<br>均响 {{ formatSeconds(person.avgResponseSeconds) }} · 转化 {{ formatPercent(person.conversionRate) }}</span>
                         </button>
                     </div>
                 </article>
-            </template>
+            </div>
 
             <div v-else class="dashboard-empty cockpit-panel">
                 <div class="empty-icon">↗</div>

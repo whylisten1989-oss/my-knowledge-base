@@ -50,7 +50,14 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .eyebrow.dark-text { color: #2a6bd3; }
 .dashboard-toolbar h1, .import-header h1 { margin: 6px 0 3px; font-size: clamp(25px, 3vw, 36px); letter-spacing: -.04em; }
 .dashboard-toolbar p { margin: 0; color: #8396ad; font-size: 12px; }
+.dashboard-period-switch { display: flex; align-self: center; padding: 5px; gap: 4px; border: 1px solid rgba(148,173,205,.15); border-radius: 13px; background: rgba(255,255,255,.045); }
+.dashboard-period-switch button { min-width: 82px; border: 0; border-radius: 9px; padding: 10px 14px; color: #748aa4; background: transparent; font-size: 11px; font-weight: 900; transition: .22s var(--ease); }
+.dashboard-period-switch button:hover { color: #dcecff; }
+.dashboard-period-switch button.active { color: white; background: linear-gradient(135deg, #2f7df6, #1767d0); box-shadow: 0 8px 22px rgba(47,125,246,.25); }
 .toolbar-actions { display: flex; align-items: end; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.current-scope { display: grid; gap: 4px; padding-right: 4px; text-align: right; }
+.current-scope span { color: #6f849d; font-size: 8px; font-weight: 800; letter-spacing: .08em; }
+.current-scope b { color: #d5e4f5; font-size: 10px; }
 .compact-field { display: grid; gap: 5px; color: #71869e; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .compact-field select { min-width: 155px; border: 1px solid rgba(148,173,205,.18); border-radius: 11px; padding: 9px 12px; outline: 0; background: var(--navy-850); color: white; }
 .button { border: 0; border-radius: 11px; padding: 11px 18px; font-size: 12px; font-weight: 800; transition: transform .2s var(--ease), box-shadow .2s var(--ease), background .2s; }
@@ -71,6 +78,13 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .animated-number, .kpi-card .name-value { color: #f5f9ff; font-size: clamp(26px, 2.4vw, 36px); font-weight: 900; line-height: 1; letter-spacing: -.04em; }
 .kpi-card .name-value { font-size: clamp(19px, 1.7vw, 25px); }
 .kpi-card small { color: #72869e; font-size: 9px; line-height: 1.4; }
+.kpi-change { width: max-content; margin-top: 3px; padding: 3px 6px; border-radius: 999px; font-size: 8px; font-style: normal; font-weight: 800; }
+.kpi-change.positive { color: #86e4c4; background: rgba(24,189,139,.1); }
+.kpi-change.negative { color: #ffaaa8; background: rgba(239,87,87,.1); }
+.kpi-change.neutral { color: #8498b0; background: rgba(148,173,205,.08); }
+.kpi-card-primary .kpi-change { color: white; background: rgba(4,22,55,.2); }
+.period-content { will-change: opacity, transform; }
+.period-fade-enter { animation: period-fade .24s var(--ease); }
 
 .main-visual-grid { display: grid; grid-template-columns: minmax(0, 1.85fr) minmax(340px, .95fr); gap: 16px; margin-bottom: 16px; }
 .secondary-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(320px, .7fr); gap: 16px; margin-bottom: 16px; }
@@ -88,12 +102,13 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .ranking-tabs { margin-bottom: 10px; overflow-x: auto; }
 .ranking-tabs button { flex: 1; white-space: nowrap; }
 .ranking-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
-.ranking-list li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; min-height: 38px; padding: 7px 9px; border-radius: 10px; color: #a8b8ca; background: rgba(255,255,255,.035); cursor: pointer; transition: transform .22s var(--ease), background .22s; }
+.ranking-list li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; min-height: 38px; padding: 7px 9px; border-radius: 10px; color: #a8b8ca; background: rgba(255,255,255,.035); cursor: pointer; transition: transform .22s var(--ease), background .22s; }
 .ranking-list li:hover { transform: translateX(4px); background: rgba(47,125,246,.11); }
 .ranking-list li.podium { color: #eef7ff; background: linear-gradient(90deg, rgba(47,125,246,.16), rgba(255,255,255,.03)); }
 .rank-index { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 8px; background: rgba(255,255,255,.06); font-size: 9px; font-weight: 900; }
 .podium .rank-index { color: #07101f; background: linear-gradient(135deg, #f8d971, #f4aa25); }
 .rank-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 800; }
+.sample-badge { padding: 3px 5px; border-radius: 6px; color: #ffd17a; background: rgba(246,169,24,.1); font-size: 7px; white-space: nowrap; }
 .rank-value { font-size: 11px; font-weight: 900; color: white; }
 .rank-change { font-size: 9px; }
 .rank-change.up { color: var(--green); animation: change-pop .5s var(--ease); }
@@ -120,6 +135,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .person-copy { min-width: 0; }
 .person-copy b, .person-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .person-copy b { font-size: 11px; }.person-copy small { margin-top: 5px; color: #70849c; font-size: 8px; }
+.person-copy i { color: #eab85d; font-style: normal; }
 .person-metrics { grid-column: 1 / -1; color: #8094ab; font-size: 9px; line-height: 1.5; }
 .dashboard-empty { min-height: 420px; display: grid; place-items: center; align-content: center; text-align: center; }
 .dashboard-empty h2 { margin: 14px 0 4px; }.dashboard-empty p { color: #7f93ab; font-size: 11px; }.empty-icon { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 18px; background: rgba(47,125,246,.13); color: #5d9dff; font-size: 28px; }
@@ -174,6 +190,7 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 .toast-enter-active, .toast-leave-active { transition: .22s var(--ease); }.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateX(20px); }
 
 @keyframes page-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes period-fade { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes skeleton { to { background-position: -200% 0; } }
 @keyframes parse-spin { to { transform: rotate(360deg); } }
 @keyframes change-pop { 50% { transform: translateY(-3px) scale(1.15); } }
