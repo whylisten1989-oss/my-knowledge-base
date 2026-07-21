@@ -2,7 +2,9 @@
 
 入口页面：`customer-bi.html`
 
-V1 已实现：Excel 解析、业务日期、人员勾选、KPI 校验与预览、Supabase 保存、Dashboard 日/周/月趋势、综合排名和人员详情。
+V1 已实现：Excel 解析、业务日期、人员勾选、KPI 校验与预览、Supabase 保存代码、Dashboard 昨日/近 7 个有效业务日/本月视图、综合排名和人员详情。
+
+当前 Supabase SQL 已生成但尚未执行，因此本地解析和预览可用，正式历史保存仍需先完成下方初始化。
 
 ## 首次初始化 Supabase
 
