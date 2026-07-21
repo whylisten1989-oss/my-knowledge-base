@@ -77,6 +77,7 @@
             const trendChartEl = ref(null);
             const detailChartEl = ref(null);
             const detailAgent = ref(null);
+            const detailPeriod = ref('yesterday');
             let trendChart = null;
             let detailChart = null;
             let authSubscription = null;
@@ -408,9 +409,13 @@
                 if (rankingMetric.value === 'satisfaction') rows.sort((a, b) => (b.satisfactionRate ?? -1) - (a.satisfactionRate ?? -1));
                 else if (rankingMetric.value === 'conversion') rows.sort((a, b) => (b.conversionRate ?? -1) - (a.conversionRate ?? -1));
                 else if (rankingMetric.value === 'response') rows.sort((a, b) => (a.avgResponseSeconds ?? Infinity) - (b.avgResponseSeconds ?? Infinity));
-                else return rankedByTotal.value;
-                return rows;
+                if (periodScope.value.provisional) return rows;
+                return [
+                    ...rows.filter((item) => item.isQualified),
+                    ...rows.filter((item) => !item.isQualified)
+                ];
             });
+            const rankingPositionText = (person, index) => person.isQualified || periodScope.value.provisional ? index + 1 : '—';
             const rankingValue = (person) => {
                 if (rankingMetric.value === 'satisfaction') return formatPercent(person.satisfactionRate);
                 if (rankingMetric.value === 'conversion') return formatPercent(person.conversionRate);
@@ -480,11 +485,85 @@
             const detailHistory = computed(() => detailAgent.value
                 ? dashboardMetrics.value.filter((item) => item.agent_id === detailAgent.value.agentId).sort((a, b) => a.business_date.localeCompare(b.business_date))
                 : []);
+            const detailScope = computed(() => core.resolvePeriodScope(availableDates.value, detailPeriod.value));
+            const detailPreviousDates = computed(() => {
+                if (detailPeriod.value !== 'yesterday') return detailScope.value.previousDates;
+                const currentDate = detailScope.value.currentDates[0];
+                const previousParticipationDate = core.uniqueBusinessDates(detailHistory.value.map((item) => item.business_date))
+                    .filter((date) => date < currentDate)
+                    .at(-1);
+                return previousParticipationDate ? [previousParticipationDate] : [];
+            });
+            const detailComparisonComplete = computed(() => detailPeriod.value === 'yesterday'
+                ? detailPreviousDates.value.length === 1
+                : detailScope.value.comparisonComplete
+            );
+            const detailRankingSet = computed(() => core.buildPeriodRanking(
+                dashboardMetrics.value,
+                detailScope.value.currentDates,
+                detailScope.value.minimumParticipationDays,
+                detailScope.value.provisional
+            ));
+            const detailMetric = computed(() => {
+                if (!detailAgent.value) return null;
+                const metric = detailRankingSet.value.allRows.find((item) => item.agentId === detailAgent.value.agentId);
+                if (!metric) return null;
+                if (detailPeriod.value !== 'yesterday') return metric;
+                const date = detailScope.value.currentDates[0];
+                const official = rankingLookup.value.get(`${date}:${metric.agentId}`);
+                return { ...metric, rankPosition: official?.rank_position || metric.rankPosition };
+            });
+            const detailPreviousMetric = computed(() => detailAgent.value
+                ? core.aggregateAgentMetrics(dashboardMetrics.value, detailPreviousDates.value)
+                    .find((item) => item.agentId === detailAgent.value.agentId) || null
+                : null
+            );
+            const detailPeriodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月' }[detailPeriod.value]));
+            const detailRangeText = computed(() => {
+                const dates = detailScope.value.currentDates;
+                if (!dates.length) return '暂无已确认数据';
+                if (detailPeriod.value === 'yesterday') return `业务日期 ${dates[0]}`;
+                if (detailPeriod.value === 'month') return `${dates.at(-1).slice(0, 7)} · ${dates.length} 个业务日`;
+                return `${dates[0]} 至 ${dates.at(-1)} · ${dates.length} 个有效业务日`;
+            });
+            const detailRankText = computed(() => {
+                if (!detailMetric.value) return '未参与';
+                if (detailScope.value.provisional) return `月度样本积累中 · 临时第 ${detailMetric.value.rankPosition} 名`;
+                if (!detailMetric.value.isQualified) return `样本不足 · 临时第 ${detailMetric.value.rankPosition} 名`;
+                return `第 ${detailMetric.value.formalRankPosition || detailMetric.value.rankPosition} / ${detailRankingSet.value.allRows.length} 名`;
+            });
+            const detailComparison = (metric) => {
+                if (!detailComparisonComplete.value || !detailMetric.value || !detailPreviousMetric.value) {
+                    return { text: '暂无完整对比', state: 'neutral' };
+                }
+                const definitions = {
+                    satisfaction: ['satisfactionRate', 100, ' 个百分点', false],
+                    response: ['avgResponseSeconds', 1, ' 秒', true],
+                    conversion: ['conversionRate', 100, ' 个百分点', false],
+                    score: ['totalScore', 1, ' 分', false]
+                };
+                const [field, multiplier, unit, lowerIsBetter] = definitions[metric];
+                const current = detailMetric.value[field];
+                const previous = detailPreviousMetric.value[field];
+                if (current == null || previous == null) return { text: '暂无完整对比', state: 'neutral' };
+                const delta = (Number(current) - Number(previous)) * multiplier;
+                const state = Math.abs(delta) < 0.0001 ? 'neutral' : ((delta < 0) === lowerIsBetter ? 'positive' : 'negative');
+                const arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '—';
+                return { text: `${arrow} ${Math.abs(delta).toFixed(1)}${unit}`, state };
+            };
+            const detailTrendRows = computed(() => {
+                if (!detailAgent.value) return [];
+                const dates = detailPeriod.value === 'yesterday'
+                    ? core.uniqueBusinessDates([...detailPreviousDates.value, ...detailScope.value.currentDates])
+                    : detailScope.value.currentDates;
+                const dateSet = new Set(dates);
+                return detailHistory.value.filter((item) => dateSet.has(item.business_date));
+            });
             const renderDetailChart = () => {
-                if (!detailChartEl.value || !detailAgent.value || !window.echarts) return;
+                if (!detailChartEl.value || !detailMetric.value || !window.echarts) return;
                 if (detailChart) detailChart.dispose();
                 detailChart = echarts.init(detailChartEl.value);
-                const rows = detailHistory.value;
+                const rows = detailTrendRows.value;
                 detailChart.setOption({
                     animationDuration: 250,
                     color: ['#2f7df6', '#18bd8b', '#f6a918'],
@@ -501,7 +580,12 @@
                 });
             };
             const openAgent = (person) => {
-                detailAgent.value = person;
+                detailAgent.value = {
+                    agentId: person.agentId,
+                    sourceAccount: person.sourceAccount,
+                    displayName: person.displayName
+                };
+                detailPeriod.value = dashboardPeriod.value;
                 nextTick(renderDetailChart);
             };
             const closeAgent = () => {
@@ -666,6 +750,7 @@
 
             watch(dashboardPeriod, () => nextTick(renderTrendChart));
             watch(dashboardMetrics, () => nextTick(renderTrendChart));
+            watch(detailPeriod, () => nextTick(renderDetailChart));
 
             onMounted(async () => {
                 window.addEventListener('resize', handleResize);
@@ -693,6 +778,8 @@
                 session, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
                 dashboardLoading, availableDates, dashboardPeriod, rankingMetric,
                 periodOptions, rankingOptions, trendChartEl, detailChartEl, detailAgent, detailHistory,
+                detailPeriod, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
+                detailRangeText, detailRankText, detailComparison, detailTrendRows,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle,
@@ -701,7 +788,7 @@
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore,
                 previewPercent, previewConversion, isSelected, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankChangeText, rankChangeClass, targetClass, openAgent, closeAgent,
+                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, openAgent, closeAgent,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }

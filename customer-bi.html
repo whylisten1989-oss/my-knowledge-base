@@ -122,7 +122,7 @@
                         </div>
                         <transition-group name="rank-list" tag="ol" class="ranking-list">
                             <li v-for="(person, index) in rankingRows.slice(0, 10)" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
-                                <span class="rank-index">{{ index + 1 }}</span>
+                                <span class="rank-index">{{ rankingPositionText(person, index) }}</span>
                                 <span class="rank-name">{{ person.displayName }}</span>
                                 <span v-if="!person.isQualified" class="sample-badge">样本不足</span>
                                 <span v-if="rankingMetric === 'total'" :class="['rank-change', rankChangeClass(person)]">{{ rankChangeText(person) }}</span>
@@ -297,16 +297,23 @@
                 <div class="detail-hero">
                     <span class="detail-avatar">{{ detailAgent.displayName.slice(0, 1) }}</span>
                     <div><small>人员详情</small><h2>{{ detailAgent.displayName }}</h2><p>{{ detailAgent.sourceAccount }}</p></div>
-                    <div class="detail-rank"><span>当前排名</span><b>第 {{ detailAgent.rankPosition || '—' }} / {{ currentMetrics.length }}</b></div>
+                    <div class="detail-rank"><span>{{ detailPeriodName }}排名</span><b>{{ detailRankText }}</b></div>
                 </div>
-                <div class="detail-kpis">
-                    <div><span>满意率</span><b>{{ formatPercent(detailAgent.satisfactionRate) }}</b><small>目标 90%</small></div>
-                    <div><span>工作时间均响</span><b>{{ formatSeconds(detailAgent.avgResponseSeconds) }}</b><small>目标 15 秒</small></div>
-                    <div><span>转化率</span><b>{{ formatPercent(detailAgent.conversionRate) }}</b><small>目标 30%</small></div>
-                    <div><span>综合得分</span><b>{{ formatScore(detailAgent.totalScore) }}</b><small>满分口径 110</small></div>
+                <div class="detail-period-switch" aria-label="人员详情时间范围">
+                    <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: detailPeriod === mode.value }" @click="detailPeriod = mode.value">{{ mode.label }}</button>
                 </div>
-                <article class="detail-panel"><div class="panel-header light"><div><h3>个人 KPI 趋势</h3><p>已有每日正式快照</p></div></div><div ref="detailChartEl" class="chart detail-chart"></div></article>
-                <article class="detail-panel history-panel"><div class="panel-header light"><div><h3>最近参与记录</h3><p>未纳入统计的日期不记失败</p></div></div><div class="history-chips"><span v-for="item in detailHistory.slice(-12)" :key="item.business_date"><b>{{ item.business_date.slice(5) }}</b>{{ formatScore(item.total_score) }}</span></div></article>
+                <template v-if="detailMetric">
+                    <div class="detail-period-summary"><b>{{ detailRangeText }}</b><span>{{ detailMetric.participationDays }} 个实际参与日 · 未参与日期不计 0 分</span></div>
+                    <div class="detail-kpis" :key="detailPeriod">
+                        <div><span>满意率</span><b>{{ formatPercent(detailMetric.satisfactionRate) }}</b><small>目标 90%</small><em :class="['detail-change', detailComparison('satisfaction').state]">{{ detailComparison('satisfaction').text }}</em></div>
+                        <div><span>工作时间均响</span><b>{{ formatSeconds(detailMetric.avgResponseSeconds) }}</b><small>目标 15 秒</small><em :class="['detail-change', detailComparison('response').state]">{{ detailComparison('response').text }}</em></div>
+                        <div><span>转化率</span><b>{{ formatPercent(detailMetric.conversionRate) }}</b><small>目标 30%</small><em :class="['detail-change', detailComparison('conversion').state]">{{ detailComparison('conversion').text }}</em></div>
+                        <div><span>综合得分</span><b>{{ formatScore(detailMetric.totalScore) }}</b><small>按周期聚合 KPI 重新评分</small><em :class="['detail-change', detailComparison('score').state]">{{ detailComparison('score').text }}</em></div>
+                    </div>
+                    <article class="detail-panel"><div class="panel-header light"><div><h3>{{ detailPeriodName }}每日趋势</h3><p>{{ detailRangeText }}</p></div></div><div ref="detailChartEl" class="chart detail-chart"></div></article>
+                    <article class="detail-panel history-panel"><div class="panel-header light"><div><h3>当前周期参与记录</h3><p>休息、未排班或未纳入统计的日期不会补 0</p></div></div><div class="history-chips"><span v-for="item in detailTrendRows" :key="item.business_date"><b>{{ item.business_date.slice(5) }}</b>{{ formatScore(item.total_score) }}</span></div></article>
+                </template>
+                <div v-else class="detail-empty"><b>该周期没有参与数据</b><span>未参与不视为未达标，也不会生成排名。</span></div>
             </aside>
         </div>
     </transition>
