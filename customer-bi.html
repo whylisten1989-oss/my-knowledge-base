@@ -55,7 +55,7 @@
                         <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="selectPeriod(mode.value)">
                             {{ mode.label }}<small v-if="mode.value==='custom' && dashboardPeriod==='custom'">{{ customStart===customEnd?customStart:`${customStart}~${customEnd}` }}</small>
                         </button>
-                    </div><div class="notice-stream"><span v-for="item in noticeItems" :key="item">{{ item }}</span></div></div>
+                    </div><div class="notice-stream" :style="{'--notice-duration':`${Math.max(8, noticeItems.join('').length * .28)}s`}"><span v-for="item in noticeItems" :key="item">{{ item }}</span></div></div>
                     <div v-if="customPanelOpen" class="custom-range-panel"><div class="custom-mode"><button :class="{active:customMode==='day'}" @click="customMode='day'">单日</button><button :class="{active:customMode==='range'}" @click="customMode='range'">日期区间</button></div><div class="custom-date-inputs"><label><span>{{ customMode==='day'?'业务日期':'开始日期' }}</span><input v-model="customDraftStart" type="date"></label><label v-if="customMode==='range'"><span>结束日期</span><input v-model="customDraftEnd" type="date"></label></div><p v-if="customError">{{ customError }}</p><footer><button @click="clearCustomRange">清除</button><button @click="cancelCustomRange">取消</button><button class="apply" @click="applyCustomRange">应用</button></footer></div>
                 </div>
                 <div class="toolbar-actions">
@@ -105,7 +105,7 @@
                 </div>
 
                 <div class="main-visual-grid three-column">
-                    <article class="cockpit-panel attainment-panel"><div class="panel-header"><div><h2>综合达成进度</h2><p>当前周期有效 KPI</p></div></div><div class="attainment-ring" :style="{'--progress':`${(attainment.rate||0)*360}deg`}"><div><b>{{ attainment.rate == null ? '—' : `${(attainment.rate * 100).toFixed(0)}%` }}</b><span>{{ attainment.passed }} / {{ attainment.valid }} 项达标</span></div></div><div class="attainment-lines"><span>满意率<b>{{ attainment.satisfaction[0] }}/{{ attainment.satisfaction[1] }}</b></span><span>均响<b>{{ attainment.response[0] }}/{{ attainment.response[1] }}</b></span><span>转化率<b>{{ attainment.conversion[0] }}/{{ attainment.conversion[1] }}</b></span></div></article>
+                    <article class="cockpit-panel attainment-panel"><div class="panel-header"><div><h2>综合达成进度</h2><p>当前周期有效 KPI</p></div></div><div class="attainment-ring" :style="{'--progress':`${(attainment.rate||0)*360}deg`}"><div><b>{{ attainment.rate == null ? '—' : `${(attainment.rate * 100).toFixed(0)}%` }}</b><span>{{ attainment.passed }} / {{ attainment.valid }} 项达标</span></div></div><div class="attainment-lines"><span><i>满意率</i><em><u :style="{width:`${attainment.satisfaction[1]?attainment.satisfaction[0]/attainment.satisfaction[1]*100:0}%`}"></u></em><b>{{ attainment.satisfaction[0] }}/{{ attainment.satisfaction[1] }}</b></span><span><i>均响</i><em><u :style="{width:`${attainment.response[1]?attainment.response[0]/attainment.response[1]*100:0}%`}"></u></em><b>{{ attainment.response[0] }}/{{ attainment.response[1] }}</b></span><span><i>转化率</i><em><u :style="{width:`${attainment.conversion[1]?attainment.conversion[0]/attainment.conversion[1]*100:0}%`}"></u></em><b>{{ attainment.conversion[0] }}/{{ attainment.conversion[1] }}</b></span></div></article>
                     <article class="cockpit-panel trend-panel">
                         <div class="panel-header">
                             <div>
@@ -138,7 +138,7 @@
                 </div>
 
                 <div class="secondary-grid">
-                    <article class="cockpit-panel sales-panel"><div class="panel-header"><div><h2>客服销售额</h2><p>{{ periodScope.currentDates.length > 1 ? '个人日均退款后销售额' : '当日退款后销售额' }}</p></div></div><div v-if="salesRows.length" ref="salesChartEl" class="sales-chart"></div><div v-else class="honor-empty">当前时间范围暂无有效退款后销售额</div></article>
+                    <article class="cockpit-panel sales-panel"><div class="panel-header"><div><h2>客服销售额</h2><p>{{ periodScope.currentDates.length > 1 ? '个人周期累计退款后销售额' : '当日退款后销售额' }}</p></div></div><div v-if="salesRows.length" ref="salesChartEl" class="sales-chart"></div><div v-else class="honor-empty">当前时间范围暂无有效退款后销售额</div></article>
                     <article class="cockpit-panel matrix-panel">
                         <div class="panel-header"><div><h2>KPI 达标矩阵</h2><p>只包含{{ periodName }}实际参与人员</p></div></div>
                         <div class="matrix-scroll">
@@ -332,7 +332,7 @@
                     </div>
                     <article class="detail-panel"><div class="panel-header light"><div><h3>{{ detailTrendTitle }}</h3><p>{{ detailRangeText }}</p></div></div><div ref="detailChartEl" class="chart detail-chart"></div></article>
                     <article class="detail-panel history-panel"><div class="panel-header light"><div><h3>当前周期参与记录</h3><p>休息、未排班或未纳入统计的日期不会补 0</p></div></div><div class="history-chips"><span v-for="item in detailTrendRows" :key="item.business_date"><b>{{ item.business_date.slice(5) }}</b>{{ formatScore(item.total_score) }}</span></div></article>
-                    <article class="detail-panel honor-history-panel"><div class="panel-header light"><div><h3>历史荣誉记录</h3><p>四类冠军按正式业务快照实时统计</p></div></div><div class="honor-accordion"><section v-for="group in detailHonorGroups" :key="group.id"><button @click="toggleHonorGroup(group)"><b>{{ group.name }}</b><span>{{ group.count }} 次</span><i :class="{open:openHonorGroup===group.id}">⌄</i></button><div v-if="openHonorGroup===group.id && group.count" class="honor-dates"><span v-for="date in group.dates" :key="date">{{ date }}</span></div></section></div></article>
+                    <article class="detail-panel honor-history-panel"><div class="panel-header light"><div><h3>历史荣誉记录</h3><p>四类冠军按正式业务快照实时统计</p></div></div><div class="honor-accordion"><section v-for="group in detailHonorGroups" :key="group.id"><button @click="toggleHonorGroup(group)"><b>{{ group.name }}</b><span>{{ group.count }} 次</span><i :class="{open:openHonorGroup===group.id}">⌄</i></button><div v-if="openHonorGroup===group.id && group.count" class="honor-dates"><article v-for="date in group.dates" :key="date"><i>{{ group.icon }}</i><div><b>{{ group.title }}</b><small>{{ date }}</small></div></article></div></section></div></article>
                 </template>
                 <div v-else class="detail-empty"><b>该周期没有参与数据</b><span>未参与不视为未达标，也不会生成排名。</span></div>
             </aside>

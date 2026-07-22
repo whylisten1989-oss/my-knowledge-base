@@ -92,6 +92,7 @@
             let authSubscription = null;
             let trendRenderFrame = 0;
             let detailRenderFrame = 0;
+            let salesRenderFrame = 0;
             let championTimer = 0;
 
             const periodOptions = [
@@ -252,6 +253,7 @@
             const openDashboard = () => {
                 setView('dashboard');
                 scheduleTrendChart();
+                scheduleSalesChart();
             };
 
             const describeError = (error) => {
@@ -423,7 +425,19 @@
                 ? rankedByTotal.value[0] || null
                 : eligibleRows.value[0] || null
             );
-            const championAnnouncements = computed(() => { const rows = rankedByTotal.value.filter(x => x.isQualified || periodScope.value.provisional); const best = (field, lower = false) => [...rows].filter(x => x[field] != null).sort((a,b)=>lower?a[field]-b[field]:b[field]-a[field])[0]; return [['综合冠军',best('totalScore')],['满意之星',best('satisfactionRate')],['响应先锋',best('avgResponseSeconds',true)],['转化高手',best('conversionRate')]].filter(x=>x[1]).map(([name,p])=>`${periodName.value}${name} · ${p.displayName}`); });
+            const championAnnouncements = computed(() => {
+                const winners = { total: null, satisfaction: null, response: null, conversion: null };
+                rankedByTotal.value.forEach((row) => {
+                    if (!row.isQualified && !periodScope.value.provisional) return;
+                    if (row.totalScore != null && (!winners.total || row.totalScore > winners.total.totalScore)) winners.total = row;
+                    if (row.satisfactionRate != null && (!winners.satisfaction || row.satisfactionRate > winners.satisfaction.satisfactionRate)) winners.satisfaction = row;
+                    if (row.avgResponseSeconds != null && (!winners.response || row.avgResponseSeconds < winners.response.avgResponseSeconds)) winners.response = row;
+                    if (row.conversionRate != null && (!winners.conversion || row.conversionRate > winners.conversion.conversionRate)) winners.conversion = row;
+                });
+                return [['综合冠军', winners.total], ['满意之星', winners.satisfaction], ['响应先锋', winners.response], ['转化高手', winners.conversion]]
+                    .filter(([, person]) => person)
+                    .map(([name, person]) => `${periodName.value}${name} · ${person.displayName}`);
+            });
             const championAnnouncement = computed(() => championAnnouncements.value[championIndex.value % Math.max(1, championAnnouncements.value.length)] || '');
             const formatChineseDate = (date) => {
                 if (!date) return '暂无日期';
@@ -506,7 +520,7 @@
                 });
                 return { ...totals, rate: totals.valid ? totals.passed / totals.valid : null };
             });
-            const salesRows = computed(() => rankedByTotal.value.filter((item) => item.avgRefundedSales != null).sort((a, b) => b.avgRefundedSales - a.avgRefundedSales));
+            const salesRows = computed(() => { const multi=periodScope.value.currentDates.length>1; return rankedByTotal.value.filter(item=>item.refundedSalesDays>0).map(item=>({...item,displaySales:multi?item.refundedSalesTotal:item.avgRefundedSales})).sort((a,b)=>b.displaySales-a.displaySales); });
             const salesSummary = computed(() => ({ total: salesRows.value.reduce((sum, item) => sum + item.refundedSalesTotal, 0), days: salesRows.value.reduce((sum, item) => sum + item.refundedSalesDays, 0) }));
             const formatCurrency = (value) => `¥${Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}`;
             const honorByAgent = computed(() => {
@@ -531,6 +545,10 @@
                 });
                 return result;
             });
+            const allDailyRankings = computed(() => { const map=new Map(); availableDates.value.forEach(date=>map.set(date,core.buildPeriodRanking(dashboardMetrics.value,[date],1,false).allRows.filter(x=>x.isQualified))); return map; });
+            const currentDailyRankings = computed(() => new Map(periodScope.value.currentDates.map(date=>[date,allDailyRankings.value.get(date)||[]])));
+            const championCountMap = computed(() => { const counts=new Map(); const field={total:'totalScore',satisfaction:'satisfactionRate',response:'avgResponseSeconds',conversion:'conversionRate'}[rankingMetric.value]; const lower=rankingMetric.value==='response'; currentDailyRankings.value.forEach(rows=>{let winner=null; rows.forEach(row=>{if(row[field]==null)return;if(!winner||(lower?row[field]<winner[field]:row[field]>winner[field]))winner=row;}); if(winner){const key=winner.agentId||winner.sourceAccount;counts.set(key,(counts.get(key)||0)+1);}}); return counts; });
+            const championStyleMap = computed(() => { const values=[...new Set(championCountMap.value.values())].sort((a,b)=>a-b); const result=new Map(); championCountMap.value.forEach((count,key)=>{const level=values.length<2?4:Math.round(values.indexOf(count)*4/(values.length-1));result.set(key,{rarity:['common','uncommon','rare','epic','legendary'][level],style:{fontSize:`${9.5+level*.35}px`,fontWeight:String(600+level*50)}});});return result; });
             const honorLabel = (person) => {
                 const count = historicalFirstCount(person);
                 if (count) return `×${count}`;
@@ -541,15 +559,11 @@
             };
             const historicalFirstCount = (person) => {
                 const key = person.agentId || person.sourceAccount;
-                return periodScope.value.currentDates.reduce((count, date) => {
-                    const rows = core.buildPeriodRanking(dashboardMetrics.value, [date], 1, false).allRows.filter((item) => item.isQualified);
-                    rows.sort((a, b) => rankingMetric.value === 'response' ? (a.avgResponseSeconds ?? Infinity) - (b.avgResponseSeconds ?? Infinity) : rankingMetric.value === 'satisfaction' ? (b.satisfactionRate ?? -1) - (a.satisfactionRate ?? -1) : rankingMetric.value === 'conversion' ? (b.conversionRate ?? -1) - (a.conversionRate ?? -1) : (b.totalScore ?? -1) - (a.totalScore ?? -1));
-                    return count + (rows[0] && (rows[0].agentId || rows[0].sourceAccount) === key ? 1 : 0);
-                }, 0);
+                return championCountMap.value.get(key) || 0;
             };
             const championLabel = computed(() => ({total:'综合冠军',satisfaction:'满意率冠军',response:'响应冠军',conversion:'转化冠军'}[rankingMetric.value]));
-            const honorRarity = (person) => { const n=historicalFirstCount(person); const values=[...new Set(rankingRows.value.map(historicalFirstCount).filter(Boolean))].sort((a,b)=>a-b); if(!n)return 'common'; if(values.length===1)return 'legendary'; const level=Math.round(values.indexOf(n)*4/(values.length-1)); return ['common','uncommon','rare','epic','legendary'][level]; };
-            const honorStyle = (person) => { const values=[...new Set(rankingRows.value.map(historicalFirstCount).filter(Boolean))].sort((a,b)=>a-b); const i=Math.max(0,values.indexOf(historicalFirstCount(person))); const level=values.length<2?4:Math.round(i*4/(values.length-1)); return {fontSize:`${9.5+level*.35}px`,fontWeight:String(600+level*50)}; };
+            const honorRarity = (person) => championStyleMap.value.get(person.agentId||person.sourceAccount)?.rarity || 'common';
+            const honorStyle = (person) => championStyleMap.value.get(person.agentId||person.sourceAccount)?.style || null;
             const singleDayMode = computed(() => periodScope.value.currentDates.length === 1);
             const singleDayKpis = computed(() => [{key:'satisfaction',name:'满意率',value:currentTeam.value.satisfactionRate,display:formatPercent(currentTeam.value.satisfactionRate),target:.9,passed:currentTeam.value.satisfactionRate>=.9,progress:Math.min(100,(currentTeam.value.satisfactionRate||0)/.9*82),gap:currentTeam.value.satisfactionRate==null?'暂无数据':currentTeam.value.satisfactionRate>=.9?`高于目标 ${((currentTeam.value.satisfactionRate-.9)*100).toFixed(1)}%`:`距目标 ${((.9-currentTeam.value.satisfactionRate)*100).toFixed(1)}%`},{key:'response',name:'工作时间均响',value:currentTeam.value.avgResponseSeconds,display:formatSeconds(currentTeam.value.avgResponseSeconds),target:15,passed:currentTeam.value.avgResponseSeconds!=null&&currentTeam.value.avgResponseSeconds<=15,progress:Math.min(100,15/Math.max(8,currentTeam.value.avgResponseSeconds||30)*82),gap:currentTeam.value.avgResponseSeconds==null?'暂无数据':currentTeam.value.avgResponseSeconds<=15?`优于目标 ${(15-currentTeam.value.avgResponseSeconds).toFixed(1)} 秒`:`超出目标 ${(currentTeam.value.avgResponseSeconds-15).toFixed(1)} 秒`},{key:'conversion',name:'转化率',value:currentTeam.value.conversionRate,display:formatPercent(currentTeam.value.conversionRate),target:.3,passed:currentTeam.value.conversionRate>=.3,progress:Math.min(100,(currentTeam.value.conversionRate||0)/.3*82),gap:currentTeam.value.conversionRate==null?'暂无数据':currentTeam.value.conversionRate>=.3?`高于目标 ${((currentTeam.value.conversionRate-.3)*100).toFixed(1)}%`:`距目标 ${((.3-currentTeam.value.conversionRate)*100).toFixed(1)}%`},{key:'score',name:'综合得分',value:currentTeam.value.avgTotalScore,display:`${formatScore(currentTeam.value.avgTotalScore)} 分`,target:null,passed:null,progress:Math.min(100,(currentTeam.value.avgTotalScore||0)/110*100),gap:'按现有三项 KPI 权重计算'}]);
             const rankingPositionText = (person, index) => person.isQualified || periodScope.value.provisional ? index + 1 : '—';
@@ -616,13 +630,14 @@
                 const current = history.at(-1) || {};
                 const previous = history.length > 1 ? history.at(-2) : null;
                 const metricText = (index, value) => value == null ? '—' : index === 0 || index === 2 ? `${Number(value).toFixed(1)}%` : index === 1 ? `${Number(value).toFixed(1)} 秒` : `${Number(value).toFixed(1)} 分`;
+                trendChart.clear();
                 trendChart.setOption({
                     animationDuration: 250,
                     backgroundColor: 'transparent',
                     color: ['#38bdf8', '#18bd8b', '#f6a918'],
                     tooltip: { trigger: 'axis', backgroundColor: '#13223a', borderColor: '#2d4565', textStyle: { color: '#eaf4ff', fontSize: 11 }, formatter: (items) => isSingleDay ? `${items[0]?.axisValue}<br>${items.map(x => `${x.marker}${x.seriesName}：${metricText(x.dataIndex, x.value)}`).join('<br>')}` : `${items[0]?.axisValue}<br>${items.map(x => `${x.marker}${x.seriesName}：${x.seriesName === '工作时间均响' ? `${Number(x.value).toFixed(1)} 秒` : x.seriesName === '综合得分' ? `${Number(x.value).toFixed(1)} 分` : `${Number(x.value).toFixed(1)}%`}`).join('<br>')}` },
-                    legend: { top: 2, right: 0, textStyle: { color: '#7e93ad', fontSize: 9 }, data: isSingleDay ? [] : ['满意率', '转化率', '工作时间均响', '综合得分'] },
-                    grid: { left: 34, right: 45, top: 44, bottom: 28 },
+                    legend: { top: 4, right: 8, itemWidth: 14, itemHeight: 6, itemGap: 12, icon: 'roundRect', textStyle: { color: '#7e93ad', fontSize: 9 }, data: isSingleDay ? [] : ['满意率', '转化率', '工作时间均响', '综合得分'] },
+                    grid: { left: 12, right: 18, top: 58, bottom: 18, containLabel: true },
                     xAxis: { type: 'category', data: isSingleDay ? ['满意率', '均响(秒)', '转化率', '综合得分'] : history.map((item) => item.key.slice(5)), boundaryGap: !isSingleDay ? false : true, axisLine: { lineStyle: { color: '#2a3c57' } }, axisLabel: { color: '#6d829c', fontSize: 9 } },
                     yAxis: [
                         { type: 'value', min: 0, max: 100, axisLabel: { color: '#6d829c', fontSize: 9, formatter: '{value}%' }, splitLine: { lineStyle: { color: 'rgba(134,158,187,.12)' } } },
@@ -638,7 +653,6 @@
                         ,{ name: '综合得分', type: 'line', smooth: true, showSymbol: false, data: history.map(x=>x.avgTotalScore==null?null:+Number(x.avgTotalScore).toFixed(1)), lineStyle:{width:1.5,color:'#a78bda'} }
                     ]
                 }, true);
-                trendChart.resize();
             };
             const renderSalesChart = () => {
                 if (!salesChartEl.value || !window.echarts || view.value !== 'dashboard') return;
@@ -646,18 +660,18 @@
                 if (salesChart && salesChart.getDom() !== salesChartEl.value) { salesChart.dispose(); salesChart = null; }
                 if (!salesChart) salesChart = echarts.getInstanceByDom(salesChartEl.value) || echarts.init(salesChartEl.value);
                 const rows = salesRows.value.slice(0, 16); const multi = periodScope.value.currentDates.length > 1;
-                salesChart.clear(); salesChart.setOption({ animationDuration: 220, grid:{left:72,right:36,top:4,bottom:4}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#13223a',borderColor:'#2d4565',textStyle:{color:'#eaf4ff',fontSize:10},formatter:(items)=>{const p=rows[items[0].dataIndex];return `${p.displayName}<br>${multi?'日均销售额':'当日销售额'}：${formatCurrency(p.avgRefundedSales)}<br>周期累计：${formatCurrency(p.refundedSalesTotal)}<br>实际参与：${p.refundedSalesDays} 日`; }}, dataZoom:rows.length>8?[{type:'inside',yAxisIndex:0,startValue:0,endValue:7}]:[],xAxis:{type:'value',show:false}, yAxis:{type:'category',inverse:true,data:rows.map(x=>x.displayName.length>7?`${x.displayName.slice(0,7)}…`:x.displayName),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8ea1b8',fontSize:9}}, series:[{type:'bar',data:rows.map((x,i)=>({value:x.avgRefundedSales,itemStyle:{color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:i<3?'rgba(91,143,221,.72)':'rgba(47,125,246,.55)'},{offset:1,color:i<3?'rgba(92,190,192,.82)':'rgba(62,153,211,.75)'}]},borderRadius:[0,7,7,0]}})),barMaxWidth:14,emphasis:{itemStyle:{opacity:1}},label:{show:true,position:'right',color:'#dcecff',fontSize:9,formatter:({value})=>formatCurrency(value)}}]}, true); salesChart.resize();
+                salesChart.clear(); salesChart.setOption({ animationDuration: 220, grid:{left:72,right:36,top:4,bottom:4}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#13223a',borderColor:'#2d4565',textStyle:{color:'#eaf4ff',fontSize:10},formatter:(items)=>{const p=rows[items[0].dataIndex];return `${p.displayName}<br>${multi?'周期累计销售额':'当日销售额'}：${formatCurrency(p.displaySales)}${multi?`<br>日均销售额：${formatCurrency(p.avgRefundedSales)}<br>实际参与：${p.refundedSalesDays} 日`:''}`; }}, dataZoom:rows.length>8?[{type:'inside',yAxisIndex:0,startValue:0,endValue:7}]:[],xAxis:{type:'value',show:false}, yAxis:{type:'category',inverse:true,data:rows.map(x=>x.displayName.length>7?`${x.displayName.slice(0,7)}…`:x.displayName),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8ea1b8',fontSize:9}}, series:[{type:'bar',data:rows.map((x,i)=>({value:x.displaySales,itemStyle:{color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:i<3?'rgba(91,143,221,.72)':'rgba(47,125,246,.55)'},{offset:1,color:i<3?'rgba(92,190,192,.82)':'rgba(62,153,211,.75)'}]},borderRadius:[0,7,7,0]}})),barMaxWidth:14,emphasis:{itemStyle:{opacity:1}},label:{show:true,position:'right',color:'#dcecff',fontSize:9,formatter:({value})=>formatCurrency(value)}}]}, true);
             };
             const scheduleTrendChart = () => {
                 cancelAnimationFrame(trendRenderFrame);
                 nextTick(() => {
                     trendRenderFrame = requestAnimationFrame(() => {
                         renderTrendChart();
-                        renderSalesChart();
-                        trendRenderFrame = requestAnimationFrame(renderTrendChart);
+                        trendRenderFrame = requestAnimationFrame(() => trendChart?.resize());
                     });
                 });
             };
+            const scheduleSalesChart = () => { cancelAnimationFrame(salesRenderFrame); nextTick(()=>{ salesRenderFrame=requestAnimationFrame(()=>{ renderSalesChart(); salesRenderFrame=requestAnimationFrame(()=>salesChart?.resize()); }); }); };
 
             const detailHistory = computed(() => detailAgent.value
                 ? dashboardMetrics.value.filter((item) => item.agent_id === detailAgent.value.agentId).sort((a, b) => a.business_date.localeCompare(b.business_date))
@@ -761,7 +775,7 @@
                 }
                 return records;
             });
-            const detailHonorGroups = computed(() => { if(!detailAgent.value)return []; const key=detailAgent.value.agentId||detailAgent.value.sourceAccount; const defs=[['total','综合荣誉','totalScore',false],['satisfaction','满意率荣誉','satisfactionRate',false],['response','响应效率荣誉','avgResponseSeconds',true],['conversion','转化率荣誉','conversionRate',false]]; return defs.map(([id,name,field,lower])=>{const dates=availableDates.value.filter(date=>{const rows=core.buildPeriodRanking(dashboardMetrics.value,[date],1,false).allRows.filter(x=>x.isQualified&&x[field]!=null).sort((a,b)=>lower?a[field]-b[field]:b[field]-a[field]); return rows[0]&&(rows[0].agentId||rows[0].sourceAccount)===key;}).reverse(); return {id,name,dates,count:dates.length};}); });
+            const detailHonorGroups = computed(() => { if(!detailAgent.value)return []; const key=detailAgent.value.agentId||detailAgent.value.sourceAccount; const defs=[['total','综合荣誉','综合冠军','🥇','totalScore',false],['satisfaction','满意率荣誉','满意率冠军','🏅','satisfactionRate',false],['response','响应效率荣誉','响应先锋','⚡','avgResponseSeconds',true],['conversion','转化率荣誉','转化冠军','📈','conversionRate',false]]; return defs.map(([id,name,title,icon,field,lower])=>{const dates=availableDates.value.filter(date=>{const rows=allDailyRankings.value.get(date)||[];let winner=null;rows.forEach(row=>{if(row[field]==null)return;if(!winner||(lower?row[field]<winner[field]:row[field]>winner[field]))winner=row;});return winner&&(winner.agentId||winner.sourceAccount)===key;}).reverse(); return {id,name,title,icon,dates,count:dates.length};}); });
             const toggleHonorGroup = (group) => { if(!group.count)return; openHonorGroup.value=openHonorGroup.value===group.id?'':group.id; };
             const renderDetailChart = () => {
                 if (!detailChartEl.value || !detailMetric.value || !window.echarts) return;
@@ -973,16 +987,16 @@
                 detailChart?.resize();
             };
 
-            watch(dashboardPeriod, scheduleTrendChart, { flush: 'post' });
+            watch(periodScope, scheduleTrendChart, { flush: 'post' });
             watch(dashboardMetrics, scheduleTrendChart, { flush: 'post' });
-            watch(salesRows, () => nextTick(renderSalesChart), { flush: 'post' });
+            watch(salesRows, scheduleSalesChart, { flush: 'post' });
             watch(detailPeriod, scheduleDetailChart, { flush: 'post' });
             watch(detailTrendRows, scheduleDetailChart, { flush: 'post' });
-            watch(view, (next) => { if (next === 'dashboard') scheduleTrendChart(); }, { flush: 'post' });
+            watch(view, (next) => { if (next === 'dashboard') { scheduleTrendChart(); scheduleSalesChart(); } }, { flush: 'post' });
 
             const handleHashChange = () => {
                 view.value = location.hash === '#import' ? 'import' : 'dashboard';
-                if (view.value === 'dashboard') scheduleTrendChart();
+                if (view.value === 'dashboard') { scheduleTrendChart(); scheduleSalesChart(); }
             };
 
             onMounted(async () => {
@@ -1005,6 +1019,7 @@
                 authSubscription?.unsubscribe();
                 cancelAnimationFrame(trendRenderFrame);
                 cancelAnimationFrame(detailRenderFrame);
+                cancelAnimationFrame(salesRenderFrame);
                 trendChart?.dispose(); salesChart?.dispose();
                 detailChart?.dispose();
                 window.clearInterval(championTimer);
