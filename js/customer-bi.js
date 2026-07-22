@@ -77,18 +77,22 @@
             const dashboardPeriod = ref('yesterday');
             const customStart = ref('');
             const customEnd = ref('');
+            const customPanelOpen = ref(false), customMode = ref('day'), customDraftStart = ref(''), customDraftEnd = ref(''), customError = ref('');
             const rankingMetric = ref('total');
             const trendChartEl = ref(null);
             const detailChartEl = ref(null);
             const salesChartEl = ref(null);
             const detailAgent = ref(null);
             const detailPeriod = ref('yesterday');
+            const openHonorGroup = ref('');
+            const championIndex = ref(0);
             let trendChart = null;
             let detailChart = null;
             let salesChart = null;
             let authSubscription = null;
             let trendRenderFrame = 0;
             let detailRenderFrame = 0;
+            let championTimer = 0;
 
             const periodOptions = [
                 { label: '昨日', value: 'yesterday' },
@@ -96,6 +100,10 @@
                 { label: '本月', value: 'month' }, { label: '自定义', value: 'custom' }
             ];
             const noticeItems = ['数据仅统计已确认快照', '均响为工作时间平响时长', '上传前请确认业务日期'];
+            const selectPeriod = (mode) => { if (mode !== 'custom') { dashboardPeriod.value = mode; customPanelOpen.value = false; return; } customDraftStart.value = customStart.value; customDraftEnd.value = customEnd.value; customPanelOpen.value = true; };
+            const applyCustomRange = () => { const start = customDraftStart.value, end = customMode.value === 'day' ? start : customDraftEnd.value; if (!start || !end || start > end) { customError.value = '请选择有效日期范围'; return; } customStart.value = start; customEnd.value = end; dashboardPeriod.value = 'custom'; customError.value = ''; customPanelOpen.value = false; };
+            const cancelCustomRange = () => { customPanelOpen.value = false; customError.value = ''; };
+            const clearCustomRange = () => { customStart.value = ''; customEnd.value = ''; customDraftStart.value = ''; customDraftEnd.value = ''; dashboardPeriod.value = 'yesterday'; customPanelOpen.value = false; };
             const rankingOptions = [
                 { label: '综合', value: 'total' }, { label: '满意率', value: 'satisfaction' },
                 { label: '均响', value: 'response' }, { label: '转化率', value: 'conversion' }
@@ -415,6 +423,8 @@
                 ? rankedByTotal.value[0] || null
                 : eligibleRows.value[0] || null
             );
+            const championAnnouncements = computed(() => { const rows = rankedByTotal.value.filter(x => x.isQualified || periodScope.value.provisional); const best = (field, lower = false) => [...rows].filter(x => x[field] != null).sort((a,b)=>lower?a[field]-b[field]:b[field]-a[field])[0]; return [['综合冠军',best('totalScore')],['满意之星',best('satisfactionRate')],['响应先锋',best('avgResponseSeconds',true)],['转化高手',best('conversionRate')]].filter(x=>x[1]).map(([name,p])=>`${periodName.value}${name} · ${p.displayName}`); });
+            const championAnnouncement = computed(() => championAnnouncements.value[championIndex.value % Math.max(1, championAnnouncements.value.length)] || '');
             const formatChineseDate = (date) => {
                 if (!date) return '暂无日期';
                 const [year, month, day] = date.split('-').map(Number);
@@ -531,13 +541,17 @@
             };
             const historicalFirstCount = (person) => {
                 const key = person.agentId || person.sourceAccount;
-                return availableDates.value.reduce((count, date) => {
+                return periodScope.value.currentDates.reduce((count, date) => {
                     const rows = core.buildPeriodRanking(dashboardMetrics.value, [date], 1, false).allRows.filter((item) => item.isQualified);
                     rows.sort((a, b) => rankingMetric.value === 'response' ? (a.avgResponseSeconds ?? Infinity) - (b.avgResponseSeconds ?? Infinity) : rankingMetric.value === 'satisfaction' ? (b.satisfactionRate ?? -1) - (a.satisfactionRate ?? -1) : rankingMetric.value === 'conversion' ? (b.conversionRate ?? -1) - (a.conversionRate ?? -1) : (b.totalScore ?? -1) - (a.totalScore ?? -1));
                     return count + (rows[0] && (rows[0].agentId || rows[0].sourceAccount) === key ? 1 : 0);
                 }, 0);
             };
-            const honorRarity = (person) => { const n = historicalFirstCount(person); return n >= 11 ? 'legendary' : n >= 8 ? 'epic' : n >= 5 ? 'rare' : n >= 3 ? 'uncommon' : 'common'; };
+            const championLabel = computed(() => ({total:'综合冠军',satisfaction:'满意率冠军',response:'响应冠军',conversion:'转化冠军'}[rankingMetric.value]));
+            const honorRarity = (person) => { const n=historicalFirstCount(person); const values=[...new Set(rankingRows.value.map(historicalFirstCount).filter(Boolean))].sort((a,b)=>a-b); if(!n)return 'common'; if(values.length===1)return 'legendary'; const level=Math.round(values.indexOf(n)*4/(values.length-1)); return ['common','uncommon','rare','epic','legendary'][level]; };
+            const honorStyle = (person) => { const values=[...new Set(rankingRows.value.map(historicalFirstCount).filter(Boolean))].sort((a,b)=>a-b); const i=Math.max(0,values.indexOf(historicalFirstCount(person))); const level=values.length<2?4:Math.round(i*4/(values.length-1)); return {fontSize:`${9.5+level*.35}px`,fontWeight:String(600+level*50)}; };
+            const singleDayMode = computed(() => periodScope.value.currentDates.length === 1);
+            const singleDayKpis = computed(() => [{key:'satisfaction',name:'满意率',value:currentTeam.value.satisfactionRate,display:formatPercent(currentTeam.value.satisfactionRate),target:.9,passed:currentTeam.value.satisfactionRate>=.9,progress:Math.min(100,(currentTeam.value.satisfactionRate||0)/.9*82),gap:currentTeam.value.satisfactionRate==null?'暂无数据':currentTeam.value.satisfactionRate>=.9?`高于目标 ${((currentTeam.value.satisfactionRate-.9)*100).toFixed(1)}%`:`距目标 ${((.9-currentTeam.value.satisfactionRate)*100).toFixed(1)}%`},{key:'response',name:'工作时间均响',value:currentTeam.value.avgResponseSeconds,display:formatSeconds(currentTeam.value.avgResponseSeconds),target:15,passed:currentTeam.value.avgResponseSeconds!=null&&currentTeam.value.avgResponseSeconds<=15,progress:Math.min(100,15/Math.max(8,currentTeam.value.avgResponseSeconds||30)*82),gap:currentTeam.value.avgResponseSeconds==null?'暂无数据':currentTeam.value.avgResponseSeconds<=15?`优于目标 ${(15-currentTeam.value.avgResponseSeconds).toFixed(1)} 秒`:`超出目标 ${(currentTeam.value.avgResponseSeconds-15).toFixed(1)} 秒`},{key:'conversion',name:'转化率',value:currentTeam.value.conversionRate,display:formatPercent(currentTeam.value.conversionRate),target:.3,passed:currentTeam.value.conversionRate>=.3,progress:Math.min(100,(currentTeam.value.conversionRate||0)/.3*82),gap:currentTeam.value.conversionRate==null?'暂无数据':currentTeam.value.conversionRate>=.3?`高于目标 ${((currentTeam.value.conversionRate-.3)*100).toFixed(1)}%`:`距目标 ${((.3-currentTeam.value.conversionRate)*100).toFixed(1)}%`},{key:'score',name:'综合得分',value:currentTeam.value.avgTotalScore,display:`${formatScore(currentTeam.value.avgTotalScore)} 分`,target:null,passed:null,progress:Math.min(100,(currentTeam.value.avgTotalScore||0)/110*100),gap:'按现有三项 KPI 权重计算'}]);
             const rankingPositionText = (person, index) => person.isQualified || periodScope.value.provisional ? index + 1 : '—';
             const rankingValue = (person) => {
                 if (rankingMetric.value === 'satisfaction') return formatPercent(person.satisfactionRate);
@@ -601,12 +615,13 @@
                 const isSingleDay = dashboardPeriod.value === 'yesterday' || periodScope.value.currentDates.length === 1;
                 const current = history.at(-1) || {};
                 const previous = history.length > 1 ? history.at(-2) : null;
+                const metricText = (index, value) => value == null ? '—' : index === 0 || index === 2 ? `${Number(value).toFixed(1)}%` : index === 1 ? `${Number(value).toFixed(1)} 秒` : `${Number(value).toFixed(1)} 分`;
                 trendChart.setOption({
                     animationDuration: 250,
                     backgroundColor: 'transparent',
                     color: ['#38bdf8', '#18bd8b', '#f6a918'],
-                    tooltip: { trigger: 'axis', backgroundColor: '#13223a', borderColor: '#2d4565', textStyle: { color: '#eaf4ff', fontSize: 11 } },
-                    legend: { top: 2, right: 0, textStyle: { color: '#7e93ad', fontSize: 9 }, data: isSingleDay ? ['当前日期', '上一有效业务日'] : ['满意率', '转化率', '工作时间均响'] },
+                    tooltip: { trigger: 'axis', backgroundColor: '#13223a', borderColor: '#2d4565', textStyle: { color: '#eaf4ff', fontSize: 11 }, formatter: (items) => isSingleDay ? `${items[0]?.axisValue}<br>${items.map(x => `${x.marker}${x.seriesName}：${metricText(x.dataIndex, x.value)}`).join('<br>')}` : `${items[0]?.axisValue}<br>${items.map(x => `${x.marker}${x.seriesName}：${x.seriesName === '工作时间均响' ? `${Number(x.value).toFixed(1)} 秒` : x.seriesName === '综合得分' ? `${Number(x.value).toFixed(1)} 分` : `${Number(x.value).toFixed(1)}%`}`).join('<br>')}` },
+                    legend: { top: 2, right: 0, textStyle: { color: '#7e93ad', fontSize: 9 }, data: isSingleDay ? [] : ['满意率', '转化率', '工作时间均响', '综合得分'] },
                     grid: { left: 34, right: 45, top: 44, bottom: 28 },
                     xAxis: { type: 'category', data: isSingleDay ? ['满意率', '均响(秒)', '转化率', '综合得分'] : history.map((item) => item.key.slice(5)), boundaryGap: !isSingleDay ? false : true, axisLine: { lineStyle: { color: '#2a3c57' } }, axisLabel: { color: '#6d829c', fontSize: 9 } },
                     yAxis: [
@@ -614,12 +629,13 @@
                         { type: 'value', axisLabel: { color: '#6d829c', fontSize: 9, formatter: '{value}s' }, splitLine: { show: false } }
                     ],
                     series: isSingleDay ? [
-                        { name: '当前日期', type: 'bar', barMaxWidth: 34, data: [current.satisfactionRate == null ? null : current.satisfactionRate * 100, current.avgResponseSeconds, current.conversionRate == null ? null : current.conversionRate * 100, current.avgTotalScore], label: { show: true, color: '#dcecff', fontSize: 9, position: 'top' } },
-                        { name: '上一有效业务日', type: 'bar', barMaxWidth: 34, data: previous ? [previous.satisfactionRate == null ? null : previous.satisfactionRate * 100, previous.avgResponseSeconds, previous.conversionRate == null ? null : previous.conversionRate * 100, previous.avgTotalScore] : [], itemStyle: { opacity: .38 }, label: { show: !!previous, color: '#8ca3c0', fontSize: 8, position: 'top' } }
+                        { name: '当前日期', type: 'bar', barWidth: 18, barGap: '35%', data: [current.satisfactionRate == null ? null : current.satisfactionRate * 100, current.avgResponseSeconds, current.conversionRate == null ? null : current.conversionRate * 100, current.avgTotalScore], label: { show: true, color: '#dcecff', fontSize: 9, position: 'top', formatter: x => metricText(x.dataIndex, x.value) } },
+                        { name: '上一有效业务日', type: 'bar', barWidth: 18, data: previous ? [previous.satisfactionRate == null ? null : previous.satisfactionRate * 100, previous.avgResponseSeconds, previous.conversionRate == null ? null : previous.conversionRate * 100, previous.avgTotalScore] : [], itemStyle: { opacity: .38 }, label: { show: !!previous, color: '#8ca3c0', fontSize: 8, position: 'top', formatter: x => metricText(x.dataIndex, x.value) } }
                     ] : [
                         { name: '满意率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: emphasizeLatest(satisfactionData, '#38bdf8'), lineStyle: { width: 3 }, areaStyle: { opacity: .05 }, markLine: dashboardPeriod.value === 'yesterday' && focusDate ? { silent: true, symbol: 'none', label: { formatter: '昨日', color: '#dcecff', fontSize: 9 }, lineStyle: { color: 'rgba(255,255,255,.28)', type: 'dashed' }, data: [{ xAxis: focusDate.slice(5) }] } : undefined },
                         { name: '转化率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: emphasizeLatest(conversionData, '#18bd8b'), lineStyle: { width: 2 } },
                         { name: '工作时间均响', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'diamond', symbolSize: 6, data: emphasizeLatest(responseData, '#f6a918'), lineStyle: { width: 2, type: 'dashed' } }
+                        ,{ name: '综合得分', type: 'line', smooth: true, showSymbol: false, data: history.map(x=>x.avgTotalScore==null?null:+Number(x.avgTotalScore).toFixed(1)), lineStyle:{width:1.5,color:'#a78bda'} }
                     ]
                 }, true);
                 trendChart.resize();
@@ -630,7 +646,7 @@
                 if (salesChart && salesChart.getDom() !== salesChartEl.value) { salesChart.dispose(); salesChart = null; }
                 if (!salesChart) salesChart = echarts.getInstanceByDom(salesChartEl.value) || echarts.init(salesChartEl.value);
                 const rows = salesRows.value.slice(0, 16); const multi = periodScope.value.currentDates.length > 1;
-                salesChart.setOption({ animationDuration: 220, grid:{left:72,right:18,top:4,bottom:4}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#13223a',borderColor:'#2d4565',textStyle:{color:'#eaf4ff',fontSize:10},formatter:(items)=>{const p=rows[items[0].dataIndex];return `${p.displayName}<br>${multi?'日均':'当日'}：${formatCurrency(p.avgRefundedSales)}<br>累计：${formatCurrency(p.refundedSalesTotal)}<br>参与：${p.refundedSalesDays} 日`; }}, xAxis:{type:'value',show:false}, yAxis:{type:'category',inverse:true,data:rows.map(x=>x.displayName.length>7?`${x.displayName.slice(0,7)}…`:x.displayName),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8ea1b8',fontSize:9}}, series:[{type:'bar',data:rows.map(x=>x.avgRefundedSales),barMaxWidth:14,itemStyle:{color:'#2f7df6',borderRadius:[0,7,7,0]},label:{show:true,position:'right',color:'#dcecff',fontSize:9,formatter:({value})=>formatCurrency(value)}}]}, true); salesChart.resize();
+                salesChart.clear(); salesChart.setOption({ animationDuration: 220, grid:{left:72,right:36,top:4,bottom:4}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#13223a',borderColor:'#2d4565',textStyle:{color:'#eaf4ff',fontSize:10},formatter:(items)=>{const p=rows[items[0].dataIndex];return `${p.displayName}<br>${multi?'日均销售额':'当日销售额'}：${formatCurrency(p.avgRefundedSales)}<br>周期累计：${formatCurrency(p.refundedSalesTotal)}<br>实际参与：${p.refundedSalesDays} 日`; }}, dataZoom:rows.length>8?[{type:'inside',yAxisIndex:0,startValue:0,endValue:7}]:[],xAxis:{type:'value',show:false}, yAxis:{type:'category',inverse:true,data:rows.map(x=>x.displayName.length>7?`${x.displayName.slice(0,7)}…`:x.displayName),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8ea1b8',fontSize:9}}, series:[{type:'bar',data:rows.map((x,i)=>({value:x.avgRefundedSales,itemStyle:{color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:i<3?'rgba(91,143,221,.72)':'rgba(47,125,246,.55)'},{offset:1,color:i<3?'rgba(92,190,192,.82)':'rgba(62,153,211,.75)'}]},borderRadius:[0,7,7,0]}})),barMaxWidth:14,emphasis:{itemStyle:{opacity:1}},label:{show:true,position:'right',color:'#dcecff',fontSize:9,formatter:({value})=>formatCurrency(value)}}]}, true); salesChart.resize();
             };
             const scheduleTrendChart = () => {
                 cancelAnimationFrame(trendRenderFrame);
@@ -745,6 +761,8 @@
                 }
                 return records;
             });
+            const detailHonorGroups = computed(() => { if(!detailAgent.value)return []; const key=detailAgent.value.agentId||detailAgent.value.sourceAccount; const defs=[['total','综合荣誉','totalScore',false],['satisfaction','满意率荣誉','satisfactionRate',false],['response','响应效率荣誉','avgResponseSeconds',true],['conversion','转化率荣誉','conversionRate',false]]; return defs.map(([id,name,field,lower])=>{const dates=availableDates.value.filter(date=>{const rows=core.buildPeriodRanking(dashboardMetrics.value,[date],1,false).allRows.filter(x=>x.isQualified&&x[field]!=null).sort((a,b)=>lower?a[field]-b[field]:b[field]-a[field]); return rows[0]&&(rows[0].agentId||rows[0].sourceAccount)===key;}).reverse(); return {id,name,dates,count:dates.length};}); });
+            const toggleHonorGroup = (group) => { if(!group.count)return; openHonorGroup.value=openHonorGroup.value===group.id?'':group.id; };
             const renderDetailChart = () => {
                 if (!detailChartEl.value || !detailMetric.value || !window.echarts) return;
                 if (!detailChartEl.value.clientWidth || !detailChartEl.value.clientHeight) return;
@@ -791,6 +809,7 @@
                     displayName: person.displayName
                 };
                 detailPeriod.value = dashboardPeriod.value;
+                nextTick(()=>{ openHonorGroup.value=detailHonorGroups.value.find(x=>x.count)?.id||''; });
                 scheduleDetailChart();
             };
             const closeAgent = () => {
@@ -978,6 +997,7 @@
                 });
                 authSubscription = listener.data.subscription;
                 if (session.value) await loadDashboard();
+                championTimer=window.setInterval(()=>{ if(championAnnouncements.value.length>1) championIndex.value=(championIndex.value+1)%championAnnouncements.value.length; },4200);
             });
             onBeforeUnmount(() => {
                 window.removeEventListener('resize', handleResize);
@@ -987,25 +1007,26 @@
                 cancelAnimationFrame(detailRenderFrame);
                 trendChart?.dispose(); salesChart?.dispose();
                 detailChart?.dispose();
+                window.clearInterval(championTimer);
             });
 
             return {
                 today, rules, view, steps, importStep, fileInfo, parseError, isParsing, isDragging,
                 parsedAgents, selectedAccounts, agentSearch, businessDate, isSaving,
                 session, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
-                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems,
+                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems, customPanelOpen, customMode, customDraftStart, customDraftEnd, customError,
                 periodOptions, rankingOptions, trendChartEl, salesChartEl, detailChartEl, detailAgent, detailHistory,
                 detailPeriod, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
-                detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors,
+                detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors, detailHonorGroups, openHonorGroup,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
-                currentChampion, eligibleRows, kpiComparison, formatChineseDate, attainment, salesRows, salesSummary,
+                currentChampion, eligibleRows, kpiComparison, formatChineseDate, attainment, salesRows, salesSummary, championAnnouncement, championLabel, singleDayMode, singleDayKpis,
                 topInsight, riskInsight, movementInsight,
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime, formatCurrency,
                 previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, openAgent, closeAgent,
+                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, honorStyle, openAgent, closeAgent, selectPeriod, applyCustomRange, cancelCustomRange, clearCustomRange, toggleHonorGroup,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }

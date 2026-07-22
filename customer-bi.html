@@ -48,15 +48,15 @@
                 <div class="dashboard-heading">
                     <div>
                         <div class="eyebrow">MANAGEMENT COCKPIT</div>
-                        <div class="title-line"><h1>苏泊尔商丘团队数据 BI 系统</h1><span class="champion-stream" aria-live="polite">🏆 {{ currentChampion ? `${periodName}综合冠军 × ${currentChampion.displayName}` : '' }}</span></div>
+                        <div class="title-line"><h1>苏泊尔商丘团队数据 BI 系统</h1><transition name="honor-slide" mode="out-in"><span :key="championAnnouncement" class="champion-stream" aria-live="polite">🏆 {{ championAnnouncement }}</span></transition></div>
                         <p>{{ periodRangeText }} · {{ dashboardStatusText }}</p>
                     </div>
                     <div class="dashboard-period-row"><div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
-                        <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="dashboardPeriod = mode.value">
-                            {{ mode.label }}
+                        <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="selectPeriod(mode.value)">
+                            {{ mode.label }}<small v-if="mode.value==='custom' && dashboardPeriod==='custom'">{{ customStart===customEnd?customStart:`${customStart}~${customEnd}` }}</small>
                         </button>
                     </div><div class="notice-stream"><span v-for="item in noticeItems" :key="item">{{ item }}</span></div></div>
-                    <div v-if="dashboardPeriod === 'custom'" class="custom-range"><input v-model="customStart" type="date"><span>至</span><input v-model="customEnd" type="date"></div>
+                    <div v-if="customPanelOpen" class="custom-range-panel"><div class="custom-mode"><button :class="{active:customMode==='day'}" @click="customMode='day'">单日</button><button :class="{active:customMode==='range'}" @click="customMode='range'">日期区间</button></div><div class="custom-date-inputs"><label><span>{{ customMode==='day'?'业务日期':'开始日期' }}</span><input v-model="customDraftStart" type="date"></label><label v-if="customMode==='range'"><span>结束日期</span><input v-model="customDraftEnd" type="date"></label></div><p v-if="customError">{{ customError }}</p><footer><button @click="clearCustomRange">清除</button><button @click="cancelCustomRange">取消</button><button class="apply" @click="applyCustomRange">应用</button></footer></div>
                 </div>
                 <div class="toolbar-actions">
                     <div class="current-scope"><span>当前人员范围</span><b>已确认批次人员</b></div>
@@ -105,7 +105,7 @@
                 </div>
 
                 <div class="main-visual-grid three-column">
-                    <article class="cockpit-panel attainment-panel"><div class="panel-header"><div><h2>综合达成进度</h2><p>当前周期有效 KPI</p></div></div><div class="attainment-ring"><b>{{ attainment.rate == null ? '—' : `${(attainment.rate * 100).toFixed(0)}%` }}</b><span>{{ attainment.passed }} / {{ attainment.valid }} 项达标</span></div><p class="attainment-copy">满意率 {{ attainment.satisfaction[0] }}/{{ attainment.satisfaction[1] }}<br>均响 {{ attainment.response[0] }}/{{ attainment.response[1] }}<br>转化率 {{ attainment.conversion[0] }}/{{ attainment.conversion[1] }}</p></article>
+                    <article class="cockpit-panel attainment-panel"><div class="panel-header"><div><h2>综合达成进度</h2><p>当前周期有效 KPI</p></div></div><div class="attainment-ring" :style="{'--progress':`${(attainment.rate||0)*360}deg`}"><div><b>{{ attainment.rate == null ? '—' : `${(attainment.rate * 100).toFixed(0)}%` }}</b><span>{{ attainment.passed }} / {{ attainment.valid }} 项达标</span></div></div><div class="attainment-lines"><span>满意率<b>{{ attainment.satisfaction[0] }}/{{ attainment.satisfaction[1] }}</b></span><span>均响<b>{{ attainment.response[0] }}/{{ attainment.response[1] }}</b></span><span>转化率<b>{{ attainment.conversion[0] }}/{{ attainment.conversion[1] }}</b></span></div></article>
                     <article class="cockpit-panel trend-panel">
                         <div class="panel-header">
                             <div>
@@ -113,7 +113,7 @@
                                 <p>{{ periodRangeText }} · 满意率、工作时间均响、转化率</p>
                             </div>
                         </div>
-                        <div ref="trendChartEl" class="chart chart-main" role="img" aria-label="团队 KPI 趋势图"></div>
+                        <div v-if="singleDayMode" class="target-progress-grid"><div v-for="item in singleDayKpis" :key="item.key" :class="['target-progress-item',item.passed===true?'pass':item.passed===false?'fail':'neutral']"><header><b>{{ item.name }}</b><strong>{{ item.display }}</strong></header><div class="target-track"><i :style="{width:`${item.progress}%`}"></i><em v-if="item.target!=null" style="left:82%"></em></div><footer><span>{{ item.passed===true?'已达标':item.passed===false?'未达标':'当前得分' }}</span><small>{{ item.gap }}</small></footer></div></div><div v-else ref="trendChartEl" class="chart chart-main" role="img" aria-label="团队 KPI 趋势图"></div>
                     </article>
 
                     <article class="cockpit-panel ranking-panel">
@@ -125,9 +125,9 @@
                             <button v-for="metric in rankingOptions" :key="metric.value" :class="{ active: rankingMetric === metric.value }" @click="rankingMetric = metric.value">{{ metric.label }}</button>
                         </div>
                         <transition-group name="rank-list" tag="ol" class="ranking-list">
-                            <li v-for="(person, index) in rankingRows.slice(0, 10)" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
+                            <li v-for="(person, index) in rankingRows" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
                                 <span class="rank-index">{{ rankingPositionText(person, index) }}</span>
-                                <span class="rank-name">{{ person.displayName }}<small v-if="honorLabel(person)" :class="['honor-badge', honorRarity(person)]">{{ honorLabel(person) }}</small></span>
+                                <span class="rank-name"><b>{{ person.displayName }}</b><small v-if="historicalFirstCount(person)" :class="['honor-copy', honorRarity(person)]" :style="honorStyle(person)">{{ championLabel }} × {{ historicalFirstCount(person) }}</small></span>
                                 <span v-if="!person.isQualified" class="sample-badge">样本不足</span>
                                 <span v-if="rankingMetric === 'total'" :class="['rank-change', rankChangeClass(person)]">{{ rankChangeText(person) }}</span>
                                 <span class="rank-value">{{ rankingValue(person) }}</span>
@@ -145,9 +145,9 @@
                             <div class="matrix-row matrix-header"><span>人员</span><span>满意</span><span>均响</span><span>转化</span></div>
                             <div v-for="person in rankedByTotal" :key="person.agentId || person.sourceAccount" class="matrix-row" @click="openAgent(person)">
                                 <span>{{ person.displayName }}</span>
-                                <span :class="targetClass(person.satisfactionRate >= rules.targets.satisfaction)">{{ formatPercent(person.satisfactionRate) }} {{ person.satisfactionRate >= rules.targets.satisfaction ? '达标' : '未达标' }}</span>
-                                <span :class="targetClass(person.avgResponseSeconds <= rules.targets.responseSeconds)">{{ formatSeconds(person.avgResponseSeconds) }} {{ person.avgResponseSeconds <= rules.targets.responseSeconds ? '达标' : '未达标' }}</span>
-                                <span :class="targetClass(person.conversionRate >= rules.targets.conversion)">{{ formatPercent(person.conversionRate) }} {{ person.conversionRate >= rules.targets.conversion ? '达标' : '未达标' }}</span>
+                                <span :class="['matrix-kpi', targetClass(person.satisfactionRate >= rules.targets.satisfaction)]"><b>{{ formatPercent(person.satisfactionRate) }}</b><small>{{ person.satisfactionRate >= rules.targets.satisfaction ? '达标' : '未达标' }}</small></span>
+                                <span :class="['matrix-kpi', targetClass(person.avgResponseSeconds <= rules.targets.responseSeconds)]"><b>{{ formatSeconds(person.avgResponseSeconds) }}</b><small>{{ person.avgResponseSeconds <= rules.targets.responseSeconds ? '达标' : '未达标' }}</small></span>
+                                <span :class="['matrix-kpi', targetClass(person.conversionRate >= rules.targets.conversion)]"><b>{{ formatPercent(person.conversionRate) }}</b><small>{{ person.conversionRate >= rules.targets.conversion ? '达标' : '未达标' }}</small></span>
                             </div>
                         </div>
                     </article>
@@ -332,7 +332,7 @@
                     </div>
                     <article class="detail-panel"><div class="panel-header light"><div><h3>{{ detailTrendTitle }}</h3><p>{{ detailRangeText }}</p></div></div><div ref="detailChartEl" class="chart detail-chart"></div></article>
                     <article class="detail-panel history-panel"><div class="panel-header light"><div><h3>当前周期参与记录</h3><p>休息、未排班或未纳入统计的日期不会补 0</p></div></div><div class="history-chips"><span v-for="item in detailTrendRows" :key="item.business_date"><b>{{ item.business_date.slice(5) }}</b>{{ formatScore(item.total_score) }}</span></div></article>
-                    <article class="detail-panel honor-history-panel"><div class="panel-header light"><div><h3>历史荣誉记录</h3><p>根据已确认的历史排名实时生成</p></div></div><div v-if="detailHonors.length" class="honor-history-list"><span v-for="honor in detailHonors" :key="honor.key"><b>{{ honor.name }}</b><small>{{ honor.date }}</small></span></div><div v-else class="honor-empty">暂无第一名荣誉记录</div></article>
+                    <article class="detail-panel honor-history-panel"><div class="panel-header light"><div><h3>历史荣誉记录</h3><p>四类冠军按正式业务快照实时统计</p></div></div><div class="honor-accordion"><section v-for="group in detailHonorGroups" :key="group.id"><button @click="toggleHonorGroup(group)"><b>{{ group.name }}</b><span>{{ group.count }} 次</span><i :class="{open:openHonorGroup===group.id}">⌄</i></button><div v-if="openHonorGroup===group.id && group.count" class="honor-dates"><span v-for="date in group.dates" :key="date">{{ date }}</span></div></section></div></article>
                 </template>
                 <div v-else class="detail-empty"><b>该周期没有参与数据</b><span>未参与不视为未达标，也不会生成排名。</span></div>
             </aside>
