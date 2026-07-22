@@ -563,17 +563,38 @@
                     Object.entries(sorted).forEach(([metric, list]) => {
                         const winner = list[0];
                         if (!winner) return;
-                        const key = winner.agentId || winner.sourceAccount;
-                        counts[metric].set(key, (counts[metric].get(key) || 0) + 1);
+                        const keys = [winner.agentId, winner.sourceAccount].filter(Boolean).map(String);
+                        keys.forEach((key) => counts[metric].set(key, (counts[metric].get(key) || 0) + 1));
                     });
                 });
                 return counts;
             });
             const metricHonorLabel = (person) => {
-                const key = person.agentId || person.sourceAccount;
-                const count = metricFirstCountByAgent.value[rankingMetric.value]?.get(key) || 0;
-                return count ? `历史第一 ${count} 次` : '';
+                const map = metricFirstCountByAgent.value[rankingMetric.value];
+                const count = Number(map?.get(String(person.agentId || '')) || map?.get(String(person.sourceAccount || '')) || 0);
+                if (!count) return '';
+                const labels = { total: '综合第一', satisfaction: '满意率第一', response: '均响第一', conversion: '转化率第一' };
+                return `${labels[rankingMetric.value]} ${count} 次`;
             };
+            const gloryTracks = computed(() => {
+                const latestDate = availableDates.value.at(-1);
+                if (!latestDate) return [];
+                const rows = core.rankAgents(core.aggregateAgentMetrics(dashboardMetrics.value, [latestDate])).filter((item) => item.isQualified);
+                if (!rows.length) return [];
+                const bySatisfaction = [...rows].sort((a,b)=>(b.satisfactionRate??-1)-(a.satisfactionRate??-1))[0];
+                const byResponse = [...rows].sort((a,b)=>(a.avgResponseSeconds??Infinity)-(b.avgResponseSeconds??Infinity))[0];
+                const byConversion = [...rows].sort((a,b)=>(b.conversionRate??-1)-(a.conversionRate??-1))[0];
+                const champion = rows[0];
+                return [
+                    { key:'champion', label:'昨日综合冠军', name:champion.displayName },
+                    { key:'team-star', label:'团队之星', name:champion.displayName },
+                    { key:'satisfaction', label:'满意之星', name:bySatisfaction?.displayName || champion.displayName },
+                    { key:'response', label:'响应先锋', name:byResponse?.displayName || champion.displayName },
+                    { key:'conversion', label:'转化高手', name:byConversion?.displayName || champion.displayName },
+                    { key:'glory', label:'荣耀时刻', name:champion.displayName }
+                ];
+            });
+
             const customDetailRows = computed(() => rankedByTotal.value.map((row) => {
                 const satisfactionPassed = row.satisfactionRate >= rules.targets.satisfaction;
                 const responsePassed = row.avgResponseSeconds <= rules.targets.responseSeconds;
@@ -1026,7 +1047,7 @@
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle, isSingleDayView, singleDayComparisons, currentMetricHonors, currentHonorCategoryName, customDetailRows,
-                currentChampion, eligibleRows, kpiComparison, formatChineseDate,
+                currentChampion, eligibleRows, gloryTracks, kpiComparison, formatChineseDate,
                 topInsight, riskInsight, movementInsight,
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime,
                 previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
