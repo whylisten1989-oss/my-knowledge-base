@@ -80,10 +80,12 @@
             const rankingMetric = ref('total');
             const trendChartEl = ref(null);
             const detailChartEl = ref(null);
+            const salesChartEl = ref(null);
             const detailAgent = ref(null);
             const detailPeriod = ref('yesterday');
             let trendChart = null;
             let detailChart = null;
+            let salesChart = null;
             let authSubscription = null;
             let trendRenderFrame = 0;
             let detailRenderFrame = 0;
@@ -496,6 +498,7 @@
             });
             const salesRows = computed(() => rankedByTotal.value.filter((item) => item.avgRefundedSales != null).sort((a, b) => b.avgRefundedSales - a.avgRefundedSales));
             const salesSummary = computed(() => ({ total: salesRows.value.reduce((sum, item) => sum + item.refundedSalesTotal, 0), days: salesRows.value.reduce((sum, item) => sum + item.refundedSalesDays, 0) }));
+            const formatCurrency = (value) => `¥${Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}`;
             const honorByAgent = computed(() => {
                 const grouped = new Map();
                 dashboardRankings.value.forEach((item) => {
@@ -520,7 +523,7 @@
             });
             const honorLabel = (person) => {
                 const count = historicalFirstCount(person);
-                if (count) return `${rankingOptions.find((item) => item.value === rankingMetric.value)?.label || '综合'}第一 ${count} 次`;
+                if (count) return `×${count}`;
                 const honor = honorByAgent.value.get(person.agentId); if (!honor) return '';
                 if (honor.currentFirstStreak >= 2) return `连续 ${honor.currentFirstStreak} 个有效业务日第一`;
                 if (honor.firstRows.length) return `历史第一 ${honor.firstRows.length} 次`;
@@ -534,6 +537,7 @@
                     return count + (rows[0] && (rows[0].agentId || rows[0].sourceAccount) === key ? 1 : 0);
                 }, 0);
             };
+            const honorRarity = (person) => { const n = historicalFirstCount(person); return n >= 11 ? 'legendary' : n >= 8 ? 'epic' : n >= 5 ? 'rare' : n >= 3 ? 'uncommon' : 'common'; };
             const rankingPositionText = (person, index) => person.isQualified || periodScope.value.provisional ? index + 1 : '—';
             const rankingValue = (person) => {
                 if (rankingMetric.value === 'satisfaction') return formatPercent(person.satisfactionRate);
@@ -620,11 +624,20 @@
                 }, true);
                 trendChart.resize();
             };
+            const renderSalesChart = () => {
+                if (!salesChartEl.value || !window.echarts || view.value !== 'dashboard') return;
+                if (!salesChartEl.value.clientWidth || !salesChartEl.value.clientHeight) return;
+                if (salesChart && salesChart.getDom() !== salesChartEl.value) { salesChart.dispose(); salesChart = null; }
+                if (!salesChart) salesChart = echarts.getInstanceByDom(salesChartEl.value) || echarts.init(salesChartEl.value);
+                const rows = salesRows.value.slice(0, 16); const multi = periodScope.value.currentDates.length > 1;
+                salesChart.setOption({ animationDuration: 220, grid:{left:72,right:18,top:4,bottom:4}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#13223a',borderColor:'#2d4565',textStyle:{color:'#eaf4ff',fontSize:10},formatter:(items)=>{const p=rows[items[0].dataIndex];return `${p.displayName}<br>${multi?'日均':'当日'}：${formatCurrency(p.avgRefundedSales)}<br>累计：${formatCurrency(p.refundedSalesTotal)}<br>参与：${p.refundedSalesDays} 日`; }}, xAxis:{type:'value',show:false}, yAxis:{type:'category',inverse:true,data:rows.map(x=>x.displayName.length>7?`${x.displayName.slice(0,7)}…`:x.displayName),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8ea1b8',fontSize:9}}, series:[{type:'bar',data:rows.map(x=>x.avgRefundedSales),barMaxWidth:14,itemStyle:{color:'#2f7df6',borderRadius:[0,7,7,0]},label:{show:true,position:'right',color:'#dcecff',fontSize:9,formatter:({value})=>formatCurrency(value)}}]}, true); salesChart.resize();
+            };
             const scheduleTrendChart = () => {
                 cancelAnimationFrame(trendRenderFrame);
                 nextTick(() => {
                     trendRenderFrame = requestAnimationFrame(() => {
                         renderTrendChart();
+                        renderSalesChart();
                         trendRenderFrame = requestAnimationFrame(renderTrendChart);
                     });
                 });
@@ -937,12 +950,13 @@
             };
 
             const handleResize = () => {
-                trendChart?.resize();
+                trendChart?.resize(); salesChart?.resize();
                 detailChart?.resize();
             };
 
             watch(dashboardPeriod, scheduleTrendChart, { flush: 'post' });
             watch(dashboardMetrics, scheduleTrendChart, { flush: 'post' });
+            watch(salesRows, () => nextTick(renderSalesChart), { flush: 'post' });
             watch(detailPeriod, scheduleDetailChart, { flush: 'post' });
             watch(detailTrendRows, scheduleDetailChart, { flush: 'post' });
             watch(view, (next) => { if (next === 'dashboard') scheduleTrendChart(); }, { flush: 'post' });
@@ -971,7 +985,7 @@
                 authSubscription?.unsubscribe();
                 cancelAnimationFrame(trendRenderFrame);
                 cancelAnimationFrame(detailRenderFrame);
-                trendChart?.dispose();
+                trendChart?.dispose(); salesChart?.dispose();
                 detailChart?.dispose();
             });
 
@@ -980,7 +994,7 @@
                 parsedAgents, selectedAccounts, agentSearch, businessDate, isSaving,
                 session, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
                 dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems,
-                periodOptions, rankingOptions, trendChartEl, detailChartEl, detailAgent, detailHistory,
+                periodOptions, rankingOptions, trendChartEl, salesChartEl, detailChartEl, detailAgent, detailHistory,
                 detailPeriod, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
                 detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
@@ -988,10 +1002,10 @@
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
                 currentChampion, eligibleRows, kpiComparison, formatChineseDate, attainment, salesRows, salesSummary,
                 topInsight, riskInsight, movementInsight,
-                formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime,
+                formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime, formatCurrency,
                 previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, openAgent, closeAgent,
+                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, openAgent, closeAgent,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }

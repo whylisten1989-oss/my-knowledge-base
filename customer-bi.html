@@ -127,7 +127,7 @@
                         <transition-group name="rank-list" tag="ol" class="ranking-list">
                             <li v-for="(person, index) in rankingRows.slice(0, 10)" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
                                 <span class="rank-index">{{ rankingPositionText(person, index) }}</span>
-                                <span class="rank-name">{{ person.displayName }}<small v-if="honorLabel(person)" class="honor-badge">{{ honorLabel(person) }}</small></span>
+                                <span class="rank-name">{{ person.displayName }}<small v-if="honorLabel(person)" :class="['honor-badge', honorRarity(person)]">{{ honorLabel(person) }}</small></span>
                                 <span v-if="!person.isQualified" class="sample-badge">样本不足</span>
                                 <span v-if="rankingMetric === 'total'" :class="['rank-change', rankChangeClass(person)]">{{ rankChangeText(person) }}</span>
                                 <span class="rank-value">{{ rankingValue(person) }}</span>
@@ -138,7 +138,7 @@
                 </div>
 
                 <div class="secondary-grid">
-                    <article class="cockpit-panel sales-panel"><div class="panel-header"><div><h2>客服销售额</h2><p>多日展示个人日均退款后销售额</p></div></div><div v-if="salesRows.length" class="sales-bars"><div v-for="person in salesRows" :key="person.agentId"><span>{{ person.displayName }}</span><i :style="{ width: `${Math.max(8, person.avgRefundedSales / salesRows[0].avgRefundedSales * 100)}%` }"></i><b>¥{{ person.avgRefundedSales.toFixed(0) }}</b></div></div><div v-else class="honor-empty">暂无有效退款后销售额</div></article>
+                    <article class="cockpit-panel sales-panel"><div class="panel-header"><div><h2>客服销售额</h2><p>{{ periodScope.currentDates.length > 1 ? '个人日均退款后销售额' : '当日退款后销售额' }}</p></div></div><div v-if="salesRows.length" ref="salesChartEl" class="sales-chart"></div><div v-else class="honor-empty">当前时间范围暂无有效退款后销售额</div></article>
                     <article class="cockpit-panel matrix-panel">
                         <div class="panel-header"><div><h2>KPI 达标矩阵</h2><p>只包含{{ periodName }}实际参与人员</p></div></div>
                         <div class="matrix-scroll">
