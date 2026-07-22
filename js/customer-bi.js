@@ -74,6 +74,8 @@
             const dashboardBatches = ref([]);
             const dashboardBatchAgents = ref([]);
             const dashboardPeriod = ref('yesterday');
+            const customStart = ref('');
+            const customEnd = ref('');
             const rankingMetric = ref('total');
             const trendChartEl = ref(null);
             const detailChartEl = ref(null);
@@ -88,8 +90,9 @@
             const periodOptions = [
                 { label: '昨日', value: 'yesterday' },
                 { label: '近 7 日', value: 'last7' },
-                { label: '本月', value: 'month' }
+                { label: '本月', value: 'month' }, { label: '自定义', value: 'custom' }
             ];
+            const noticeItems = ['数据仅统计已确认快照', '均响为工作时间平响时长', '上传前请确认业务日期'];
             const rankingOptions = [
                 { label: '综合', value: 'total' }, { label: '满意率', value: 'satisfaction' },
                 { label: '均响', value: 'response' }, { label: '转化率', value: 'conversion' }
@@ -355,7 +358,12 @@
                 dashboardRankings.value.forEach((item) => map.set(`${item.business_date}:${item.agent_id}`, item));
                 return map;
             });
-            const periodScope = computed(() => core.resolvePeriodScope(availableDates.value, dashboardPeriod.value));
+            const periodScope = computed(() => {
+                if (dashboardPeriod.value !== 'custom') return core.resolvePeriodScope(availableDates.value, dashboardPeriod.value);
+                const dates = availableDates.value.filter((date) => (!customStart.value || date >= customStart.value) && (!customEnd.value || date <= customEnd.value));
+                const before = availableDates.value.filter((date) => dates.length && date < dates[0]).slice(-dates.length);
+                return { currentDates: dates, previousDates: before, minimumParticipationDays: dates.length > 1 ? 2 : 1, provisional: false, comparisonComplete: !!dates.length && before.length === dates.length };
+            });
             const currentPeriodRanking = computed(() => core.buildPeriodRanking(
                 dashboardMetrics.value,
                 periodScope.value.currentDates,
@@ -406,7 +414,7 @@
                 const [year, month, day] = date.split('-').map(Number);
                 return `${year} 年 ${month} 月 ${day} 日`;
             };
-            const periodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月' }[dashboardPeriod.value]));
+            const periodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月', custom: '自定义' }[dashboardPeriod.value]));
             const trendTitle = computed(() => dashboardPeriod.value === 'yesterday'
                 ? '近期指标趋势 · 昨日重点'
                 : `${periodName.value}指标趋势`
@@ -419,6 +427,7 @@
                     const [year, month] = dates.at(-1).slice(0, 7).split('-').map(Number);
                     return `${year} 年 ${month} 月 · 已录入 ${dates.length} 个业务日`;
                 }
+                if (dashboardPeriod.value === 'custom') return dates.length === 1 ? `自定义日期 · ${dates[0]}` : `${dates[0]} 至 ${dates.at(-1)} · ${dates.length} 个有效业务日`;
                 return `${dates[0]} 至 ${dates.at(-1)} · ${dates.length} 个有效业务日`;
             });
             const dashboardStatusText = computed(() => {
@@ -470,6 +479,18 @@
                     ...rows.filter((item) => !item.isQualified)
                 ];
             });
+            const attainment = computed(() => {
+                const totals = { passed: 0, valid: 0, satisfaction: [0, 0], response: [0, 0], conversion: [0, 0] };
+                rankedByTotal.value.forEach((person) => {
+                    [['satisfaction', person.satisfactionRate, rules.targets.satisfaction, false], ['response', person.avgResponseSeconds, rules.targets.responseSeconds, true], ['conversion', person.conversionRate, rules.targets.conversion, false]].forEach(([key, value, target, lower]) => {
+                        if (value == null) return;
+                        totals.valid += 1; totals[key][1] += 1;
+                        if (lower ? value <= target : value >= target) { totals.passed += 1; totals[key][0] += 1; }
+                    });
+                });
+                return { ...totals, rate: totals.valid ? totals.passed / totals.valid : null };
+            });
+            const salesRows = computed(() => rankedByTotal.value.filter((item) => item.avgRefundedSales != null).sort((a, b) => b.avgRefundedSales - a.avgRefundedSales));
             const honorByAgent = computed(() => {
                 const grouped = new Map();
                 dashboardRankings.value.forEach((item) => {
@@ -493,11 +514,20 @@
                 return result;
             });
             const honorLabel = (person) => {
-                const honor = honorByAgent.value.get(person.agentId);
-                if (!honor) return '';
+                const count = historicalFirstCount(person);
+                if (count) return `${rankingOptions.find((item) => item.value === rankingMetric.value)?.label || '综合'}第一 ${count} 次`;
+                const honor = honorByAgent.value.get(person.agentId); if (!honor) return '';
                 if (honor.currentFirstStreak >= 2) return `连续 ${honor.currentFirstStreak} 个有效业务日第一`;
                 if (honor.firstRows.length) return `历史第一 ${honor.firstRows.length} 次`;
                 return '';
+            };
+            const historicalFirstCount = (person) => {
+                const key = person.agentId || person.sourceAccount;
+                return availableDates.value.reduce((count, date) => {
+                    const rows = core.buildPeriodRanking(dashboardMetrics.value, [date], 1, false).allRows.filter((item) => item.isQualified);
+                    rows.sort((a, b) => rankingMetric.value === 'response' ? (a.avgResponseSeconds ?? Infinity) - (b.avgResponseSeconds ?? Infinity) : rankingMetric.value === 'satisfaction' ? (b.satisfactionRate ?? -1) - (a.satisfactionRate ?? -1) : rankingMetric.value === 'conversion' ? (b.conversionRate ?? -1) - (a.conversionRate ?? -1) : (b.totalScore ?? -1) - (a.totalScore ?? -1));
+                    return count + (rows[0] && (rows[0].agentId || rows[0].sourceAccount) === key ? 1 : 0);
+                }, 0);
             };
             const rankingPositionText = (person, index) => person.isQualified || periodScope.value.provisional ? index + 1 : '—';
             const rankingValue = (person) => {
@@ -938,19 +968,19 @@
                 today, rules, view, steps, importStep, fileInfo, parseError, isParsing, isDragging,
                 parsedAgents, selectedAccounts, agentSearch, businessDate, isSaving,
                 session, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
-                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows,
+                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems,
                 periodOptions, rankingOptions, trendChartEl, detailChartEl, detailAgent, detailHistory,
                 detailPeriod, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
                 detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
-                currentChampion, eligibleRows, kpiComparison, formatChineseDate,
+                currentChampion, eligibleRows, kpiComparison, formatChineseDate, attainment, salesRows,
                 topInsight, riskInsight, movementInsight,
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime,
                 previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, openAgent, closeAgent,
+                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, openAgent, closeAgent,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }

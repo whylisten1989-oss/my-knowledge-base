@@ -48,7 +48,7 @@
                 <div class="dashboard-heading">
                     <div>
                         <div class="eyebrow">MANAGEMENT COCKPIT</div>
-                        <h1>苏泊尔商丘团队数据 BI 系统</h1>
+                        <div class="title-line"><h1>苏泊尔商丘团队数据 BI 系统</h1><span class="champion-stream" aria-live="polite">🏆 {{ currentChampion ? `${periodName}综合冠军 × ${currentChampion.displayName}` : '' }}</span></div>
                         <p>{{ periodRangeText }} · {{ dashboardStatusText }}</p>
                     </div>
                     <div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
@@ -56,8 +56,10 @@
                             {{ mode.label }}
                         </button>
                     </div>
+                    <div v-if="dashboardPeriod === 'custom'" class="custom-range"><input v-model="customStart" type="date"><span>至</span><input v-model="customEnd" type="date"></div>
                 </div>
                 <div class="toolbar-actions">
+                    <div class="notice-stream"><span v-for="item in noticeItems" :key="item">{{ item }}</span></div>
                     <div class="current-scope"><span>当前人员范围</span><b>已确认批次人员</b></div>
                     <button class="button button-ghost" @click="loadDashboard" :disabled="dashboardLoading">刷新</button>
                     <button class="button button-primary" @click="openImport">上传数据</button>
@@ -91,9 +93,9 @@
                         <small>目标 30% · 权重 25%</small><em :class="['kpi-change', kpiComparison('conversion').state]">{{ kpiComparison('conversion').text }}</em>
                     </article>
                     <article class="kpi-card">
-                        <span>三项达标人数</span>
-                        <animated-number :value="currentTeam.allTargetsCount" :decimals="0"></animated-number>
-                        <small>共 {{ currentTeam.participantCount }} 人参与</small><em :class="['kpi-change', kpiComparison('targets').state]">{{ kpiComparison('targets').text }}</em>
+                        <span>综合达成率</span>
+                        <animated-number :value="percentValue(attainment.rate)" suffix="%" :decimals="1"></animated-number>
+                        <small>{{ attainment.passed }} / {{ attainment.valid }} 项达标 · 满意{{ attainment.satisfaction[0] }}/{{ attainment.satisfaction[1] }} 均响{{ attainment.response[0] }}/{{ attainment.response[1] }} 转化{{ attainment.conversion[0] }}/{{ attainment.conversion[1] }}</small><em :class="['kpi-change', attainment.rate >= .8 ? 'positive' : 'negative']">{{ attainment.valid ? '按人员周期聚合' : '暂无有效 KPI' }}</em>
                     </article>
                     <article class="kpi-card">
                         <span>{{ periodName }}第一名</span>
@@ -103,7 +105,8 @@
                     </article>
                 </div>
 
-                <div class="main-visual-grid">
+                <div class="main-visual-grid three-column">
+                    <article class="cockpit-panel attainment-panel"><div class="panel-header"><div><h2>综合达成进度</h2><p>当前周期有效 KPI</p></div></div><div class="attainment-ring"><b>{{ attainment.rate == null ? '—' : `${(attainment.rate * 100).toFixed(0)}%` }}</b><span>{{ attainment.passed }} / {{ attainment.valid }} 项达标</span></div><p class="attainment-copy">满意率 {{ attainment.satisfaction[0] }}/{{ attainment.satisfaction[1] }}<br>均响 {{ attainment.response[0] }}/{{ attainment.response[1] }}<br>转化率 {{ attainment.conversion[0] }}/{{ attainment.conversion[1] }}</p></article>
                     <article class="cockpit-panel trend-panel">
                         <div class="panel-header">
                             <div>
@@ -131,19 +134,21 @@
                                 <span class="rank-value">{{ rankingValue(person) }}</span>
                             </li>
                         </transition-group>
+                        <p class="ranking-note">实时计算，暂不写入数据库</p>
                     </article>
                 </div>
 
                 <div class="secondary-grid">
+                    <article class="cockpit-panel sales-panel"><div class="panel-header"><div><h2>客服销售额</h2><p>多日展示个人日均退款后销售额</p></div></div><div v-if="salesRows.length" class="sales-bars"><div v-for="person in salesRows" :key="person.agentId"><span>{{ person.displayName }}</span><i :style="{ width: `${Math.max(8, person.avgRefundedSales / salesRows[0].avgRefundedSales * 100)}%` }"></i><b>¥{{ person.avgRefundedSales.toFixed(0) }}</b></div></div><div v-else class="honor-empty">暂无有效退款后销售额</div></article>
                     <article class="cockpit-panel matrix-panel">
                         <div class="panel-header"><div><h2>KPI 达标矩阵</h2><p>只包含{{ periodName }}实际参与人员</p></div></div>
                         <div class="matrix-scroll">
                             <div class="matrix-row matrix-header"><span>人员</span><span>满意</span><span>均响</span><span>转化</span></div>
                             <div v-for="person in rankedByTotal" :key="person.agentId || person.sourceAccount" class="matrix-row" @click="openAgent(person)">
                                 <span>{{ person.displayName }}</span>
-                                <i :class="targetClass(person.satisfactionRate >= rules.targets.satisfaction)"></i>
-                                <i :class="targetClass(person.avgResponseSeconds <= rules.targets.responseSeconds)"></i>
-                                <i :class="targetClass(person.conversionRate >= rules.targets.conversion)"></i>
+                                <span :class="targetClass(person.satisfactionRate >= rules.targets.satisfaction)">{{ formatPercent(person.satisfactionRate) }} {{ person.satisfactionRate >= rules.targets.satisfaction ? '达标' : '未达标' }}</span>
+                                <span :class="targetClass(person.avgResponseSeconds <= rules.targets.responseSeconds)">{{ formatSeconds(person.avgResponseSeconds) }} {{ person.avgResponseSeconds <= rules.targets.responseSeconds ? '达标' : '未达标' }}</span>
+                                <span :class="targetClass(person.conversionRate >= rules.targets.conversion)">{{ formatPercent(person.conversionRate) }} {{ person.conversionRate >= rules.targets.conversion ? '达标' : '未达标' }}</span>
                             </div>
                         </div>
                     </article>
