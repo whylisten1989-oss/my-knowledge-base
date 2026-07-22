@@ -17,7 +17,8 @@
         bad: '有效差评数',
         response: '工作时间平响时长',
         inquiries: '询单人数',
-        orders: '下单人数'
+        orders: '下单人数',
+        refundedSales: '退款后销售额'
     });
 
     const cleanText = (value) => value == null ? '' : String(value).trim();
@@ -96,6 +97,7 @@
             avgResponseSeconds: parseDurationSeconds(row[CORE_HEADERS.response]),
             inquiryCount: toCount(row[CORE_HEADERS.inquiries]),
             orderCount: toCount(row[CORE_HEADERS.orders]),
+            refundedSales: toNumber(row[CORE_HEADERS.refundedSales]),
             warnings,
             rawData: sanitizeRawRow(row)
         };
@@ -255,6 +257,7 @@
             inquiryCount: numberOrNull(item?.inquiry_count, item?.inquiryCount),
             orderCount: numberOrNull(item?.order_count, item?.orderCount),
             avgResponseSeconds: numberOrNull(item?.avg_response_seconds, item?.avgResponseSeconds)
+            ,refundedSales: numberOrNull(item?.refunded_sales, item?.refundedSales, item?.raw_data?.[CORE_HEADERS.refundedSales])
         };
     };
 
@@ -283,6 +286,7 @@
                     ratingDays: 0,
                     conversionDays: 0,
                     responses: []
+                    ,sales: []
                 });
             }
             const group = groups.get(key);
@@ -298,6 +302,7 @@
                 group.conversionDays += 1;
             }
             if (item.avgResponseSeconds != null) group.responses.push(item.avgResponseSeconds);
+            if (item.refundedSales != null) group.sales.push(item.refundedSales);
         });
 
         return [...groups.values()].map((group) => {
@@ -322,6 +327,9 @@
                 ratingParticipationDays: group.ratingDays,
                 conversionParticipationDays: group.conversionDays,
                 responseParticipationDays: group.responses.length,
+                refundedSalesTotal: group.sales.reduce((sum, value) => sum + value, 0),
+                refundedSalesDays: group.sales.length,
+                avgRefundedSales: group.sales.length ? group.sales.reduce((sum, value) => sum + value, 0) / group.sales.length : null,
                 businessDates: [...group.dates].sort()
             };
         });
