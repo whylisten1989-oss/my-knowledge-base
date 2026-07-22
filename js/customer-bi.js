@@ -84,6 +84,9 @@
             const salesChartEl = ref(null);
             const detailAgent = ref(null);
             const detailPeriod = ref('yesterday');
+            const detailSelectedDate = ref('');
+            const detailCalendarOpen = ref(false);
+            const detailCalendarMonth = ref(today.slice(0, 7));
             const openHonorGroup = ref('');
             const championIndex = ref(0);
             let trendChart = null;
@@ -100,7 +103,10 @@
                 { label: '近 7 日', value: 'last7' },
                 { label: '本月', value: 'month' }, { label: '自定义', value: 'custom' }
             ];
+            const detailPeriodOptions = periodOptions.filter((item) => item.value !== 'custom');
             const noticeItems = ['数据仅统计已确认快照', '均响为工作时间平响时长', '上传前请确认业务日期'];
+            const noticeText = computed(() => noticeItems.join('　·　'));
+            const noticeShouldScroll = computed(() => noticeText.value.length > 28);
             const selectPeriod = (mode) => { if (mode !== 'custom') { dashboardPeriod.value = mode; customPanelOpen.value = false; return; } customDraftStart.value = customStart.value; customDraftEnd.value = customEnd.value; customPanelOpen.value = true; };
             const applyCustomRange = () => { const start = customDraftStart.value, end = customMode.value === 'day' ? start : customDraftEnd.value; if (!start || !end || start > end) { customError.value = '请选择有效日期范围'; return; } customStart.value = start; customEnd.value = end; dashboardPeriod.value = 'custom'; customError.value = ''; customPanelOpen.value = false; };
             const cancelCustomRange = () => { customPanelOpen.value = false; customError.value = ''; };
@@ -108,6 +114,12 @@
             const rankingOptions = [
                 { label: '综合', value: 'total' }, { label: '满意率', value: 'satisfaction' },
                 { label: '均响', value: 'response' }, { label: '转化率', value: 'conversion' }
+            ];
+            const honorMetricDefinitions = [
+                { key: 'total', field: 'totalScore', title: '综合第一', lower: false },
+                { key: 'satisfaction', field: 'satisfactionRate', title: '满意率第一', lower: false },
+                { key: 'response', field: 'avgResponseSeconds', title: '响应第一', lower: true },
+                { key: 'conversion', field: 'conversionRate', title: '转化第一', lower: false }
             ];
 
             const addToast = (message, type = 'info') => {
@@ -425,18 +437,64 @@
                 ? rankedByTotal.value[0] || null
                 : eligibleRows.value[0] || null
             );
+            const historicalHonorAnnouncements = computed(() => {
+                const candidates = [];
+                const seen = new Set();
+                const push = (text, weight) => { if (text && !seen.has(text)) { seen.add(text); candidates.push({ text, weight }); } };
+                const latest = availableDates.value.at(-1);
+                if (!latest) return candidates.map((item) => item.text);
+                const scopes = [
+                    { name: '本月累计', dates: availableDates.value.filter((date) => date.startsWith(latest.slice(0, 7))), weight: 30 },
+                    { name: '近 7 日', dates: availableDates.value.slice(-7), weight: 20 }
+                ];
+                scopes.forEach((scope) => {
+                    honorMetricDefinitions.forEach((definition) => {
+                        const counts = new Map();
+                        scope.dates.forEach((date) => {
+                            const person = dailyWinnerMap.value.get(date)?.[definition.key];
+                            if (!person) return;
+                            const key = person.agentId || person.sourceAccount;
+                            const entry = counts.get(key) || { person, count: 0 };
+                            entry.count += 1;
+                            counts.set(key, entry);
+                        });
+                        counts.forEach(({ person, count }) => {
+                            if (count) push(`${person.displayName}${scope.name}获得 ${count} 次${definition.title}`, scope.weight + count * 5);
+                        });
+                    });
+                });
+                honorMetricDefinitions.forEach((definition) => {
+                    const streaks = new Map();
+                    let previousKey = '';
+                    let currentCount = 0;
+                    let currentPerson = null;
+                    availableDates.value.forEach((date) => {
+                        const person = dailyWinnerMap.value.get(date)?.[definition.key] || null;
+                        const key = person ? person.agentId || person.sourceAccount : '';
+                        if (key && key === previousKey) currentCount += 1;
+                        else { previousKey = key; currentPerson = person; currentCount = key ? 1 : 0; }
+                        if (currentPerson && currentCount >= 2) {
+                            const best = streaks.get(key) || { person: currentPerson, count: 0 };
+                            if (currentCount > best.count) streaks.set(key, { person: currentPerson, count: currentCount });
+                        }
+                    });
+                    streaks.forEach(({ person, count }) => push(`${person.displayName}连续 ${count} 个有效业务日获得${definition.title}`, 40 + count * 6));
+                });
+                return candidates.sort((a, b) => b.weight - a.weight).slice(0, 8).map((item) => item.text);
+            });
             const championAnnouncements = computed(() => {
                 const winners = { total: null, satisfaction: null, response: null, conversion: null };
                 rankedByTotal.value.forEach((row) => {
                     if (!row.isQualified && !periodScope.value.provisional) return;
-                    if (row.totalScore != null && (!winners.total || row.totalScore > winners.total.totalScore)) winners.total = row;
-                    if (row.satisfactionRate != null && (!winners.satisfaction || row.satisfactionRate > winners.satisfaction.satisfactionRate)) winners.satisfaction = row;
-                    if (row.avgResponseSeconds != null && (!winners.response || row.avgResponseSeconds < winners.response.avgResponseSeconds)) winners.response = row;
-                    if (row.conversionRate != null && (!winners.conversion || row.conversionRate > winners.conversion.conversionRate)) winners.conversion = row;
+                    honorMetricDefinitions.forEach((definition) => {
+                        if (row[definition.field] == null) return;
+                        const current = winners[definition.key];
+                        if (!current || (definition.lower ? row[definition.field] < current[definition.field] : row[definition.field] > current[definition.field])) winners[definition.key] = row;
+                    });
                 });
-                return [['综合冠军', winners.total], ['满意之星', winners.satisfaction], ['响应先锋', winners.response], ['转化高手', winners.conversion]]
-                    .filter(([, person]) => person)
-                    .map(([name, person]) => `${periodName.value}${name} · ${person.displayName}`);
+                const labels = { total: '综合第一', satisfaction: '满意之星', response: '响应先锋', conversion: '转化高手' };
+                const current = honorMetricDefinitions.filter((definition) => winners[definition.key]).map((definition) => `${periodName.value}${labels[definition.key]} · ${winners[definition.key].displayName}`);
+                return [...new Set([...current, ...historicalHonorAnnouncements.value])].slice(0, 12);
             });
             const championAnnouncement = computed(() => championAnnouncements.value[championIndex.value % Math.max(1, championAnnouncements.value.length)] || '');
             const formatChineseDate = (date) => {
@@ -546,8 +604,23 @@
                 return result;
             });
             const allDailyRankings = computed(() => { const map=new Map(); availableDates.value.forEach(date=>map.set(date,core.buildPeriodRanking(dashboardMetrics.value,[date],1,false).allRows.filter(x=>x.isQualified))); return map; });
-            const currentDailyRankings = computed(() => new Map(periodScope.value.currentDates.map(date=>[date,allDailyRankings.value.get(date)||[]])));
-            const championCountMap = computed(() => { const counts=new Map(); const field={total:'totalScore',satisfaction:'satisfactionRate',response:'avgResponseSeconds',conversion:'conversionRate'}[rankingMetric.value]; const lower=rankingMetric.value==='response'; currentDailyRankings.value.forEach(rows=>{let winner=null; rows.forEach(row=>{if(row[field]==null)return;if(!winner||(lower?row[field]<winner[field]:row[field]>winner[field]))winner=row;}); if(winner){const key=winner.agentId||winner.sourceAccount;counts.set(key,(counts.get(key)||0)+1);}}); return counts; });
+            const dailyWinnerMap = computed(() => {
+                const result = new Map();
+                allDailyRankings.value.forEach((rows, date) => {
+                    const winners = {};
+                    honorMetricDefinitions.forEach((definition) => {
+                        let winner = null;
+                        rows.forEach((row) => {
+                            if (row[definition.field] == null) return;
+                            if (!winner || (definition.lower ? row[definition.field] < winner[definition.field] : row[definition.field] > winner[definition.field])) winner = row;
+                        });
+                        winners[definition.key] = winner;
+                    });
+                    result.set(date, winners);
+                });
+                return result;
+            });
+            const championCountMap = computed(() => { const counts=new Map(); periodScope.value.currentDates.forEach(date=>{const winner=dailyWinnerMap.value.get(date)?.[rankingMetric.value];if(winner){const key=winner.agentId||winner.sourceAccount;counts.set(key,(counts.get(key)||0)+1);}}); return counts; });
             const championStyleMap = computed(() => { const values=[...new Set(championCountMap.value.values())].sort((a,b)=>a-b); const result=new Map(); championCountMap.value.forEach((count,key)=>{const level=values.length<2?4:Math.round(values.indexOf(count)*4/(values.length-1));result.set(key,{rarity:['common','uncommon','rare','epic','legendary'][level],style:{fontSize:`${9.5+level*.35}px`,fontWeight:String(600+level*50)}});});return result; });
             const honorLabel = (person) => {
                 const count = historicalFirstCount(person);
@@ -561,7 +634,7 @@
                 const key = person.agentId || person.sourceAccount;
                 return championCountMap.value.get(key) || 0;
             };
-            const championLabel = computed(() => ({total:'综合冠军',satisfaction:'满意率冠军',response:'响应冠军',conversion:'转化冠军'}[rankingMetric.value]));
+            const championLabel = computed(() => ({total:'综合第一',satisfaction:'满意率第一',response:'响应第一',conversion:'转化第一'}[rankingMetric.value]));
             const honorRarity = (person) => championStyleMap.value.get(person.agentId||person.sourceAccount)?.rarity || 'common';
             const honorStyle = (person) => championStyleMap.value.get(person.agentId||person.sourceAccount)?.style || null;
             const singleDayMode = computed(() => periodScope.value.currentDates.length === 1);
@@ -595,7 +668,7 @@
                 const missed = currentMetrics.value.filter((item) => item.satisfactionRate < rules.targets.satisfaction);
                 const insufficient = currentMetrics.value.filter((item) => !item.isQualified).length;
                 if (missed.length) return `${missed.length} 人满意率低于 90%，需要优先复盘差评。`;
-                return insufficient ? `${insufficient} 人参与天数不足，仅在明细展示，不参与正式冠军评选。` : '当前参与人员满意率全部达标。';
+                return insufficient ? `${insufficient} 人参与天数不足，仅在明细展示，不参与正式第一评选。` : '当前参与人员满意率全部达标。';
             });
             const movementInsight = computed(() => {
                 const mover = rankedByTotal.value.filter((item) => item.previousRank && item.previousRank > item.rankPosition)
@@ -636,7 +709,7 @@
                     backgroundColor: 'transparent',
                     color: ['#38bdf8', '#18bd8b', '#f6a918'],
                     tooltip: { trigger: 'axis', backgroundColor: '#13223a', borderColor: '#2d4565', textStyle: { color: '#eaf4ff', fontSize: 11 }, formatter: (items) => isSingleDay ? `${items[0]?.axisValue}<br>${items.map(x => `${x.marker}${x.seriesName}：${metricText(x.dataIndex, x.value)}`).join('<br>')}` : `${items[0]?.axisValue}<br>${items.map(x => `${x.marker}${x.seriesName}：${x.seriesName === '工作时间均响' ? `${Number(x.value).toFixed(1)} 秒` : x.seriesName === '综合得分' ? `${Number(x.value).toFixed(1)} 分` : `${Number(x.value).toFixed(1)}%`}`).join('<br>')}` },
-                    legend: { top: 4, right: 8, itemWidth: 14, itemHeight: 6, itemGap: 12, icon: 'roundRect', textStyle: { color: '#7e93ad', fontSize: 9 }, data: isSingleDay ? [] : ['满意率', '转化率', '工作时间均响', '综合得分'] },
+                    legend: { top: 4, right: 8, itemWidth: 14, itemHeight: 6, itemGap: 12, icon: 'roundRect', textStyle: { color: '#7e93ad', fontSize: 9 }, data: isSingleDay ? [] : ['满意率', '转化率', '工作时间均响'] },
                     grid: { left: 12, right: 18, top: 58, bottom: 18, containLabel: true },
                     xAxis: { type: 'category', data: isSingleDay ? ['满意率', '均响(秒)', '转化率', '综合得分'] : history.map((item) => item.key.slice(5)), boundaryGap: !isSingleDay ? false : true, axisLine: { lineStyle: { color: '#2a3c57' } }, axisLabel: { color: '#6d829c', fontSize: 9 } },
                     yAxis: [
@@ -650,7 +723,6 @@
                         { name: '满意率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: emphasizeLatest(satisfactionData, '#38bdf8'), lineStyle: { width: 3 }, areaStyle: { opacity: .05 }, markLine: dashboardPeriod.value === 'yesterday' && focusDate ? { silent: true, symbol: 'none', label: { formatter: '昨日', color: '#dcecff', fontSize: 9 }, lineStyle: { color: 'rgba(255,255,255,.28)', type: 'dashed' }, data: [{ xAxis: focusDate.slice(5) }] } : undefined },
                         { name: '转化率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: emphasizeLatest(conversionData, '#18bd8b'), lineStyle: { width: 2 } },
                         { name: '工作时间均响', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'diamond', symbolSize: 6, data: emphasizeLatest(responseData, '#f6a918'), lineStyle: { width: 2, type: 'dashed' } }
-                        ,{ name: '综合得分', type: 'line', smooth: true, showSymbol: false, data: history.map(x=>x.avgTotalScore==null?null:+Number(x.avgTotalScore).toFixed(1)), lineStyle:{width:1.5,color:'#a78bda'} }
                     ]
                 }, true);
             };
@@ -660,7 +732,7 @@
                 if (salesChart && salesChart.getDom() !== salesChartEl.value) { salesChart.dispose(); salesChart = null; }
                 if (!salesChart) salesChart = echarts.getInstanceByDom(salesChartEl.value) || echarts.init(salesChartEl.value);
                 const rows = salesRows.value.slice(0, 16); const multi = periodScope.value.currentDates.length > 1;
-                salesChart.clear(); salesChart.setOption({ animationDuration: 220, grid:{left:72,right:36,top:4,bottom:4}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#13223a',borderColor:'#2d4565',textStyle:{color:'#eaf4ff',fontSize:10},formatter:(items)=>{const p=rows[items[0].dataIndex];return `${p.displayName}<br>${multi?'周期累计销售额':'当日销售额'}：${formatCurrency(p.displaySales)}${multi?`<br>日均销售额：${formatCurrency(p.avgRefundedSales)}<br>实际参与：${p.refundedSalesDays} 日`:''}`; }}, dataZoom:rows.length>8?[{type:'inside',yAxisIndex:0,startValue:0,endValue:7}]:[],xAxis:{type:'value',show:false}, yAxis:{type:'category',inverse:true,data:rows.map(x=>x.displayName.length>7?`${x.displayName.slice(0,7)}…`:x.displayName),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8ea1b8',fontSize:9}}, series:[{type:'bar',data:rows.map((x,i)=>({value:x.displaySales,itemStyle:{color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:i<3?'rgba(91,143,221,.72)':'rgba(47,125,246,.55)'},{offset:1,color:i<3?'rgba(92,190,192,.82)':'rgba(62,153,211,.75)'}]},borderRadius:[0,7,7,0]}})),barMaxWidth:14,emphasis:{itemStyle:{opacity:1}},label:{show:true,position:'right',color:'#dcecff',fontSize:9,formatter:({value})=>formatCurrency(value)}}]}, true);
+                salesChart.clear(); salesChart.setOption({ animationDuration: 220, grid:{left:12,right:70,top:4,bottom:4,containLabel:true}, tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'#13223a',borderColor:'#2d4565',textStyle:{color:'#eaf4ff',fontSize:10},formatter:(items)=>{const p=rows[items[0].dataIndex];return `${p.displayName}<br>${multi?'周期累计销售额':'当日销售额'}：${formatCurrency(p.displaySales)}${multi?`<br>日均销售额：${formatCurrency(p.avgRefundedSales)}<br>实际参与：${p.refundedSalesDays} 日`:''}`; }}, dataZoom:rows.length>8?[{type:'inside',yAxisIndex:0,startValue:0,endValue:7}]:[],xAxis:{type:'value',show:false,max:(range)=>range.max>0?range.max*1.16:1}, yAxis:{type:'category',inverse:true,data:rows.map(x=>x.displayName.length>7?`${x.displayName.slice(0,7)}…`:x.displayName),axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8ea1b8',fontSize:9}}, series:[{type:'bar',clip:false,data:rows.map((x,i)=>({value:x.displaySales,itemStyle:{color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:i<3?'rgba(91,143,221,.72)':'rgba(47,125,246,.55)'},{offset:1,color:i<3?'rgba(92,190,192,.82)':'rgba(62,153,211,.75)'}]},borderRadius:[0,7,7,0]}})),barMaxWidth:14,emphasis:{itemStyle:{opacity:1}},label:{show:true,position:'right',distance:7,color:'#dcecff',fontSize:9,formatter:({value})=>formatCurrency(value)},labelLayout:{hideOverlap:false}}]}, true);
             };
             const scheduleTrendChart = () => {
                 cancelAnimationFrame(trendRenderFrame);
@@ -674,18 +746,41 @@
             const scheduleSalesChart = () => { cancelAnimationFrame(salesRenderFrame); nextTick(()=>{ salesRenderFrame=requestAnimationFrame(()=>{ renderSalesChart(); salesRenderFrame=requestAnimationFrame(()=>salesChart?.resize()); }); }); };
 
             const detailHistory = computed(() => detailAgent.value
-                ? dashboardMetrics.value.filter((item) => item.agent_id === detailAgent.value.agentId).sort((a, b) => a.business_date.localeCompare(b.business_date))
+                ? dashboardMetrics.value.filter((item) => item.agent_id === detailAgent.value.agentId || item.source_account === detailAgent.value.sourceAccount || item.bi_agents?.source_account === detailAgent.value.sourceAccount).sort((a, b) => a.business_date.localeCompare(b.business_date))
                 : []);
-            const detailScope = computed(() => core.resolvePeriodScope(availableDates.value, detailPeriod.value));
+            const detailScope = computed(() => {
+                if (detailPeriod.value !== 'day') return core.resolvePeriodScope(availableDates.value, detailPeriod.value);
+                const date = detailSelectedDate.value;
+                const index = availableDates.value.indexOf(date);
+                return { period: 'day', baseDate: date || null, currentDates: index >= 0 ? [date] : [], previousDates: index > 0 ? [availableDates.value[index - 1]] : [], comparisonComplete: index > 0, minimumParticipationDays: 1, provisional: false };
+            });
+            const detailDateLabel = computed(() => (detailSelectedDate.value || availableDates.value.at(-1) || today).replaceAll('-', '.'));
+            const detailCalendarLabel = computed(() => { const [year, month] = detailCalendarMonth.value.split('-').map(Number); return `${year} 年 ${month} 月`; });
+            const detailCalendarDays = computed(() => {
+                const [year, month] = detailCalendarMonth.value.split('-').map(Number);
+                const leading = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
+                const count = new Date(Date.UTC(year, month, 0)).getUTCDate();
+                const cells = Array.from({ length: leading }, (_, index) => ({ key: `blank-start-${index}`, blank: true }));
+                for (let day = 1; day <= count; day += 1) {
+                    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    cells.push({ key: date, date, day, enabled: availableDates.value.includes(date), selected: detailSelectedDate.value === date, today: date === today });
+                }
+                while (cells.length % 7) cells.push({ key: `blank-end-${cells.length}`, blank: true });
+                return cells;
+            });
+            const toggleDetailCalendar = () => { detailCalendarOpen.value = !detailCalendarOpen.value; if (detailCalendarOpen.value) detailCalendarMonth.value = (detailSelectedDate.value || availableDates.value.at(-1) || today).slice(0, 7); };
+            const moveDetailCalendar = (offset) => { const [year, month] = detailCalendarMonth.value.split('-').map(Number); const next = new Date(Date.UTC(year, month - 1 + offset, 1)); detailCalendarMonth.value = next.toISOString().slice(0, 7); };
+            const selectDetailDate = (cell) => { if (!cell?.enabled) return; detailSelectedDate.value = cell.date; detailPeriod.value = 'day'; detailCalendarOpen.value = false; };
+            const selectDetailPeriod = (period) => { detailPeriod.value = period; detailCalendarOpen.value = false; };
             const detailPreviousDates = computed(() => {
-                if (detailPeriod.value !== 'yesterday') return detailScope.value.previousDates;
+                if (detailPeriod.value !== 'yesterday' && detailPeriod.value !== 'day') return detailScope.value.previousDates;
                 const currentDate = detailScope.value.currentDates[0];
                 const previousParticipationDate = core.uniqueBusinessDates(detailHistory.value.map((item) => item.business_date))
                     .filter((date) => date < currentDate)
                     .at(-1);
                 return previousParticipationDate ? [previousParticipationDate] : [];
             });
-            const detailComparisonComplete = computed(() => detailPeriod.value === 'yesterday'
+            const detailComparisonComplete = computed(() => detailPeriod.value === 'yesterday' || detailPeriod.value === 'day'
                 ? detailPreviousDates.value.length === 1
                 : detailScope.value.comparisonComplete
             );
@@ -697,27 +792,29 @@
             ));
             const detailMetric = computed(() => {
                 if (!detailAgent.value) return null;
-                const metric = detailRankingSet.value.allRows.find((item) => item.agentId === detailAgent.value.agentId);
+                const key = detailAgent.value.agentId || detailAgent.value.sourceAccount;
+                const metric = detailRankingSet.value.allRows.find((item) => (item.agentId || item.sourceAccount) === key);
                 if (!metric) return null;
-                if (detailPeriod.value !== 'yesterday') return metric;
+                if (detailPeriod.value !== 'yesterday' && detailPeriod.value !== 'day') return metric;
                 const date = detailScope.value.currentDates[0];
                 const official = rankingLookup.value.get(`${date}:${metric.agentId}`);
                 return { ...metric, rankPosition: official?.rank_position || metric.rankPosition };
             });
             const detailPreviousMetric = computed(() => detailAgent.value
                 ? core.aggregateAgentMetrics(dashboardMetrics.value, detailPreviousDates.value)
-                    .find((item) => item.agentId === detailAgent.value.agentId) || null
+                    .find((item) => (item.agentId || item.sourceAccount) === (detailAgent.value.agentId || detailAgent.value.sourceAccount)) || null
                 : null
             );
-            const detailPeriodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月' }[detailPeriod.value]));
-            const detailTrendTitle = computed(() => detailPeriod.value === 'yesterday'
-                ? '近期指标趋势 · 昨日重点'
+            const detailPeriodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月', day: '指定日期' }[detailPeriod.value]));
+            const detailSingleDayMode = computed(() => detailScope.value.currentDates.length === 1 && (detailPeriod.value === 'yesterday' || detailPeriod.value === 'day'));
+            const detailTrendTitle = computed(() => detailSingleDayMode.value
+                ? '单日指标达成'
                 : `${detailPeriodName.value}每日趋势`
             );
             const detailRangeText = computed(() => {
                 const dates = detailScope.value.currentDates;
                 if (!dates.length) return '暂无已确认数据';
-                if (detailPeriod.value === 'yesterday') return `业务日期 ${dates[0]}`;
+                if (detailPeriod.value === 'yesterday' || detailPeriod.value === 'day') return `业务日期 ${dates[0]}`;
                 if (detailPeriod.value === 'month') return `${dates.at(-1).slice(0, 7)} · ${dates.length} 个业务日`;
                 return `${dates[0]} 至 ${dates.at(-1)} · ${dates.length} 个有效业务日`;
             });
@@ -726,6 +823,16 @@
                 if (detailScope.value.provisional) return `月度样本积累中 · 临时第 ${detailMetric.value.rankPosition} 名`;
                 if (!detailMetric.value.isQualified) return `样本不足 · 临时第 ${detailMetric.value.rankPosition} 名`;
                 return `第 ${detailMetric.value.formalRankPosition || detailMetric.value.rankPosition} / ${detailRankingSet.value.allRows.length} 名`;
+            });
+            const detailSalesDisplay = computed(() => detailMetric.value?.refundedSalesDays ? formatCurrency(detailMetric.value.refundedSalesTotal) : '—');
+            const detailSingleDayKpis = computed(() => {
+                const metric = detailMetric.value || {};
+                return [
+                    { key:'satisfaction', name:'满意率', display:formatPercent(metric.satisfactionRate), target:.9, passed:metric.satisfactionRate==null?null:metric.satisfactionRate>=.9, progress:Math.min(100,(metric.satisfactionRate||0)/.9*82), gap:metric.satisfactionRate==null?'暂无数据':metric.satisfactionRate>=.9?`高于目标 ${((metric.satisfactionRate-.9)*100).toFixed(1)}%`:`距目标 ${((.9-metric.satisfactionRate)*100).toFixed(1)}%` },
+                    { key:'response', name:'工作时间均响', display:formatSeconds(metric.avgResponseSeconds), target:15, passed:metric.avgResponseSeconds==null?null:metric.avgResponseSeconds<=15, progress:Math.min(100,15/Math.max(8,metric.avgResponseSeconds||30)*82), gap:metric.avgResponseSeconds==null?'暂无数据':metric.avgResponseSeconds<=15?`优于目标 ${(15-metric.avgResponseSeconds).toFixed(1)} 秒`:`超出目标 ${(metric.avgResponseSeconds-15).toFixed(1)} 秒` },
+                    { key:'conversion', name:'转化率', display:formatPercent(metric.conversionRate), target:.3, passed:metric.conversionRate==null?null:metric.conversionRate>=.3, progress:Math.min(100,(metric.conversionRate||0)/.3*82), gap:metric.conversionRate==null?'暂无数据':metric.conversionRate>=.3?`高于目标 ${((metric.conversionRate-.3)*100).toFixed(1)}%`:`距目标 ${((.3-metric.conversionRate)*100).toFixed(1)}%` },
+                    { key:'score', name:'综合得分', display:`${formatScore(metric.totalScore)} 分`, target:null, passed:null, progress:Math.min(100,(metric.totalScore||0)/110*100), gap:'按现有三项 KPI 权重计算' }
+                ];
             });
             const detailComparison = (metric) => {
                 if (!detailComparisonComplete.value || !detailMetric.value || !detailPreviousMetric.value) {
@@ -749,10 +856,9 @@
             const detailTrendRows = computed(() => {
                 if (!detailAgent.value) return [];
                 const currentDate = detailScope.value.currentDates.at(-1);
-                const dates = detailPeriod.value === 'yesterday'
+                const dates = detailPeriod.value === 'yesterday' || detailPeriod.value === 'day'
                     ? core.uniqueBusinessDates(detailHistory.value.map((item) => item.business_date))
-                        .filter((date) => !currentDate || date <= currentDate)
-                        .slice(-7)
+                        .filter((date) => date === currentDate)
                     : detailScope.value.currentDates;
                 const dateSet = new Set(dates);
                 return detailHistory.value.filter((item) => dateSet.has(item.business_date));
@@ -775,9 +881,10 @@
                 }
                 return records;
             });
-            const detailHonorGroups = computed(() => { if(!detailAgent.value)return []; const key=detailAgent.value.agentId||detailAgent.value.sourceAccount; const defs=[['total','综合荣誉','综合冠军','🥇','totalScore',false],['satisfaction','满意率荣誉','满意率冠军','🏅','satisfactionRate',false],['response','响应效率荣誉','响应先锋','⚡','avgResponseSeconds',true],['conversion','转化率荣誉','转化冠军','📈','conversionRate',false]]; return defs.map(([id,name,title,icon,field,lower])=>{const dates=availableDates.value.filter(date=>{const rows=allDailyRankings.value.get(date)||[];let winner=null;rows.forEach(row=>{if(row[field]==null)return;if(!winner||(lower?row[field]<winner[field]:row[field]>winner[field]))winner=row;});return winner&&(winner.agentId||winner.sourceAccount)===key;}).reverse(); return {id,name,title,icon,dates,count:dates.length};}); });
+            const detailHonorGroups = computed(() => { if(!detailAgent.value)return []; const key=detailAgent.value.agentId||detailAgent.value.sourceAccount; const meta={total:['综合荣誉','综合第一','🥇'],satisfaction:['满意率荣誉','满意率第一','🏅'],response:['响应效率荣誉','响应第一','⚡'],conversion:['转化率荣誉','转化第一','📈']}; return honorMetricDefinitions.map((definition)=>{const [name,title,icon]=meta[definition.key];const dates=availableDates.value.filter(date=>{const winner=dailyWinnerMap.value.get(date)?.[definition.key];return winner&&(winner.agentId||winner.sourceAccount)===key;}).reverse();return {id:definition.key,name,title,icon,dates,count:dates.length};}); });
             const toggleHonorGroup = (group) => { if(!group.count)return; openHonorGroup.value=openHonorGroup.value===group.id?'':group.id; };
             const renderDetailChart = () => {
+                if (detailSingleDayMode.value) { detailChart?.dispose(); detailChart = null; return; }
                 if (!detailChartEl.value || !detailMetric.value || !window.echarts) return;
                 if (!detailChartEl.value.clientWidth || !detailChartEl.value.clientHeight) return;
                 if (detailChart && detailChart.getDom() !== detailChartEl.value) {
@@ -786,33 +893,29 @@
                 }
                 if (!detailChart) detailChart = echarts.getInstanceByDom(detailChartEl.value) || echarts.init(detailChartEl.value);
                 const rows = detailTrendRows.value;
-                const focusDate = detailScope.value.currentDates.at(-1);
-                const emphasizeLatest = (values, color) => values.map((value, index) => rows[index]?.business_date === focusDate
-                    ? { value, symbolSize: 9, itemStyle: { color, borderColor: '#ffffff', borderWidth: 2 } }
-                    : value
-                );
+                const formatDetailTooltip = (items) => `${items[0]?.axisValue || ''}<br>${items.map((item) => `${item.marker}${item.seriesName}：${item.seriesName === '工作时间均响' ? `${Number(item.value).toFixed(1)} 秒` : `${Number(item.value).toFixed(1)}%`}`).join('<br>')}`;
+                detailChart.clear();
                 detailChart.setOption({
                     animationDuration: 250,
                     color: ['#2f7df6', '#18bd8b', '#f6a918'],
-                    tooltip: { trigger: 'axis' },
-                    legend: { top: 0, right: 0, textStyle: { color: '#73869a', fontSize: 9 } },
-                    grid: { left: 36, right: 43, top: 43, bottom: 28 },
-                    xAxis: { type: 'category', boundaryGap: false, data: rows.map((item) => item.business_date.slice(5)), axisLabel: { color: '#7c8da0', fontSize: 9 } },
-                    yAxis: [{ type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', fontSize: 9 }, splitLine: { lineStyle: { color: '#e8eef4' } } }, { type: 'value', axisLabel: { formatter: '{value}s', fontSize: 9 }, splitLine: { show: false } }],
+                    tooltip: { trigger: 'axis', backgroundColor:'#fff', borderColor:'#d8e2ed', textStyle:{color:'#38516a',fontSize:10}, formatter:formatDetailTooltip },
+                    legend: { top: 2, right: 6, itemWidth:14, itemHeight:6, itemGap:12, icon:'roundRect', textStyle: { color: '#73869a', fontSize: 9 }, data:['满意率','转化率','工作时间均响'] },
+                    grid: { left: 12, right: 18, top: 52, bottom: 14, containLabel:true },
+                    xAxis: { type: 'category', boundaryGap: false, data: rows.map((item) => item.business_date.slice(5)), axisLine:{lineStyle:{color:'#d7e1eb'}}, axisTick:{show:false}, axisLabel: { color: '#7c8da0', fontSize: 9 } },
+                    yAxis: [{ type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', color:'#7c8da0', fontSize: 9 }, splitLine: { lineStyle: { color: '#e8eef4' } } }, { type: 'value', axisLabel: { formatter: '{value}s', color:'#7c8da0', fontSize: 9 }, splitLine: { show: false } }],
                     series: [
-                        { name: '满意率', type: 'line', smooth: true, data: emphasizeLatest(rows.map((item) => item.satisfaction_rate == null ? null : +(Number(item.satisfaction_rate) * 100).toFixed(2)), '#2f7df6'), markLine: detailPeriod.value === 'yesterday' && focusDate ? { silent: true, symbol: 'none', label: { formatter: '昨日', color: '#46627e', fontSize: 9 }, lineStyle: { color: '#9db0c3', type: 'dashed' }, data: [{ xAxis: focusDate.slice(5) }] } : undefined },
-                        { name: '转化率', type: 'line', smooth: true, data: emphasizeLatest(rows.map((item) => item.conversion_rate == null ? null : +(Number(item.conversion_rate) * 100).toFixed(2)), '#18bd8b') },
-                        { name: '均响', type: 'line', smooth: true, yAxisIndex: 1, data: emphasizeLatest(rows.map((item) => item.avg_response_seconds == null ? null : Number(item.avg_response_seconds)), '#f6a918') }
+                        { name: '满意率', type: 'line', smooth: true, symbol:'circle', symbolSize:5, data: rows.map((item) => item.satisfaction_rate == null ? null : +(Number(item.satisfaction_rate) * 100).toFixed(1)), lineStyle:{width:2}, areaStyle:{opacity:.035} },
+                        { name: '转化率', type: 'line', smooth: true, symbol:'circle', symbolSize:5, data: rows.map((item) => item.conversion_rate == null ? null : +(Number(item.conversion_rate) * 100).toFixed(1)), lineStyle:{width:2} },
+                        { name: '工作时间均响', type: 'line', smooth: true, symbol:'diamond', symbolSize:6, yAxisIndex: 1, data: rows.map((item) => item.avg_response_seconds == null ? null : +Number(item.avg_response_seconds).toFixed(1)), lineStyle:{width:2,type:'dashed'} }
                     ]
                 }, true);
-                detailChart.resize();
             };
             const scheduleDetailChart = () => {
                 cancelAnimationFrame(detailRenderFrame);
                 nextTick(() => {
                     detailRenderFrame = requestAnimationFrame(() => {
                         renderDetailChart();
-                        detailRenderFrame = requestAnimationFrame(renderDetailChart);
+                        detailRenderFrame = requestAnimationFrame(() => detailChart?.resize());
                     });
                 });
             };
@@ -822,11 +925,14 @@
                     sourceAccount: person.sourceAccount,
                     displayName: person.displayName
                 };
-                detailPeriod.value = dashboardPeriod.value;
+                if (!detailSelectedDate.value || !availableDates.value.includes(detailSelectedDate.value)) detailSelectedDate.value = availableDates.value.at(-1) || '';
+                if (!['yesterday','last7','month','day'].includes(detailPeriod.value)) detailPeriod.value = 'yesterday';
+                detailCalendarOpen.value = false;
                 nextTick(()=>{ openHonorGroup.value=detailHonorGroups.value.find(x=>x.count)?.id||''; });
                 scheduleDetailChart();
             };
             const closeAgent = () => {
+                detailCalendarOpen.value = false;
                 detailAgent.value = null;
                 if (detailChart) { detailChart.dispose(); detailChart = null; }
             };
@@ -1029,10 +1135,11 @@
                 today, rules, view, steps, importStep, fileInfo, parseError, isParsing, isDragging,
                 parsedAgents, selectedAccounts, agentSearch, businessDate, isSaving,
                 session, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
-                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems, customPanelOpen, customMode, customDraftStart, customDraftEnd, customError,
-                periodOptions, rankingOptions, trendChartEl, salesChartEl, detailChartEl, detailAgent, detailHistory,
-                detailPeriod, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
-                detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors, detailHonorGroups, openHonorGroup,
+                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems, noticeText, noticeShouldScroll, customPanelOpen, customMode, customDraftStart, customDraftEnd, customError,
+                periodOptions, detailPeriodOptions, rankingOptions, trendChartEl, salesChartEl, detailChartEl, detailAgent, detailHistory,
+                detailPeriod, detailSelectedDate, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
+                detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors, detailHonorGroups, openHonorGroup, detailSingleDayMode, detailSingleDayKpis, detailSalesDisplay,
+                detailCalendarOpen, detailCalendarLabel, detailCalendarDays, detailDateLabel,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
@@ -1041,7 +1148,7 @@
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime, formatCurrency,
                 previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, honorStyle, openAgent, closeAgent, selectPeriod, applyCustomRange, cancelCustomRange, clearCustomRange, toggleHonorGroup,
+                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, honorStyle, openAgent, closeAgent, selectPeriod, applyCustomRange, cancelCustomRange, clearCustomRange, toggleHonorGroup, toggleDetailCalendar, moveDetailCalendar, selectDetailDate, selectDetailPeriod,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }
