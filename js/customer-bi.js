@@ -4,6 +4,9 @@
     } = Vue;
     const core = window.CustomerBICore;
     const db = window.customerBISupabase;
+    const ACCOUNT_NAME_OVERRIDES = {
+        '123456789@qq.com': '岱旋内测账号'
+    };
 
     const AnimatedNumber = {
         props: {
@@ -42,6 +45,99 @@
         template: '<strong class="animated-number">{{ text }}</strong>'
     };
 
+    const DateRangePicker = {
+        props: {
+            start: { type: String, default: '' },
+            end: { type: String, default: '' },
+            availableDates: { type: Array, default: () => [] },
+            active: { type: Boolean, default: false }
+        },
+        emits: ['apply', 'clear'],
+        setup(props, { emit }) {
+            const todayValue = new Date().toISOString().slice(0, 10);
+            const open = ref(false);
+            const visibleMonth = ref(todayValue.slice(0, 7));
+            const draftStart = ref('');
+            const draftEnd = ref('');
+            const hoverDate = ref('');
+            const formatTrigger = (start, end) => {
+                if (!start) return '自定义';
+                const actualEnd = end || start;
+                if (start === actualEnd) return start.slice(5).replace('-', '.');
+                return start.slice(0, 4) === actualEnd.slice(0, 4)
+                    ? `${start.slice(5).replace('-', '.')} - ${actualEnd.slice(5).replace('-', '.')}`
+                    : `${start.replaceAll('-', '.')} - ${actualEnd.replaceAll('-', '.')}`;
+            };
+            const triggerLabel = computed(() => formatTrigger(props.start, props.end));
+            const monthLabel = computed(() => { const [year, month] = visibleMonth.value.split('-').map(Number); return `${year} 年 ${month} 月`; });
+            const calendarDays = computed(() => {
+                const [year, month] = visibleMonth.value.split('-').map(Number);
+                const leading = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
+                const count = new Date(Date.UTC(year, month, 0)).getUTCDate();
+                const cells = Array.from({ length: leading }, (_, index) => ({ key: `blank-start-${index}`, blank: true }));
+                for (let day = 1; day <= count; day += 1) {
+                    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    cells.push({ key: date, date, day, enabled: props.availableDates.includes(date), today: date === todayValue });
+                }
+                while (cells.length % 7) cells.push({ key: `blank-end-${cells.length}`, blank: true });
+                return cells;
+            });
+            const previewBounds = computed(() => {
+                if (!draftStart.value) return null;
+                let start = draftStart.value;
+                let end = draftEnd.value || hoverDate.value || draftStart.value;
+                if (end < start) [start, end] = [end, start];
+                return { start, end, preview: !draftEnd.value && !!hoverDate.value };
+            });
+            const dateClasses = (cell) => {
+                const bounds = previewBounds.value;
+                if (!bounds || cell.blank) return { today: cell.today };
+                return {
+                    today: cell.today,
+                    'range-start': cell.date === bounds.start,
+                    'range-end': cell.date === bounds.end,
+                    'range-middle': cell.date > bounds.start && cell.date < bounds.end,
+                    preview: bounds.preview && cell.date >= bounds.start && cell.date <= bounds.end
+                };
+            };
+            const rangeSummary = computed(() => {
+                if (!draftStart.value) return '请选择开始日期';
+                if (!draftEnd.value) return `${draftStart.value} · 请选择结束日期，或直接应用为单日`;
+                return `${draftStart.value} 至 ${draftEnd.value}`;
+            });
+            const toggle = () => {
+                if (open.value) { open.value = false; return; }
+                draftStart.value = props.start;
+                draftEnd.value = props.end && props.end !== props.start ? props.end : '';
+                hoverDate.value = '';
+                visibleMonth.value = (props.start || props.availableDates.at(-1) || todayValue).slice(0, 7);
+                open.value = true;
+            };
+            const moveMonth = (offset) => { const [year, month] = visibleMonth.value.split('-').map(Number); visibleMonth.value = new Date(Date.UTC(year, month - 1 + offset, 1)).toISOString().slice(0, 7); };
+            const choose = (cell) => {
+                if (!cell?.enabled) return;
+                if (!draftStart.value || draftEnd.value) { draftStart.value = cell.date; draftEnd.value = ''; }
+                else if (cell.date < draftStart.value) { draftEnd.value = draftStart.value; draftStart.value = cell.date; }
+                else draftEnd.value = cell.date;
+                hoverDate.value = '';
+            };
+            const apply = () => { if (!draftStart.value) return; emit('apply', { start: draftStart.value, end: draftEnd.value || draftStart.value }); open.value = false; };
+            const cancel = () => { open.value = false; hoverDate.value = ''; };
+            const clear = () => { emit('clear'); draftStart.value = ''; draftEnd.value = ''; hoverDate.value = ''; open.value = false; };
+            return { open, triggerLabel, monthLabel, calendarDays, draftStart, draftEnd, hoverDate, dateClasses, rangeSummary, toggle, moveMonth, choose, apply, cancel, clear };
+        },
+        template: `<div class="range-date-picker">
+            <button :class="['range-date-trigger',{active}]" :title="triggerLabel" @click="toggle">{{ triggerLabel }} <span>▼</span></button>
+            <div v-if="open" class="range-calendar">
+                <header><button aria-label="上一个月" @click="moveMonth(-1)">‹</button><b>{{ monthLabel }}</b><button aria-label="下一个月" @click="moveMonth(1)">›</button></header>
+                <div class="range-calendar-week"><span v-for="day in ['一','二','三','四','五','六','日']" :key="day">{{ day }}</span></div>
+                <div class="range-calendar-grid"><template v-for="cell in calendarDays" :key="cell.key"><span v-if="cell.blank" class="blank"></span><button v-else :class="dateClasses(cell)" :disabled="!cell.enabled" @mouseenter="hoverDate=cell.enabled?cell.date:''" @mouseleave="hoverDate=''" @click="choose(cell)">{{ cell.day }}</button></template></div>
+                <p class="range-summary">{{ rangeSummary }}</p>
+                <footer><button @click="clear">清除</button><button @click="cancel">取消</button><button class="apply" :disabled="!draftStart" @click="apply">应用</button></footer>
+            </div>
+        </div>`
+    };
+
     const app = createApp({
         setup() {
             const today = new Date().toISOString().slice(0, 10);
@@ -64,7 +160,7 @@
             const showAuth = ref(false);
             const authMode = ref('login');
             const authLoading = ref(false);
-            const authForm = reactive({ email: '', password: '' });
+            const authForm = reactive({ email: '', username: '', password: '' });
             const pendingSaveAfterAuth = ref(false);
             const duplicateBatch = ref(null);
             const toasts = ref([]);
@@ -77,16 +173,14 @@
             const dashboardPeriod = ref('yesterday');
             const customStart = ref('');
             const customEnd = ref('');
-            const customPanelOpen = ref(false), customMode = ref('day'), customDraftStart = ref(''), customDraftEnd = ref(''), customError = ref('');
             const rankingMetric = ref('total');
             const trendChartEl = ref(null);
             const detailChartEl = ref(null);
             const salesChartEl = ref(null);
             const detailAgent = ref(null);
             const detailPeriod = ref('yesterday');
-            const detailSelectedDate = ref('');
-            const detailCalendarOpen = ref(false);
-            const detailCalendarMonth = ref(today.slice(0, 7));
+            const detailCustomStart = ref('');
+            const detailCustomEnd = ref('');
             const openHonorGroup = ref('');
             const championIndex = ref(0);
             let trendChart = null;
@@ -98,19 +192,32 @@
             let salesRenderFrame = 0;
             let championTimer = 0;
 
+            const currentAccountName = computed(() => {
+                const user = session.value?.user;
+                if (!user) return '';
+                const email = String(user.email || '');
+                return ACCOUNT_NAME_OVERRIDES[email.toLowerCase()]
+                    || String(user.user_metadata?.username || '').trim()
+                    || email.split('@')[0]
+                    || email
+                    || '已登录';
+            });
+
             const periodOptions = [
                 { label: '昨日', value: 'yesterday' },
                 { label: '近 7 日', value: 'last7' },
                 { label: '本月', value: 'month' }, { label: '自定义', value: 'custom' }
             ];
-            const detailPeriodOptions = periodOptions.filter((item) => item.value !== 'custom');
+            const dashboardPeriodOptions = periodOptions.filter((item) => item.value !== 'custom');
+            const detailPeriodOptions = dashboardPeriodOptions;
             const noticeItems = ['数据仅统计已确认快照', '均响为工作时间平响时长', '上传前请确认业务日期'];
             const noticeText = computed(() => noticeItems.join('　·　'));
             const noticeShouldScroll = computed(() => noticeText.value.length > 28);
-            const selectPeriod = (mode) => { if (mode !== 'custom') { dashboardPeriod.value = mode; customPanelOpen.value = false; return; } customDraftStart.value = customStart.value; customDraftEnd.value = customEnd.value; customPanelOpen.value = true; };
-            const applyCustomRange = () => { const start = customDraftStart.value, end = customMode.value === 'day' ? start : customDraftEnd.value; if (!start || !end || start > end) { customError.value = '请选择有效日期范围'; return; } customStart.value = start; customEnd.value = end; dashboardPeriod.value = 'custom'; customError.value = ''; customPanelOpen.value = false; };
-            const cancelCustomRange = () => { customPanelOpen.value = false; customError.value = ''; };
-            const clearCustomRange = () => { customStart.value = ''; customEnd.value = ''; customDraftStart.value = ''; customDraftEnd.value = ''; dashboardPeriod.value = 'yesterday'; customPanelOpen.value = false; };
+            const selectPeriod = (mode) => { dashboardPeriod.value = mode; };
+            const applyDashboardRange = ({ start, end }) => { customStart.value = start; customEnd.value = end; dashboardPeriod.value = 'custom'; };
+            const clearDashboardRange = () => { customStart.value = ''; customEnd.value = ''; dashboardPeriod.value = 'yesterday'; };
+            const applyDetailRange = ({ start, end }) => { detailCustomStart.value = start; detailCustomEnd.value = end; detailPeriod.value = 'custom'; };
+            const clearDetailRange = () => { detailCustomStart.value = ''; detailCustomEnd.value = ''; detailPeriod.value = 'yesterday'; };
             const rankingOptions = [
                 { label: '综合', value: 'total' }, { label: '满意率', value: 'satisfaction' },
                 { label: '均响', value: 'response' }, { label: '转化率', value: 'conversion' }
@@ -278,11 +385,20 @@
             const submitAuth = async () => {
                 if (!db) { addToast('Supabase 客户端未加载', 'error'); return; }
                 if (!authForm.email || authForm.password.length < 6) { addToast('请输入有效邮箱和至少 6 位密码', 'error'); return; }
+                const username = authForm.username.trim();
+                if (authMode.value === 'register' && !/^[\p{L}\p{N}_]{2,20}$/u.test(username)) {
+                    addToast('用户名需为 2～20 个中文、英文、数字或下划线', 'error');
+                    return;
+                }
                 authLoading.value = true;
                 try {
                     const result = authMode.value === 'login'
                         ? await db.auth.signInWithPassword({ email: authForm.email, password: authForm.password })
-                        : await db.auth.signUp({ email: authForm.email, password: authForm.password });
+                        : await db.auth.signUp({
+                            email: authForm.email,
+                            password: authForm.password,
+                            options: { data: { username } }
+                        });
                     if (result.error) throw result.error;
                     if (result.data.session) {
                         session.value = result.data.session;
@@ -749,38 +865,31 @@
                 ? dashboardMetrics.value.filter((item) => item.agent_id === detailAgent.value.agentId || item.source_account === detailAgent.value.sourceAccount || item.bi_agents?.source_account === detailAgent.value.sourceAccount).sort((a, b) => a.business_date.localeCompare(b.business_date))
                 : []);
             const detailScope = computed(() => {
-                if (detailPeriod.value !== 'day') return core.resolvePeriodScope(availableDates.value, detailPeriod.value);
-                const date = detailSelectedDate.value;
-                const index = availableDates.value.indexOf(date);
-                return { period: 'day', baseDate: date || null, currentDates: index >= 0 ? [date] : [], previousDates: index > 0 ? [availableDates.value[index - 1]] : [], comparisonComplete: index > 0, minimumParticipationDays: 1, provisional: false };
+                if (detailPeriod.value !== 'custom') return core.resolvePeriodScope(availableDates.value, detailPeriod.value);
+                const dates = availableDates.value.filter((date) => date >= detailCustomStart.value && date <= detailCustomEnd.value);
+                const previousDates = dates.length
+                    ? availableDates.value.filter((date) => date < dates[0]).slice(-dates.length)
+                    : [];
+                return {
+                    period: 'custom',
+                    baseDate: dates.at(-1) || null,
+                    currentDates: dates,
+                    previousDates,
+                    comparisonComplete: dates.length > 0 && previousDates.length === dates.length,
+                    minimumParticipationDays: dates.length > 1 ? 2 : 1,
+                    provisional: false
+                };
             });
-            const detailDateLabel = computed(() => (detailSelectedDate.value || availableDates.value.at(-1) || today).replaceAll('-', '.'));
-            const detailCalendarLabel = computed(() => { const [year, month] = detailCalendarMonth.value.split('-').map(Number); return `${year} 年 ${month} 月`; });
-            const detailCalendarDays = computed(() => {
-                const [year, month] = detailCalendarMonth.value.split('-').map(Number);
-                const leading = (new Date(Date.UTC(year, month - 1, 1)).getUTCDay() + 6) % 7;
-                const count = new Date(Date.UTC(year, month, 0)).getUTCDate();
-                const cells = Array.from({ length: leading }, (_, index) => ({ key: `blank-start-${index}`, blank: true }));
-                for (let day = 1; day <= count; day += 1) {
-                    const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    cells.push({ key: date, date, day, enabled: availableDates.value.includes(date), selected: detailSelectedDate.value === date, today: date === today });
-                }
-                while (cells.length % 7) cells.push({ key: `blank-end-${cells.length}`, blank: true });
-                return cells;
-            });
-            const toggleDetailCalendar = () => { detailCalendarOpen.value = !detailCalendarOpen.value; if (detailCalendarOpen.value) detailCalendarMonth.value = (detailSelectedDate.value || availableDates.value.at(-1) || today).slice(0, 7); };
-            const moveDetailCalendar = (offset) => { const [year, month] = detailCalendarMonth.value.split('-').map(Number); const next = new Date(Date.UTC(year, month - 1 + offset, 1)); detailCalendarMonth.value = next.toISOString().slice(0, 7); };
-            const selectDetailDate = (cell) => { if (!cell?.enabled) return; detailSelectedDate.value = cell.date; detailPeriod.value = 'day'; detailCalendarOpen.value = false; };
-            const selectDetailPeriod = (period) => { detailPeriod.value = period; detailCalendarOpen.value = false; };
+            const selectDetailPeriod = (period) => { detailPeriod.value = period; };
             const detailPreviousDates = computed(() => {
-                if (detailPeriod.value !== 'yesterday' && detailPeriod.value !== 'day') return detailScope.value.previousDates;
+                if (detailScope.value.currentDates.length !== 1) return detailScope.value.previousDates;
                 const currentDate = detailScope.value.currentDates[0];
                 const previousParticipationDate = core.uniqueBusinessDates(detailHistory.value.map((item) => item.business_date))
                     .filter((date) => date < currentDate)
                     .at(-1);
                 return previousParticipationDate ? [previousParticipationDate] : [];
             });
-            const detailComparisonComplete = computed(() => detailPeriod.value === 'yesterday' || detailPeriod.value === 'day'
+            const detailComparisonComplete = computed(() => detailScope.value.currentDates.length === 1
                 ? detailPreviousDates.value.length === 1
                 : detailScope.value.comparisonComplete
             );
@@ -795,7 +904,7 @@
                 const key = detailAgent.value.agentId || detailAgent.value.sourceAccount;
                 const metric = detailRankingSet.value.allRows.find((item) => (item.agentId || item.sourceAccount) === key);
                 if (!metric) return null;
-                if (detailPeriod.value !== 'yesterday' && detailPeriod.value !== 'day') return metric;
+                if (detailScope.value.currentDates.length !== 1) return metric;
                 const date = detailScope.value.currentDates[0];
                 const official = rankingLookup.value.get(`${date}:${metric.agentId}`);
                 return { ...metric, rankPosition: official?.rank_position || metric.rankPosition };
@@ -805,8 +914,8 @@
                     .find((item) => (item.agentId || item.sourceAccount) === (detailAgent.value.agentId || detailAgent.value.sourceAccount)) || null
                 : null
             );
-            const detailPeriodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月', day: '指定日期' }[detailPeriod.value]));
-            const detailSingleDayMode = computed(() => detailScope.value.currentDates.length === 1 && (detailPeriod.value === 'yesterday' || detailPeriod.value === 'day'));
+            const detailPeriodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月', custom: '自定义' }[detailPeriod.value]));
+            const detailSingleDayMode = computed(() => detailScope.value.currentDates.length === 1 && (detailPeriod.value === 'yesterday' || detailPeriod.value === 'custom'));
             const detailTrendTitle = computed(() => detailSingleDayMode.value
                 ? '单日指标达成'
                 : `${detailPeriodName.value}每日趋势`
@@ -814,7 +923,7 @@
             const detailRangeText = computed(() => {
                 const dates = detailScope.value.currentDates;
                 if (!dates.length) return '暂无已确认数据';
-                if (detailPeriod.value === 'yesterday' || detailPeriod.value === 'day') return `业务日期 ${dates[0]}`;
+                if (detailSingleDayMode.value) return `业务日期 ${dates[0]}`;
                 if (detailPeriod.value === 'month') return `${dates.at(-1).slice(0, 7)} · ${dates.length} 个业务日`;
                 return `${dates[0]} 至 ${dates.at(-1)} · ${dates.length} 个有效业务日`;
             });
@@ -856,7 +965,7 @@
             const detailTrendRows = computed(() => {
                 if (!detailAgent.value) return [];
                 const currentDate = detailScope.value.currentDates.at(-1);
-                const dates = detailPeriod.value === 'yesterday' || detailPeriod.value === 'day'
+                const dates = detailSingleDayMode.value
                     ? core.uniqueBusinessDates(detailHistory.value.map((item) => item.business_date))
                         .filter((date) => date === currentDate)
                     : detailScope.value.currentDates;
@@ -925,14 +1034,11 @@
                     sourceAccount: person.sourceAccount,
                     displayName: person.displayName
                 };
-                if (!detailSelectedDate.value || !availableDates.value.includes(detailSelectedDate.value)) detailSelectedDate.value = availableDates.value.at(-1) || '';
-                if (!['yesterday','last7','month','day'].includes(detailPeriod.value)) detailPeriod.value = 'yesterday';
-                detailCalendarOpen.value = false;
+                if (!['yesterday','last7','month','custom'].includes(detailPeriod.value)) detailPeriod.value = 'yesterday';
                 nextTick(()=>{ openHonorGroup.value=detailHonorGroups.value.find(x=>x.count)?.id||''; });
                 scheduleDetailChart();
             };
             const closeAgent = () => {
-                detailCalendarOpen.value = false;
                 detailAgent.value = null;
                 if (detailChart) { detailChart.dispose(); detailChart = null; }
             };
@@ -1134,12 +1240,11 @@
             return {
                 today, rules, view, steps, importStep, fileInfo, parseError, isParsing, isDragging,
                 parsedAgents, selectedAccounts, agentSearch, businessDate, isSaving,
-                session, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
-                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems, noticeText, noticeShouldScroll, customPanelOpen, customMode, customDraftStart, customDraftEnd, customError,
-                periodOptions, detailPeriodOptions, rankingOptions, trendChartEl, salesChartEl, detailChartEl, detailAgent, detailHistory,
-                detailPeriod, detailSelectedDate, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
+                session, currentAccountName, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
+                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems, noticeText, noticeShouldScroll,
+                dashboardPeriodOptions, detailPeriodOptions, rankingOptions, trendChartEl, salesChartEl, detailChartEl, detailAgent, detailHistory,
+                detailPeriod, detailCustomStart, detailCustomEnd, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
                 detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors, detailHonorGroups, openHonorGroup, detailSingleDayMode, detailSingleDayKpis, detailSalesDisplay,
-                detailCalendarOpen, detailCalendarLabel, detailCalendarDays, detailDateLabel,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
@@ -1148,12 +1253,13 @@
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime, formatCurrency,
                 previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, honorStyle, openAgent, closeAgent, selectPeriod, applyCustomRange, cancelCustomRange, clearCustomRange, toggleHonorGroup, toggleDetailCalendar, moveDetailCalendar, selectDetailDate, selectDetailPeriod,
+                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, honorStyle, openAgent, closeAgent, selectPeriod, applyDashboardRange, clearDashboardRange, applyDetailRange, clearDetailRange, toggleHonorGroup, selectDetailPeriod,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }
     });
 
     app.component('animated-number', AnimatedNumber);
+    app.component('date-range-picker', DateRangePicker);
     app.mount('#app');
 })();

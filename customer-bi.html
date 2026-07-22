@@ -36,9 +36,9 @@
             <button :class="{ active: view === 'import' }" @click="openImport">导入数据</button>
             <a href="index.html">返回 MindForge</a>
         </nav>
-        <button class="account-button" @click="showAuth = true">
+        <button class="account-button" :title="session ? `${currentAccountName} · ${session.user.email || ''}` : '登录后保存'" @click="showAuth = true">
             <span :class="['status-dot', session ? 'online' : 'offline']"></span>
-            {{ session ? (session.user.email || '已登录') : '登录后保存' }}
+            <span class="account-name">{{ session ? currentAccountName : '登录后保存' }}</span>
         </button>
     </header>
 
@@ -52,11 +52,9 @@
                         <p>{{ periodRangeText }} · {{ dashboardStatusText }}</p>
                     </div>
                     <div class="dashboard-period-row"><div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
-                        <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="selectPeriod(mode.value)">
-                            {{ mode.label }}<small v-if="mode.value==='custom' && dashboardPeriod==='custom'">{{ customStart===customEnd?customStart:`${customStart}~${customEnd}` }}</small>
-                        </button>
+                        <button v-for="mode in dashboardPeriodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="selectPeriod(mode.value)">{{ mode.label }}</button>
+                        <date-range-picker :start="customStart" :end="customEnd" :available-dates="availableDates" :active="dashboardPeriod === 'custom'" @apply="applyDashboardRange" @clear="clearDashboardRange"></date-range-picker>
                     </div><div :class="['notice-stream',{scrolling:noticeShouldScroll}]" :style="{'--notice-duration':`${Math.max(9, noticeText.length * .22)}s`}"><div class="notice-track"><span class="notice-group">{{ noticeText }}</span><span v-if="noticeShouldScroll" class="notice-group" aria-hidden="true">{{ noticeText }}</span></div></div></div>
-                    <div v-if="customPanelOpen" class="custom-range-panel"><div class="custom-mode"><button :class="{active:customMode==='day'}" @click="customMode='day'">单日</button><button :class="{active:customMode==='range'}" @click="customMode='range'">日期区间</button></div><div class="custom-date-inputs"><label><span>{{ customMode==='day'?'业务日期':'开始日期' }}</span><input v-model="customDraftStart" type="date"></label><label v-if="customMode==='range'"><span>结束日期</span><input v-model="customDraftEnd" type="date"></label></div><p v-if="customError">{{ customError }}</p><footer><button @click="clearCustomRange">清除</button><button @click="cancelCustomRange">取消</button><button class="apply" @click="applyCustomRange">应用</button></footer></div>
                 </div>
                 <div class="toolbar-actions">
                     <div class="current-scope"><span>当前人员范围</span><b>已确认批次人员</b></div>
@@ -321,19 +319,11 @@
                 </div>
                 <div class="detail-period-switch" aria-label="人员详情时间范围">
                     <button v-for="mode in detailPeriodOptions" :key="mode.value" :class="{ active: detailPeriod === mode.value }" @click="selectDetailPeriod(mode.value)">{{ mode.label }}</button>
-                    <div class="detail-date-picker">
-                        <button :class="['detail-date-trigger',{active:detailPeriod==='day'}]" @click="toggleDetailCalendar">{{ detailDateLabel }} <span>▼</span></button>
-                        <div v-if="detailCalendarOpen" class="detail-calendar">
-                            <header><button @click="moveDetailCalendar(-1)" aria-label="上一个月">‹</button><b>{{ detailCalendarLabel }}</b><button @click="moveDetailCalendar(1)" aria-label="下一个月">›</button></header>
-                            <div class="detail-calendar-week"><span v-for="day in ['一','二','三','四','五','六','日']" :key="day">{{ day }}</span></div>
-                            <div class="detail-calendar-grid"><template v-for="cell in detailCalendarDays" :key="cell.key"><span v-if="cell.blank" class="blank"></span><button v-else :class="{selected:cell.selected,today:cell.today}" :disabled="!cell.enabled" @click="selectDetailDate(cell)">{{ cell.day }}</button></template></div>
-                            <p>仅有正式快照的日期可选择</p>
-                        </div>
-                    </div>
+                    <date-range-picker :start="detailCustomStart" :end="detailCustomEnd" :available-dates="availableDates" :active="detailPeriod === 'custom'" @apply="applyDetailRange" @clear="clearDetailRange"></date-range-picker>
                 </div>
                 <template v-if="detailMetric">
                     <div class="detail-period-summary"><b>{{ detailRangeText }}</b><span>{{ detailMetric.participationDays }} 个实际参与日 · 未参与日期不计 0 分</span></div>
-                    <div class="detail-kpis" :key="`${detailPeriod}-${detailSelectedDate}`">
+                    <div class="detail-kpis" :key="`${detailPeriod}-${detailCustomStart}-${detailCustomEnd}`">
                         <div><span>满意率</span><b>{{ formatPercent(detailMetric.satisfactionRate) }}</b><small>目标 90%</small><em :class="['detail-change', detailComparison('satisfaction').state]">{{ detailComparison('satisfaction').text }}</em></div>
                         <div><span>工作时间均响</span><b>{{ formatSeconds(detailMetric.avgResponseSeconds) }}</b><small>目标 15 秒</small><em :class="['detail-change', detailComparison('response').state]">{{ detailComparison('response').text }}</em></div>
                         <div><span>转化率</span><b>{{ formatPercent(detailMetric.conversionRate) }}</b><small>目标 30%</small><em :class="['detail-change', detailComparison('conversion').state]">{{ detailComparison('conversion').text }}</em></div>
@@ -360,7 +350,8 @@
                 <template v-else>
                     <span class="auth-icon">◎</span><h2>{{ authMode === 'login' ? '登录后保存数据' : '创建 Customer BI 账号' }}</h2><p>账号仅属于全新的 Customer BI Supabase 项目。</p>
                     <label><span>邮箱</span><input v-model.trim="authForm.email" type="email" autocomplete="email"></label>
-                    <label><span>密码</span><input v-model="authForm.password" type="password" minlength="6" autocomplete="current-password"></label>
+                    <label v-if="authMode === 'register'"><span>用户名</span><input v-model="authForm.username" type="text" minlength="2" maxlength="20" autocomplete="username"></label>
+                    <label><span>密码</span><input v-model="authForm.password" type="password" minlength="6" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'"></label>
                     <button class="button button-dark" :disabled="authLoading" @click="submitAuth">{{ authLoading ? '处理中…' : (authMode === 'login' ? '登录' : '注册') }}</button>
                     <button class="text-button" @click="authMode = authMode === 'login' ? 'register' : 'login'">{{ authMode === 'login' ? '没有账号？注册' : '已有账号？登录' }}</button>
                 </template>
