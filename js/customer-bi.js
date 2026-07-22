@@ -997,7 +997,7 @@
                 });
                 authSubscription = listener.data.subscription;
                 if (session.value) await loadDashboard();
-                championTimer=window.setInterval(()=>{ if(championAnnouncements.value.length>1) championIndex.value=(championIndex.value+1)%championAnnouncements.value.length; },4200);
+                if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) championTimer=window.setInterval(()=>{ if(championAnnouncements.value.length>1) championIndex.value=(championIndex.value+1)%championAnnouncements.value.length; },4200);
             });
             onBeforeUnmount(() => {
                 window.removeEventListener('resize', handleResize);
