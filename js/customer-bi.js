@@ -72,6 +72,7 @@
             const dashboardMetrics = ref([]);
             const dashboardRankings = ref([]);
             const dashboardBatches = ref([]);
+            const dashboardBatchAgents = ref([]);
             const dashboardPeriod = ref('yesterday');
             const rankingMetric = ref('total');
             const trendChartEl = ref(null);
@@ -81,6 +82,8 @@
             let trendChart = null;
             let detailChart = null;
             let authSubscription = null;
+            let trendRenderFrame = 0;
+            let detailRenderFrame = 0;
 
             const periodOptions = [
                 { label: '昨日', value: 'yesterday' },
@@ -109,6 +112,14 @@
             const percentValue = (value) => value == null ? null : Number(value) * 100;
             const formatSeconds = (value) => value == null || !Number.isFinite(Number(value)) ? '—' : `${Number(value).toFixed(1)} 秒`;
             const formatScore = (value) => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toFixed(1);
+            const formatDateTime = (value) => {
+                if (!value) return '—';
+                const date = new Date(value);
+                return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false });
+            };
+
+            const agentMetricPreview = (agent) => core.calculateAgent(agent);
+            const isAgentSelectable = (agent) => agentMetricPreview(agent).satisfactionRate != null;
 
             const filteredAgents = computed(() => {
                 const keyword = agentSearch.value.toLocaleLowerCase('zh-CN');
@@ -120,12 +131,16 @@
             const selectedSet = computed(() => new Set(selectedAccounts.value));
             const isSelected = (agent) => selectedSet.value.has(agent.key);
             const toggleAgent = (agent) => {
+                if (!isAgentSelectable(agent)) return;
                 const next = new Set(selectedAccounts.value);
                 if (next.has(agent.key)) next.delete(agent.key); else next.add(agent.key);
                 selectedAccounts.value = [...next];
             };
             const selectFiltered = () => {
-                selectedAccounts.value = [...new Set([...selectedAccounts.value, ...filteredAgents.value.map((agent) => agent.key)])];
+                selectedAccounts.value = [...new Set([
+                    ...selectedAccounts.value,
+                    ...filteredAgents.value.filter(isAgentSelectable).map((agent) => agent.key)
+                ])];
             };
             const clearFiltered = () => {
                 const visible = new Set(filteredAgents.value.map((agent) => agent.key));
@@ -133,7 +148,7 @@
             };
             const invertFiltered = () => {
                 const next = new Set(selectedAccounts.value);
-                filteredAgents.value.forEach((agent) => next.has(agent.key) ? next.delete(agent.key) : next.add(agent.key));
+                filteredAgents.value.filter(isAgentSelectable).forEach((agent) => next.has(agent.key) ? next.delete(agent.key) : next.add(agent.key));
                 selectedAccounts.value = [...next];
             };
 
@@ -151,8 +166,8 @@
                 return false;
             });
 
-            const previewPercent = (agent) => formatPercent(core.calculateAgent(agent).satisfactionRate);
-            const previewConversion = (agent) => formatPercent(core.calculateAgent(agent).conversionRate);
+            const previewPercent = (agent) => formatPercent(agentMetricPreview(agent).satisfactionRate);
+            const previewConversion = (agent) => formatPercent(agentMetricPreview(agent).conversionRate);
 
             const createHash = async (buffer) => {
                 if (!window.crypto?.subtle) return '';
@@ -188,7 +203,11 @@
                     isParsing.value = false;
                 }
             };
-            const handleFileInput = (event) => parseFile(event.target.files?.[0]);
+            const handleFileInput = async (event) => {
+                const input = event.target;
+                await parseFile(input.files?.[0]);
+                input.value = '';
+            };
             const handleDrop = (event) => {
                 isDragging.value = false;
                 parseFile(event.dataTransfer?.files?.[0]);
@@ -199,6 +218,17 @@
                 importStep.value = Math.min(5, importStep.value + 1);
             };
             const previousStep = () => { importStep.value = Math.max(1, importStep.value - 1); };
+            const resetImport = () => {
+                importStep.value = 1;
+                fileInfo.value = null;
+                fileHash.value = '';
+                parseError.value = '';
+                parsedAgents.value = [];
+                selectedAccounts.value = [];
+                agentSearch.value = '';
+                businessDate.value = today;
+                duplicateBatch.value = null;
+            };
             const setView = (next) => {
                 view.value = next;
                 history.replaceState(null, '', next === 'import' ? '#import' : '#dashboard');
@@ -207,7 +237,7 @@
             const openImport = () => setView('import');
             const openDashboard = () => {
                 setView('dashboard');
-                nextTick(renderTrendChart);
+                scheduleTrendChart();
             };
 
             const describeError = (error) => {
@@ -249,6 +279,7 @@
                 dashboardMetrics.value = [];
                 dashboardRankings.value = [];
                 dashboardBatches.value = [];
+                dashboardBatchAgents.value = [];
                 addToast('已退出 Customer BI', 'info');
             };
 
@@ -257,13 +288,14 @@
                     dashboardMetrics.value = [];
                     dashboardRankings.value = [];
                     dashboardBatches.value = [];
+                    dashboardBatchAgents.value = [];
                     return;
                 }
                 dashboardLoading.value = true;
                 try {
-                    const [batchResult, metricResult, rankingResult] = await Promise.all([
+                    const [batchResult, metricResult, rankingResult, batchAgentResult] = await Promise.all([
                         db.from('bi_import_batches')
-                            .select('id, business_date, status, selected_count, confirmed_at, created_at')
+                            .select('id, business_date, status, file_name, selected_count, excluded_count, confirmed_at, created_at')
                             .eq('status', 'confirmed')
                             .order('business_date', { ascending: true }),
                         db.from('bi_daily_metrics')
@@ -271,25 +303,44 @@
                             .order('business_date', { ascending: true }),
                         db.from('bi_daily_rankings')
                             .select('*, bi_agents(id, source_account, display_name)')
-                            .order('business_date', { ascending: true })
+                            .order('business_date', { ascending: true }),
+                        db.from('bi_import_batch_agents')
+                            .select('batch_id, display_name_snapshot, is_included')
+                            .eq('is_included', true)
                     ]);
                     if (batchResult.error) throw batchResult.error;
                     if (metricResult.error) throw metricResult.error;
                     if (rankingResult.error) throw rankingResult.error;
-                    dashboardBatches.value = batchResult.data || [];
-                    dashboardMetrics.value = metricResult.data || [];
-                    dashboardRankings.value = rankingResult.data || [];
-                    await nextTick();
-                    renderTrendChart();
+                    if (batchAgentResult.error) throw batchAgentResult.error;
+                    const normalizeDate = (value) => String(value || '').slice(0, 10);
+                    dashboardBatches.value = (batchResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
+                    dashboardMetrics.value = (metricResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
+                    dashboardRankings.value = (rankingResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
+                    dashboardBatchAgents.value = batchAgentResult.data || [];
                 } catch (error) {
                     addToast(describeError(error), 'error');
                     dashboardBatches.value = [];
                     dashboardMetrics.value = [];
                     dashboardRankings.value = [];
+                    dashboardBatchAgents.value = [];
                 } finally {
                     dashboardLoading.value = false;
+                    await nextTick();
+                    scheduleTrendChart();
                 }
             };
+
+            const importHistoryRows = computed(() => {
+                const includedByBatch = new Map();
+                dashboardBatchAgents.value.forEach((item) => {
+                    if (!includedByBatch.has(item.batch_id)) includedByBatch.set(item.batch_id, []);
+                    includedByBatch.get(item.batch_id).push(item.display_name_snapshot);
+                });
+                return [...dashboardBatches.value]
+                    .sort((a, b) => b.business_date.localeCompare(a.business_date))
+                    .slice(0, 12)
+                    .map((batch) => ({ ...batch, includedNames: includedByBatch.get(batch.id) || [] }));
+            });
 
             const availableDates = computed(() => {
                 const metricDates = new Set(dashboardMetrics.value.map((item) => item.business_date));
@@ -356,6 +407,10 @@
                 return `${year} 年 ${month} 月 ${day} 日`;
             };
             const periodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月' }[dashboardPeriod.value]));
+            const trendTitle = computed(() => dashboardPeriod.value === 'yesterday'
+                ? '近期指标趋势 · 昨日重点'
+                : `${periodName.value}指标趋势`
+            );
             const periodRangeText = computed(() => {
                 const dates = periodScope.value.currentDates;
                 if (!dates.length) return '暂无已确认数据';
@@ -415,6 +470,35 @@
                     ...rows.filter((item) => !item.isQualified)
                 ];
             });
+            const honorByAgent = computed(() => {
+                const grouped = new Map();
+                dashboardRankings.value.forEach((item) => {
+                    if (!grouped.has(item.agent_id)) grouped.set(item.agent_id, []);
+                    grouped.get(item.agent_id).push(item);
+                });
+                const result = new Map();
+                grouped.forEach((items, agentId) => {
+                    const rows = [...items].sort((a, b) => a.business_date.localeCompare(b.business_date));
+                    let currentFirstStreak = 0;
+                    for (let index = rows.length - 1; index >= 0 && rows[index].rank_position === 1; index -= 1) currentFirstStreak += 1;
+                    let bestFirstStreak = 0;
+                    let running = 0;
+                    rows.forEach((row) => {
+                        running = row.rank_position === 1 ? running + 1 : 0;
+                        bestFirstStreak = Math.max(bestFirstStreak, running);
+                    });
+                    const firstRows = rows.filter((row) => row.rank_position === 1).reverse();
+                    result.set(agentId, { currentFirstStreak, bestFirstStreak, firstRows });
+                });
+                return result;
+            });
+            const honorLabel = (person) => {
+                const honor = honorByAgent.value.get(person.agentId);
+                if (!honor) return '';
+                if (honor.currentFirstStreak >= 2) return `连续 ${honor.currentFirstStreak} 个有效业务日第一`;
+                if (honor.firstRows.length) return `历史第一 ${honor.firstRows.length} 次`;
+                return '';
+            };
             const rankingPositionText = (person, index) => person.isQualified || periodScope.value.provisional ? index + 1 : '—';
             const rankingValue = (person) => {
                 if (rankingMetric.value === 'satisfaction') return formatPercent(person.satisfactionRate);
@@ -454,14 +538,27 @@
 
             const renderTrendChart = () => {
                 if (!trendChartEl.value || !window.echarts || view.value !== 'dashboard') return;
-                if (!trendChart) trendChart = echarts.init(trendChartEl.value);
+                if (!trendChartEl.value.clientWidth || !trendChartEl.value.clientHeight) return;
+                if (trendChart && trendChart.getDom() !== trendChartEl.value) {
+                    trendChart.dispose();
+                    trendChart = null;
+                }
+                if (!trendChart) trendChart = echarts.getInstanceByDom(trendChartEl.value) || echarts.init(trendChartEl.value);
                 const chartDates = dashboardPeriod.value === 'yesterday'
-                    ? core.uniqueBusinessDates([...periodScope.value.previousDates, ...periodScope.value.currentDates])
+                    ? availableDates.value.slice(-7)
                     : periodScope.value.currentDates;
                 const history = chartDates.map((date) => ({
                     key: date,
                     ...core.aggregateTeamMetrics(dashboardMetrics.value, [date])
                 }));
+                const focusDate = periodScope.value.currentDates.at(-1);
+                const emphasizeLatest = (values, color) => values.map((value, index) => index === values.length - 1 && history[index]?.key === focusDate
+                    ? { value, symbolSize: 10, itemStyle: { color, borderColor: '#ffffff', borderWidth: 2 } }
+                    : value
+                );
+                const satisfactionData = history.map((item) => item.satisfactionRate == null ? null : +(item.satisfactionRate * 100).toFixed(2));
+                const conversionData = history.map((item) => item.conversionRate == null ? null : +(item.conversionRate * 100).toFixed(2));
+                const responseData = history.map((item) => item.avgResponseSeconds == null ? null : +item.avgResponseSeconds.toFixed(2));
                 trendChart.setOption({
                     animationDuration: 250,
                     backgroundColor: 'transparent',
@@ -475,11 +572,21 @@
                         { type: 'value', axisLabel: { color: '#6d829c', fontSize: 9, formatter: '{value}s' }, splitLine: { show: false } }
                     ],
                     series: [
-                        { name: '满意率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: history.map((item) => item.satisfactionRate == null ? null : +(item.satisfactionRate * 100).toFixed(2)), lineStyle: { width: 3 }, areaStyle: { opacity: .05 } },
-                        { name: '转化率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: history.map((item) => item.conversionRate == null ? null : +(item.conversionRate * 100).toFixed(2)), lineStyle: { width: 2 } },
-                        { name: '工作时间均响', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'diamond', symbolSize: 6, data: history.map((item) => item.avgResponseSeconds == null ? null : +item.avgResponseSeconds.toFixed(2)), lineStyle: { width: 2, type: 'dashed' } }
+                        { name: '满意率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: emphasizeLatest(satisfactionData, '#38bdf8'), lineStyle: { width: 3 }, areaStyle: { opacity: .05 }, markLine: dashboardPeriod.value === 'yesterday' && focusDate ? { silent: true, symbol: 'none', label: { formatter: '昨日', color: '#dcecff', fontSize: 9 }, lineStyle: { color: 'rgba(255,255,255,.28)', type: 'dashed' }, data: [{ xAxis: focusDate.slice(5) }] } : undefined },
+                        { name: '转化率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: emphasizeLatest(conversionData, '#18bd8b'), lineStyle: { width: 2 } },
+                        { name: '工作时间均响', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'diamond', symbolSize: 6, data: emphasizeLatest(responseData, '#f6a918'), lineStyle: { width: 2, type: 'dashed' } }
                     ]
                 }, true);
+                trendChart.resize();
+            };
+            const scheduleTrendChart = () => {
+                cancelAnimationFrame(trendRenderFrame);
+                nextTick(() => {
+                    trendRenderFrame = requestAnimationFrame(() => {
+                        renderTrendChart();
+                        trendRenderFrame = requestAnimationFrame(renderTrendChart);
+                    });
+                });
             };
 
             const detailHistory = computed(() => detailAgent.value
@@ -519,6 +626,10 @@
                 : null
             );
             const detailPeriodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月' }[detailPeriod.value]));
+            const detailTrendTitle = computed(() => detailPeriod.value === 'yesterday'
+                ? '近期指标趋势 · 昨日重点'
+                : `${detailPeriodName.value}每日趋势`
+            );
             const detailRangeText = computed(() => {
                 const dates = detailScope.value.currentDates;
                 if (!dates.length) return '暂无已确认数据';
@@ -553,17 +664,47 @@
             };
             const detailTrendRows = computed(() => {
                 if (!detailAgent.value) return [];
+                const currentDate = detailScope.value.currentDates.at(-1);
                 const dates = detailPeriod.value === 'yesterday'
-                    ? core.uniqueBusinessDates([...detailPreviousDates.value, ...detailScope.value.currentDates])
+                    ? core.uniqueBusinessDates(detailHistory.value.map((item) => item.business_date))
+                        .filter((date) => !currentDate || date <= currentDate)
+                        .slice(-7)
                     : detailScope.value.currentDates;
                 const dateSet = new Set(dates);
                 return detailHistory.value.filter((item) => dateSet.has(item.business_date));
             });
+            const detailHonors = computed(() => {
+                if (!detailAgent.value) return [];
+                const honor = honorByAgent.value.get(detailAgent.value.agentId);
+                if (!honor) return [];
+                const records = honor.firstRows.slice(0, 20).map((row) => ({
+                    key: `first-${row.business_date}`,
+                    name: '当日综合第一名',
+                    date: row.business_date
+                }));
+                if (honor.bestFirstStreak >= 2) {
+                    records.unshift({
+                        key: 'best-first-streak',
+                        name: `最佳连续 ${honor.bestFirstStreak} 个有效业务日第一`,
+                        date: '历史最佳'
+                    });
+                }
+                return records;
+            });
             const renderDetailChart = () => {
                 if (!detailChartEl.value || !detailMetric.value || !window.echarts) return;
-                if (detailChart) detailChart.dispose();
-                detailChart = echarts.init(detailChartEl.value);
+                if (!detailChartEl.value.clientWidth || !detailChartEl.value.clientHeight) return;
+                if (detailChart && detailChart.getDom() !== detailChartEl.value) {
+                    detailChart.dispose();
+                    detailChart = null;
+                }
+                if (!detailChart) detailChart = echarts.getInstanceByDom(detailChartEl.value) || echarts.init(detailChartEl.value);
                 const rows = detailTrendRows.value;
+                const focusDate = detailScope.value.currentDates.at(-1);
+                const emphasizeLatest = (values, color) => values.map((value, index) => rows[index]?.business_date === focusDate
+                    ? { value, symbolSize: 9, itemStyle: { color, borderColor: '#ffffff', borderWidth: 2 } }
+                    : value
+                );
                 detailChart.setOption({
                     animationDuration: 250,
                     color: ['#2f7df6', '#18bd8b', '#f6a918'],
@@ -573,10 +714,20 @@
                     xAxis: { type: 'category', boundaryGap: false, data: rows.map((item) => item.business_date.slice(5)), axisLabel: { color: '#7c8da0', fontSize: 9 } },
                     yAxis: [{ type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%', fontSize: 9 }, splitLine: { lineStyle: { color: '#e8eef4' } } }, { type: 'value', axisLabel: { formatter: '{value}s', fontSize: 9 }, splitLine: { show: false } }],
                     series: [
-                        { name: '满意率', type: 'line', smooth: true, data: rows.map((item) => item.satisfaction_rate == null ? null : +(Number(item.satisfaction_rate) * 100).toFixed(2)) },
-                        { name: '转化率', type: 'line', smooth: true, data: rows.map((item) => item.conversion_rate == null ? null : +(Number(item.conversion_rate) * 100).toFixed(2)) },
-                        { name: '均响', type: 'line', smooth: true, yAxisIndex: 1, data: rows.map((item) => item.avg_response_seconds == null ? null : Number(item.avg_response_seconds)) }
+                        { name: '满意率', type: 'line', smooth: true, data: emphasizeLatest(rows.map((item) => item.satisfaction_rate == null ? null : +(Number(item.satisfaction_rate) * 100).toFixed(2)), '#2f7df6'), markLine: detailPeriod.value === 'yesterday' && focusDate ? { silent: true, symbol: 'none', label: { formatter: '昨日', color: '#46627e', fontSize: 9 }, lineStyle: { color: '#9db0c3', type: 'dashed' }, data: [{ xAxis: focusDate.slice(5) }] } : undefined },
+                        { name: '转化率', type: 'line', smooth: true, data: emphasizeLatest(rows.map((item) => item.conversion_rate == null ? null : +(Number(item.conversion_rate) * 100).toFixed(2)), '#18bd8b') },
+                        { name: '均响', type: 'line', smooth: true, yAxisIndex: 1, data: emphasizeLatest(rows.map((item) => item.avg_response_seconds == null ? null : Number(item.avg_response_seconds)), '#f6a918') }
                     ]
+                }, true);
+                detailChart.resize();
+            };
+            const scheduleDetailChart = () => {
+                cancelAnimationFrame(detailRenderFrame);
+                nextTick(() => {
+                    detailRenderFrame = requestAnimationFrame(() => {
+                        renderDetailChart();
+                        detailRenderFrame = requestAnimationFrame(renderDetailChart);
+                    });
                 });
             };
             const openAgent = (person) => {
@@ -586,7 +737,7 @@
                     displayName: person.displayName
                 };
                 detailPeriod.value = dashboardPeriod.value;
-                nextTick(renderDetailChart);
+                scheduleDetailChart();
             };
             const closeAgent = () => {
                 detailAgent.value = null;
@@ -734,6 +885,7 @@
                     addToast(`${businessDate.value} 快照保存成功`, 'success');
                     dashboardPeriod.value = 'yesterday';
                     await loadDashboard();
+                    resetImport();
                     openDashboard();
                 } catch (error) {
                     if (newBatchId) await db.from('bi_import_batches').delete().eq('id', newBatchId);
@@ -748,13 +900,20 @@
                 detailChart?.resize();
             };
 
-            watch(dashboardPeriod, () => nextTick(renderTrendChart));
-            watch(dashboardMetrics, () => nextTick(renderTrendChart));
-            watch(detailPeriod, () => nextTick(renderDetailChart));
+            watch(dashboardPeriod, scheduleTrendChart, { flush: 'post' });
+            watch(dashboardMetrics, scheduleTrendChart, { flush: 'post' });
+            watch(detailPeriod, scheduleDetailChart, { flush: 'post' });
+            watch(detailTrendRows, scheduleDetailChart, { flush: 'post' });
+            watch(view, (next) => { if (next === 'dashboard') scheduleTrendChart(); }, { flush: 'post' });
+
+            const handleHashChange = () => {
+                view.value = location.hash === '#import' ? 'import' : 'dashboard';
+                if (view.value === 'dashboard') scheduleTrendChart();
+            };
 
             onMounted(async () => {
                 window.addEventListener('resize', handleResize);
-                window.addEventListener('hashchange', () => { view.value = location.hash === '#import' ? 'import' : 'dashboard'; });
+                window.addEventListener('hashchange', handleHashChange);
                 if (!db) { addToast('Supabase SDK 或独立配置加载失败', 'error'); return; }
                 const { data } = await db.auth.getSession();
                 session.value = data.session;
@@ -767,7 +926,10 @@
             });
             onBeforeUnmount(() => {
                 window.removeEventListener('resize', handleResize);
+                window.removeEventListener('hashchange', handleHashChange);
                 authSubscription?.unsubscribe();
+                cancelAnimationFrame(trendRenderFrame);
+                cancelAnimationFrame(detailRenderFrame);
                 trendChart?.dispose();
                 detailChart?.dispose();
             });
@@ -776,19 +938,19 @@
                 today, rules, view, steps, importStep, fileInfo, parseError, isParsing, isDragging,
                 parsedAgents, selectedAccounts, agentSearch, businessDate, isSaving,
                 session, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
-                dashboardLoading, availableDates, dashboardPeriod, rankingMetric,
+                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows,
                 periodOptions, rankingOptions, trendChartEl, detailChartEl, detailAgent, detailHistory,
                 detailPeriod, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
-                detailRangeText, detailRankText, detailComparison, detailTrendRows,
+                detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
-                periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle,
+                periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
                 currentChampion, eligibleRows, kpiComparison, formatChineseDate,
                 topInsight, riskInsight, movementInsight,
-                formatBytes, formatPercent, percentValue, formatSeconds, formatScore,
-                previewPercent, previewConversion, isSelected, toggleAgent, selectFiltered, clearFiltered,
+                formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime,
+                previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, openAgent, closeAgent,
+                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, openAgent, closeAgent,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }

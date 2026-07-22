@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light">
-    <title>客服绩效 BI</title>
+    <title>苏泊尔商丘团队数据 BI 系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
@@ -25,9 +25,9 @@
 <div id="app" v-cloak>
     <header class="bi-topbar">
         <div class="brand-block">
-            <a class="brand-mark" href="customer-bi.html" aria-label="客服绩效 BI 首页">CS</a>
+            <a class="brand-mark" href="customer-bi.html" aria-label="商丘春客数据中心首页">CS</a>
             <div>
-                <div class="brand-title">客服绩效 BI</div>
+                <div class="brand-title">商丘春客数据中心</div>
                 <div class="brand-subtitle">Customer Service Performance</div>
             </div>
         </div>
@@ -45,15 +45,17 @@
     <main>
         <section v-if="view === 'dashboard'" class="dashboard-shell page-enter">
             <div class="dashboard-toolbar">
-                <div>
-                    <div class="eyebrow">MANAGEMENT COCKPIT</div>
-                    <h1>客服绩效驾驶舱</h1>
-                    <p>{{ periodRangeText }} · {{ dashboardStatusText }}</p>
-                </div>
-                <div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
-                    <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="dashboardPeriod = mode.value">
-                        {{ mode.label }}
-                    </button>
+                <div class="dashboard-heading">
+                    <div>
+                        <div class="eyebrow">MANAGEMENT COCKPIT</div>
+                        <h1>苏泊尔商丘团队数据 BI 系统</h1>
+                        <p>{{ periodRangeText }} · {{ dashboardStatusText }}</p>
+                    </div>
+                    <div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
+                        <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="dashboardPeriod = mode.value">
+                            {{ mode.label }}
+                        </button>
+                    </div>
                 </div>
                 <div class="toolbar-actions">
                     <div class="current-scope"><span>当前人员范围</span><b>已确认批次人员</b></div>
@@ -105,7 +107,7 @@
                     <article class="cockpit-panel trend-panel">
                         <div class="panel-header">
                             <div>
-                                <h2>{{ periodName }}指标趋势</h2>
+                                <h2>{{ trendTitle }}</h2>
                                 <p>{{ periodRangeText }} · 满意率、工作时间均响、转化率</p>
                             </div>
                         </div>
@@ -123,7 +125,7 @@
                         <transition-group name="rank-list" tag="ol" class="ranking-list">
                             <li v-for="(person, index) in rankingRows.slice(0, 10)" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
                                 <span class="rank-index">{{ rankingPositionText(person, index) }}</span>
-                                <span class="rank-name">{{ person.displayName }}</span>
+                                <span class="rank-name">{{ person.displayName }}<small v-if="honorLabel(person)" class="honor-badge">{{ honorLabel(person) }}</small></span>
                                 <span v-if="!person.isQualified" class="sample-badge">样本不足</span>
                                 <span v-if="rankingMetric === 'total'" :class="['rank-change', rankChangeClass(person)]">{{ rankChangeText(person) }}</span>
                                 <span class="rank-value">{{ rankingValue(person) }}</span>
@@ -187,6 +189,20 @@
                 <button class="button button-light" @click="openDashboard">返回 Dashboard</button>
             </div>
 
+            <details v-if="session" class="import-history" open>
+                <summary><span>上传记录</span><b>{{ importHistoryRows.length }} 条最近记录</b></summary>
+                <div v-if="importHistoryRows.length" class="import-history-list">
+                    <details v-for="batch in importHistoryRows" :key="batch.id" class="import-history-item">
+                        <summary>
+                            <span><b>{{ batch.business_date }}</b>{{ batch.file_name }}</span>
+                            <em>{{ batch.selected_count }} 人参与 / {{ batch.excluded_count }} 人排除</em>
+                        </summary>
+                        <div><span>确认时间：{{ formatDateTime(batch.confirmed_at || batch.created_at) }}</span><p>参与人员：{{ batch.includedNames.join('、') || '无' }}</p></div>
+                    </details>
+                </div>
+                <div v-else class="import-history-empty">暂无上传记录</div>
+            </details>
+
             <ol class="stepper" aria-label="导入步骤">
                 <li v-for="(item, index) in steps" :key="item" :class="{ active: importStep === index + 1, done: importStep > index + 1 }">
                     <span>{{ importStep > index + 1 ? '✓' : index + 1 }}</span><b>{{ item }}</b>
@@ -196,7 +212,7 @@
             <transition name="step-slide" mode="out-in">
                 <section :key="importStep" class="wizard-card">
                     <template v-if="importStep === 1">
-                        <div class="wizard-title"><span>01</span><div><h2>上传 Excel</h2><p>支持 .xlsx 和 .xls；微信小店相关字段会被忽略。</p></div></div>
+                        <div class="wizard-title"><span>01</span><div><h2>上传 Excel</h2><p>支持 .xlsx 和 .xls，文件会先在浏览器中解析。</p></div></div>
                         <label :class="['drop-zone', { dragging: isDragging }]" @dragenter.prevent="isDragging = true" @dragover.prevent @dragleave.prevent="isDragging = false" @drop.prevent="handleDrop">
                             <input type="file" accept=".xlsx,.xls" @change="handleFileInput">
                             <span class="upload-orbit" :class="{ loading: isParsing }">↑</span>
@@ -231,12 +247,12 @@
                             <div class="selection-count"><b>{{ selectedAccounts.length }}</b> 已选 <i></i><b>{{ parsedAgents.length - selectedAccounts.length }}</b> 排除</div>
                         </div>
                         <div class="agent-selection-grid">
-                            <label v-for="agent in filteredAgents" :key="agent.key" :class="['agent-select-card', { selected: isSelected(agent), warning: agent.warnings.length }]">
-                                <input type="checkbox" :checked="isSelected(agent)" @change="toggleAgent(agent)">
+                            <label v-for="agent in filteredAgents" :key="agent.key" :class="['agent-select-card', { selected: isSelected(agent), warning: agent.warnings.length, selectable: isAgentSelectable(agent), unavailable: !isAgentSelectable(agent) }]">
+                                <input type="checkbox" :checked="isSelected(agent)" :disabled="!isAgentSelectable(agent)" @change="toggleAgent(agent)">
                                 <span class="fake-check">✓</span>
                                 <span class="agent-main"><b>{{ agent.displayName }}</b><small>{{ agent.sourceAccount }}</small></span>
                                 <span class="agent-preview">满意 {{ previewPercent(agent) }}<br>均响 {{ formatSeconds(agent.avgResponseSeconds) }} · 转化 {{ previewConversion(agent) }}</span>
-                                <em v-if="agent.warnings.length">需确认</em>
+                                <em v-if="!isAgentSelectable(agent)">无满意率数据</em><em v-else-if="agent.warnings.length">需确认</em>
                             </label>
                         </div>
                         <div v-if="!filteredAgents.length" class="no-search-result">没有匹配人员</div>
@@ -274,7 +290,7 @@
                             <div class="confirm-card"><span>规则版本</span><b>{{ rules.version }}</b></div>
                             <div class="confirm-card"><span>数据来源</span><b>{{ fileInfo?.name }}</b></div>
                         </div>
-                        <div class="final-warning"><b>确认事项</b><p>微信小店字段不会入库；未选择人员只保留在批次审计记录中，不写入正式 KPI、排名或荣誉。</p></div>
+                        <div class="final-warning"><b>确认事项</b><p>未选择人员只保留在批次审计记录中，不写入正式 KPI、排名或荣誉。</p></div>
                         <button class="button save-button" :disabled="isSaving || hasBlockingValidation" @click="requestSave">
                             <span v-if="isSaving" class="button-spinner"></span>{{ isSaving ? '正在保存…' : (session ? '确认保存当天快照' : '登录并保存') }}
                         </button>
@@ -310,8 +326,9 @@
                         <div><span>转化率</span><b>{{ formatPercent(detailMetric.conversionRate) }}</b><small>目标 30%</small><em :class="['detail-change', detailComparison('conversion').state]">{{ detailComparison('conversion').text }}</em></div>
                         <div><span>综合得分</span><b>{{ formatScore(detailMetric.totalScore) }}</b><small>按周期聚合 KPI 重新评分</small><em :class="['detail-change', detailComparison('score').state]">{{ detailComparison('score').text }}</em></div>
                     </div>
-                    <article class="detail-panel"><div class="panel-header light"><div><h3>{{ detailPeriodName }}每日趋势</h3><p>{{ detailRangeText }}</p></div></div><div ref="detailChartEl" class="chart detail-chart"></div></article>
+                    <article class="detail-panel"><div class="panel-header light"><div><h3>{{ detailTrendTitle }}</h3><p>{{ detailRangeText }}</p></div></div><div ref="detailChartEl" class="chart detail-chart"></div></article>
                     <article class="detail-panel history-panel"><div class="panel-header light"><div><h3>当前周期参与记录</h3><p>休息、未排班或未纳入统计的日期不会补 0</p></div></div><div class="history-chips"><span v-for="item in detailTrendRows" :key="item.business_date"><b>{{ item.business_date.slice(5) }}</b>{{ formatScore(item.total_score) }}</span></div></article>
+                    <article class="detail-panel honor-history-panel"><div class="panel-header light"><div><h3>历史荣誉记录</h3><p>根据已确认的历史排名实时生成</p></div></div><div v-if="detailHonors.length" class="honor-history-list"><span v-for="honor in detailHonors" :key="honor.key"><b>{{ honor.name }}</b><small>{{ honor.date }}</small></span></div><div v-else class="honor-empty">暂无第一名荣誉记录</div></article>
                 </template>
                 <div v-else class="detail-empty"><b>该周期没有参与数据</b><span>未参与不视为未达标，也不会生成排名。</span></div>
             </aside>
