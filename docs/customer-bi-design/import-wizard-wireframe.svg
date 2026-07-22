@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1080" viewBox="0 0 1600 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Excel 导入向导线框图</title><desc id="desc">展示上传文件、选择日期、选择人员、校验预览、确认入库五步向导，重点呈现人员筛选与排除界面。</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8fafc"/><stop offset="1" stop-color="#edf4fb"/></linearGradient><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#0891b2"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="9" stdDeviation="12" flood-color="#1f3c5c" flood-opacity=".12"/></filter><style>text{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;fill:#18324f}.title{font-size:30px;font-weight:700}.small{font-size:13px;fill:#657b92}.label{font-size:16px;font-weight:700}.panel{fill:#fff;stroke:#d3deeb;stroke-width:1.5}.chip{fill:#edf3f9}.active{fill:url(#blue)}.btn{fill:#17324d}.ghost{fill:#fff;stroke:#b9c8d9}.person{fill:#fff;stroke:#d5e0ec}.new{fill:#eff6ff;stroke:#60a5fa}.warn{fill:#fff7ed;stroke:#f59e0b}.disabled{fill:#f1f5f9;stroke:#cbd5e1}.check{fill:#2563eb}.checkText{font-size:14px;font-weight:700;fill:#fff}</style></defs>
+  <rect width="1600" height="1080" fill="url(#bg)"/>
+  <text x="52" y="62" class="title">导入客服绩效数据</text><text x="52" y="92" class="small">数据参考722.xlsx · 25.4 KB · 草稿批次</text>
+  <rect x="1360" y="42" width="180" height="44" rx="12" class="ghost"/><text x="1450" y="70" text-anchor="middle" class="label">保存并退出</text>
+
+  <rect x="52" y="126" width="1488" height="92" rx="20" class="panel" filter="url(#shadow)"/>
+  <g transform="translate(95 158)"><circle cx="18" cy="16" r="18" fill="#10b981"/><text x="18" y="22" text-anchor="middle" class="checkText">✓</text><text x="48" y="22" class="label">上传文件</text><line x1="155" y1="16" x2="248" y2="16" stroke="#a7c2df" stroke-width="3"/>
+  <circle cx="270" cy="16" r="18" fill="#10b981"/><text x="270" y="22" text-anchor="middle" class="checkText">✓</text><text x="300" y="22" class="label">选择日期</text><line x1="407" y1="16" x2="500" y2="16" stroke="#a7c2df" stroke-width="3"/>
+  <circle cx="522" cy="16" r="20" class="active"/><text x="522" y="22" text-anchor="middle" class="checkText">3</text><text x="554" y="22" class="label">选择人员</text><line x1="665" y1="16" x2="758" y2="16" stroke="#cbd5e1" stroke-width="3"/>
+  <circle cx="780" cy="16" r="18" fill="#e2e8f0"/><text x="780" y="22" text-anchor="middle" class="label">4</text><text x="810" y="22" class="small">校验预览</text><line x1="915" y1="16" x2="1008" y2="16" stroke="#cbd5e1" stroke-width="3"/>
+  <circle cx="1030" cy="16" r="18" fill="#e2e8f0"/><text x="1030" y="22" text-anchor="middle" class="label">5</text><text x="1060" y="22" class="small">确认入库</text></g>
+
+  <rect x="52" y="244" width="1020" height="754" rx="22" class="panel" filter="url(#shadow)"/>
+  <text x="84" y="286" class="title" font-size="24">选择本次纳入统计的人员</text><text x="84" y="316" class="small">Excel 共识别 54 人；未选择人员不会写入正式 KPI、排名或荣誉</text>
+  <rect x="84" y="344" width="310" height="44" rx="12" class="chip"/><text x="105" y="372" class="small">搜索账号或昵称…</text>
+  <rect x="410" y="344" width="190" height="44" rx="12" class="chip"/><text x="505" y="372" text-anchor="middle" class="small">团队：全部</text>
+  <rect x="616" y="344" width="190" height="44" rx="12" class="chip"/><text x="711" y="372" text-anchor="middle" class="small">名单：售后团队</text>
+  <rect x="822" y="344" width="215" height="44" rx="12" class="active"/><text x="929" y="372" text-anchor="middle" class="label" style="fill:#fff">使用默认名单</text>
+
+  <g transform="translate(84 410)"><rect width="105" height="38" rx="10" class="ghost"/><text x="52" y="25" text-anchor="middle" class="small">全选</text><rect x="116" width="105" height="38" rx="10" class="ghost"/><text x="168" y="25" text-anchor="middle" class="small">取消全选</text><rect x="232" width="105" height="38" rx="10" class="ghost"/><text x="284" y="25" text-anchor="middle" class="small">反选</text><rect x="348" width="170" height="38" rx="10" class="ghost"/><text x="433" y="25" text-anchor="middle" class="small">恢复最近一次选择</text><rect x="530" width="168" height="38" rx="10" class="ghost"/><text x="614" y="25" text-anchor="middle" class="small">保存为新名单</text></g>
+
+  <g transform="translate(84 472)">
+    <g><rect width="452" height="114" rx="16" class="person"/><rect x="18" y="18" width="24" height="24" rx="6" class="check"/><text x="30" y="36" text-anchor="middle" class="checkText">✓</text><text x="58" y="37" class="label">售后小舒</text><text x="355" y="36" class="small">默认名单</text><text x="58" y="68" class="small">好评 21　差评 2　满意率 91.3%</text><text x="58" y="94" class="small">均响 15 秒　询单 100　转化率 31%</text></g>
+    <g transform="translate(468)"><rect width="452" height="114" rx="16" class="person"/><rect x="18" y="18" width="24" height="24" rx="6" class="check"/><text x="30" y="36" text-anchor="middle" class="checkText">✓</text><text x="58" y="37" class="label">售后楠楠</text><text x="355" y="36" class="small">默认名单</text><text x="58" y="68" class="small">好评 14　差评 0　满意率 100%</text><text x="58" y="94" class="small">均响 13 秒　询单 39　转化率 30.8%</text></g>
+    <g transform="translate(0 130)"><rect width="452" height="114" rx="16" class="new"/><rect x="18" y="18" width="24" height="24" rx="6" fill="#fff" stroke="#60a5fa"/><text x="58" y="37" class="label">小至</text><rect x="340" y="16" width="88" height="28" rx="14" fill="#dbeafe"/><text x="384" y="35" text-anchor="middle" class="small">新人员</text><text x="58" y="68" class="small">来源账号：训练师kk · 当前无有效指标</text><text x="58" y="94" class="small">需要匹配/创建人员；默认不选中</text></g>
+    <g transform="translate(468 130)"><rect width="452" height="114" rx="16" class="warn"/><rect x="18" y="18" width="24" height="24" rx="6" fill="#fff" stroke="#f59e0b"/><text x="58" y="37" class="label">倪金</text><rect x="340" y="16" width="88" height="28" rx="14" fill="#ffedd5"/><text x="384" y="35" text-anchor="middle" class="small">缺账号</text><text x="58" y="68" class="small">客服账号为空，仅有昵称</text><text x="58" y="94" class="small">确认身份映射后方可选择</text></g>
+    <g transform="translate(0 260)"><rect width="452" height="114" rx="16" class="disabled"/><rect x="18" y="18" width="24" height="24" rx="6" fill="#fff" stroke="#94a3b8"/><text x="58" y="37" class="label">客服主管王嘉硕</text><rect x="340" y="16" width="88" height="28" rx="14" fill="#e2e8f0"/><text x="384" y="35" text-anchor="middle" class="small">未选择</text><text x="58" y="68" class="small">当前无有效指标 · 不在默认名单</text><text x="58" y="94" class="small">不参与计算，不写入正式 KPI</text></g>
+    <g transform="translate(468 260)"><rect width="452" height="114" rx="16" class="disabled"/><rect x="18" y="18" width="24" height="24" rx="6" fill="#fff" stroke="#94a3b8"/><text x="58" y="37" class="label">离职示例人员</text><rect x="340" y="16" width="88" height="28" rx="14" fill="#e2e8f0"/><text x="384" y="35" text-anchor="middle" class="small">已停用</text><text x="58" y="68" class="small">历史记录保留 · 默认不选中</text><text x="58" y="94" class="small">如需临时纳入，必须显式确认</text></g>
+    <text x="0" y="420" class="small">显示 6 / 54 人　·　滚动加载更多　·　表头“微信小店”字段已忽略，不影响人员解析</text>
+  </g>
+
+  <rect x="1100" y="244" width="440" height="754" rx="22" class="panel" filter="url(#shadow)"/>
+  <text x="1132" y="286" class="label">本次统计范围</text>
+  <rect x="1132" y="314" width="175" height="94" rx="16" fill="#eff6ff"/><text x="1152" y="344" class="small">已选择</text><text x="1152" y="384" class="title" font-size="30">18 人</text>
+  <rect x="1325" y="314" width="183" height="94" rx="16" fill="#f1f5f9"/><text x="1345" y="344" class="small">已排除</text><text x="1345" y="384" class="title" font-size="30">36 人</text>
+  <text x="1132" y="454" class="label">范围提示</text>
+  <rect x="1132" y="474" width="376" height="74" rx="14" class="new"/><text x="1152" y="503" class="small">4 名历史未出现的新人员</text><text x="1152" y="529" class="small">默认未选中，待确认是否加入名单</text>
+  <rect x="1132" y="562" width="376" height="74" rx="14" class="warn"/><text x="1152" y="591" class="small">2 名默认名单人员本次缺失</text><text x="1152" y="617" class="small">不记未达标，连续记录默认暂停</text>
+  <text x="1132" y="682" class="label">关键指标预估</text><text x="1132" y="716" class="small">团队满意率　91.8%</text><text x="1132" y="746" class="small">平均响应时长　19.6 秒</text><text x="1132" y="776" class="small">团队转化率　38.2%</text>
+  <rect x="1132" y="808" width="376" height="88" rx="14" fill="#fff7ed"/><text x="1152" y="839" class="small">平均响应时长为当前所选人员的</text><text x="1152" y="866" class="small">简单平均，暂未按会话量加权。</text>
+  <rect x="1132" y="922" width="176" height="50" rx="13" class="ghost"/><text x="1220" y="953" text-anchor="middle" class="label">返回</text><rect x="1328" y="922" width="180" height="50" rx="13" class="btn"/><text x="1418" y="953" text-anchor="middle" class="label" style="fill:#fff">进入校验预览</text>
+  <text x="52" y="1040" class="small">步骤 5 确认页将再次展示：业务日期、人员范围、KPI 规则版本、revision、被替代批次和二次确认。</text>
+</svg>
