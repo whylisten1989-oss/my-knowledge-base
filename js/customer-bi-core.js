@@ -71,7 +71,7 @@
     const sanitizeRawRow = (row) => Object.fromEntries(
         Object.entries(row || {}).filter(([key]) => {
             const normalized = cleanText(key);
-            return normalized && !normalized.startsWith('__EMPTY') && !normalized.includes('微信小店');
+            return normalized && !normalized.startsWith('__EMPTY');
         })
     );
 
