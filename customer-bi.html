@@ -51,10 +51,20 @@
                         <h1>苏泊尔商丘团队数据 BI 系统</h1>
                         <p>{{ periodRangeText }} · {{ dashboardStatusText }}</p>
                     </div>
-                    <div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
-                        <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="dashboardPeriod = mode.value">
-                            {{ mode.label }}
-                        </button>
+                    <div class="dashboard-period-tools">
+                        <div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
+                            <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="dashboardPeriod = mode.value">
+                                {{ mode.label }}
+                            </button>
+                        </div>
+                        <div v-if="dashboardPeriod === 'custom'" class="custom-period-panel">
+                            <div class="custom-period-mode">
+                                <button :class="{ active: customPeriodMode === 'single' }" @click="customPeriodMode = 'single'">单日</button>
+                                <button :class="{ active: customPeriodMode === 'range' }" @click="customPeriodMode = 'range'">日期区间</button>
+                            </div>
+                            <label><span>{{ customPeriodMode === 'single' ? '查看日期' : '开始日期' }}</span><input v-model="customStartDate" type="date" :min="availableDates[0]" :max="availableDates.at(-1)"></label>
+                            <label v-if="customPeriodMode === 'range'"><span>结束日期</span><input v-model="customEndDate" type="date" :min="customStartDate || availableDates[0]" :max="availableDates.at(-1)"></label>
+                        </div>
                     </div>
                 </div>
                 <div class="toolbar-actions">
@@ -111,7 +121,14 @@
                                 <p>{{ periodRangeText }} · 满意率、工作时间均响、转化率</p>
                             </div>
                         </div>
-                        <div ref="trendChartEl" class="chart chart-main" role="img" aria-label="团队 KPI 趋势图"></div>
+                        <div v-if="isSingleDayView" class="single-day-comparison">
+                            <div v-for="item in singleDayComparisons" :key="item.key" class="single-day-card">
+                                <span>{{ item.label }}</span><b>{{ item.currentText }}</b>
+                                <small>上一有效日 {{ item.previousText }}</small>
+                                <em :class="['comparison-pill', item.state]">{{ item.deltaText }}</em>
+                            </div>
+                        </div>
+                        <div v-else ref="trendChartEl" class="chart chart-main" role="img" aria-label="团队 KPI 趋势图"></div>
                     </article>
 
                     <article class="cockpit-panel ranking-panel">
@@ -131,6 +148,15 @@
                                 <span class="rank-value">{{ rankingValue(person) }}</span>
                             </li>
                         </transition-group>
+                        <div class="metric-honor-strip">
+                            <div class="metric-honor-heading"><span>{{ currentHonorCategoryName }}</span><small>实时计算 · 暂不写入数据库</small></div>
+                            <div v-if="currentMetricHonors.length" class="metric-honor-list">
+                                <div v-for="honor in currentMetricHonors" :key="honor.key" class="metric-honor-card">
+                                    <span>{{ honor.medal }}</span><div><b>{{ honor.title }}</b><strong>{{ honor.displayName }}</strong><small>{{ honor.valueText }}</small></div>
+                                </div>
+                            </div>
+                            <div v-else class="metric-honor-empty">当前周期暂无符合条件的荣誉人员</div>
+                        </div>
                     </article>
                 </div>
 
@@ -141,9 +167,9 @@
                             <div class="matrix-row matrix-header"><span>人员</span><span>满意</span><span>均响</span><span>转化</span></div>
                             <div v-for="person in rankedByTotal" :key="person.agentId || person.sourceAccount" class="matrix-row" @click="openAgent(person)">
                                 <span>{{ person.displayName }}</span>
-                                <i :class="targetClass(person.satisfactionRate >= rules.targets.satisfaction)"></i>
-                                <i :class="targetClass(person.avgResponseSeconds <= rules.targets.responseSeconds)"></i>
-                                <i :class="targetClass(person.conversionRate >= rules.targets.conversion)"></i>
+                                <i :class="targetClass(person.satisfactionRate >= rules.targets.satisfaction)">{{ person.satisfactionRate >= rules.targets.satisfaction ? '达标' : '未达标' }}</i>
+                                <i :class="targetClass(person.avgResponseSeconds <= rules.targets.responseSeconds)">{{ person.avgResponseSeconds <= rules.targets.responseSeconds ? '达标' : '未达标' }}</i>
+                                <i :class="targetClass(person.conversionRate >= rules.targets.conversion)">{{ person.conversionRate >= rules.targets.conversion ? '达标' : '未达标' }}</i>
                             </div>
                         </div>
                     </article>
@@ -316,7 +342,7 @@
                     <div class="detail-rank"><span>{{ detailPeriodName }}排名</span><b>{{ detailRankText }}</b></div>
                 </div>
                 <div class="detail-period-switch" aria-label="人员详情时间范围">
-                    <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: detailPeriod === mode.value }" @click="detailPeriod = mode.value">{{ mode.label }}</button>
+                    <button v-for="mode in periodOptions.filter((item) => item.value !== 'custom')" :key="mode.value" :class="{ active: detailPeriod === mode.value }" @click="detailPeriod = mode.value">{{ mode.label }}</button>
                 </div>
                 <template v-if="detailMetric">
                     <div class="detail-period-summary"><b>{{ detailRangeText }}</b><span>{{ detailMetric.participationDays }} 个实际参与日 · 未参与日期不计 0 分</span></div>
@@ -328,7 +354,14 @@
                     </div>
                     <article class="detail-panel"><div class="panel-header light"><div><h3>{{ detailTrendTitle }}</h3><p>{{ detailRangeText }}</p></div></div><div ref="detailChartEl" class="chart detail-chart"></div></article>
                     <article class="detail-panel history-panel"><div class="panel-header light"><div><h3>当前周期参与记录</h3><p>休息、未排班或未纳入统计的日期不会补 0</p></div></div><div class="history-chips"><span v-for="item in detailTrendRows" :key="item.business_date"><b>{{ item.business_date.slice(5) }}</b>{{ formatScore(item.total_score) }}</span></div></article>
-                    <article class="detail-panel honor-history-panel"><div class="panel-header light"><div><h3>历史荣誉记录</h3><p>根据已确认的历史排名实时生成</p></div></div><div v-if="detailHonors.length" class="honor-history-list"><span v-for="honor in detailHonors" :key="honor.key"><b>{{ honor.name }}</b><small>{{ honor.date }}</small></span></div><div v-else class="honor-empty">暂无第一名荣誉记录</div></article>
+                    <article class="detail-panel honor-history-panel">
+                        <div class="panel-header light"><div><h3>荣誉墙</h3><p>按指标折叠展示 · 实时计算，暂不写入数据库</p></div></div>
+                        <details v-for="group in detailHonorGroups" :key="group.key" class="honor-group" :open="group.key === 'total'">
+                            <summary><span>{{ group.name }}</span><b>{{ group.items.length }} 项</b></summary>
+                            <div v-if="group.items.length" class="honor-history-list"><span v-for="honor in group.items" :key="honor.key"><b>{{ honor.name }}</b><small>{{ honor.date }}</small></span></div>
+                            <div v-else class="honor-empty">暂无该类荣誉</div>
+                        </details>
+                    </article>
                 </template>
                 <div v-else class="detail-empty"><b>该周期没有参与数据</b><span>未参与不视为未达标，也不会生成排名。</span></div>
             </aside>
