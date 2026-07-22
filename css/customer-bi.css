@@ -229,3 +229,24 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+
+/* BI incremental UX: custom period, metric honors and compact matrix */
+.dashboard-heading { align-items: flex-start; }
+.dashboard-period-tools { display: grid; gap: 10px; justify-items: start; }
+.custom-period-panel { display: flex; align-items: end; gap: 9px; flex-wrap: wrap; padding: 10px; border: 1px solid rgba(121,151,185,.22); border-radius: 13px; background: rgba(7,21,39,.56); }
+.custom-period-mode { display: flex; padding: 3px; border-radius: 9px; background: rgba(255,255,255,.06); }
+.custom-period-mode button { border: 0; border-radius: 7px; padding: 7px 10px; color: #7f95ae; background: transparent; font-size: 9px; font-weight: 900; }
+.custom-period-mode button.active { color: #fff; background: #246fdf; }
+.custom-period-panel label { display: grid; gap: 4px; color: #768ba4; font-size: 8px; font-weight: 800; }
+.custom-period-panel input, select { color-scheme: dark; }
+.custom-period-panel input { min-width: 145px; border: 1px solid #304763; border-radius: 9px; padding: 8px 10px; color: #eaf4ff; background: #0b1c31; outline: 0; }
+.custom-period-panel input:focus { border-color: #3b8cff; box-shadow: 0 0 0 3px rgba(59,140,255,.14); }
+.single-day-comparison { min-height: 315px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; align-content: center; }
+.single-day-card { display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; padding: 18px; border: 1px solid rgba(121,151,185,.16); border-radius: 15px; background: rgba(255,255,255,.035); }
+.single-day-card > span { color: #8296ad; font-size: 9px; font-weight: 800; }.single-day-card b { color: #eef7ff; font-size: 22px; }.single-day-card small { color: #71869f; font-size: 8px; }
+.comparison-pill { justify-self: end; width: max-content; padding: 4px 7px; border-radius: 999px; font-size: 8px; font-style: normal; font-weight: 900; }.comparison-pill.positive{color:#34d9a2;background:rgba(24,189,139,.13)}.comparison-pill.negative{color:#ff7c84;background:rgba(235,80,91,.13)}.comparison-pill.neutral{color:#8aa0b8;background:rgba(255,255,255,.06)}
+.metric-honor-strip { margin-top: 14px; padding-top: 13px; border-top: 1px solid rgba(133,158,188,.14); }.metric-honor-heading { display:flex; justify-content:space-between; gap:10px; margin-bottom:9px; }.metric-honor-heading span{color:#dcecff;font-size:10px;font-weight:900}.metric-honor-heading small{color:#627892;font-size:8px}.metric-honor-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.metric-honor-card{display:grid;grid-template-columns:28px 1fr;gap:7px;padding:9px;border-radius:11px;background:rgba(255,194,61,.07);border:1px solid rgba(255,194,61,.12)}.metric-honor-card>span{font-size:18px}.metric-honor-card div{min-width:0}.metric-honor-card b,.metric-honor-card strong,.metric-honor-card small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.metric-honor-card b{color:#d4a843;font-size:8px}.metric-honor-card strong{color:#edf5ff;font-size:10px}.metric-honor-card small{color:#8296ad;font-size:8px}.metric-honor-empty{padding:12px;color:#71869f;background:rgba(255,255,255,.025);border-radius:10px;text-align:center;font-size:8px}
+.matrix-panel { align-self: start; }.matrix-scroll { max-height: 330px; }.matrix-row { min-height: 34px; padding: 5px 0; }.matrix-row i { width: auto; height: auto; min-width: 42px; padding: 4px 6px; border-radius: 999px; font-size: 8px; font-style: normal; font-weight: 900; text-align: center; }.target-pass{color:#35d6a0;background:rgba(24,189,139,.13)}.target-fail{color:#ff7e86;background:rgba(235,80,91,.13)}
+.honor-group { margin-top: 9px; border: 1px solid #dbe5ee; border-radius: 12px; overflow: hidden; background: #fbfdff; }.honor-group summary { display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;color:#314a64;font-size:10px;font-weight:900;list-style:none}.honor-group summary::-webkit-details-marker{display:none}.honor-group summary b{padding:3px 7px;border-radius:999px;color:#7a8ea2;background:#edf3f8;font-size:8px}.honor-group .honor-history-list,.honor-group .honor-empty{margin:0 12px 12px}
+@media(max-width:640px){.single-day-comparison{grid-template-columns:1fr;min-height:auto}.metric-honor-list{grid-template-columns:1fr}.custom-period-panel{align-items:stretch}.custom-period-panel label,.custom-period-panel input{width:100%}}
