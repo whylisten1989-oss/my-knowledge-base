@@ -74,6 +74,9 @@
             const dashboardBatches = ref([]);
             const dashboardBatchAgents = ref([]);
             const dashboardPeriod = ref('yesterday');
+            const customPeriodMode = ref('single');
+            const customStartDate = ref(today);
+            const customEndDate = ref(today);
             const rankingMetric = ref('total');
             const trendChartEl = ref(null);
             const detailChartEl = ref(null);
@@ -88,7 +91,8 @@
             const periodOptions = [
                 { label: '昨日', value: 'yesterday' },
                 { label: '近 7 日', value: 'last7' },
-                { label: '本月', value: 'month' }
+                { label: '本月', value: 'month' },
+                { label: '自定义', value: 'custom' }
             ];
             const rankingOptions = [
                 { label: '综合', value: 'total' }, { label: '满意率', value: 'satisfaction' },
@@ -317,6 +321,11 @@
                     dashboardMetrics.value = (metricResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
                     dashboardRankings.value = (rankingResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
                     dashboardBatchAgents.value = batchAgentResult.data || [];
+                    const loadedDates = core.uniqueBusinessDates(dashboardBatches.value.map((item) => item.business_date));
+                    if (loadedDates.length && (!loadedDates.includes(customStartDate.value) || customStartDate.value === today)) {
+                        customStartDate.value = loadedDates.at(-1);
+                        customEndDate.value = loadedDates.at(-1);
+                    }
                 } catch (error) {
                     addToast(describeError(error), 'error');
                     dashboardBatches.value = [];
@@ -355,7 +364,17 @@
                 dashboardRankings.value.forEach((item) => map.set(`${item.business_date}:${item.agent_id}`, item));
                 return map;
             });
-            const periodScope = computed(() => core.resolvePeriodScope(availableDates.value, dashboardPeriod.value));
+            const periodScope = computed(() => {
+                if (dashboardPeriod.value !== 'custom') return core.resolvePeriodScope(availableDates.value, dashboardPeriod.value);
+                const sorted = availableDates.value;
+                const start = customStartDate.value || sorted.at(-1);
+                const end = customPeriodMode.value === 'single' ? start : (customEndDate.value || start);
+                const [from, to] = start <= end ? [start, end] : [end, start];
+                const currentDates = sorted.filter((date) => date >= from && date <= to);
+                const firstIndex = currentDates.length ? sorted.indexOf(currentDates[0]) : -1;
+                const previousDates = firstIndex > 0 ? sorted.slice(Math.max(0, firstIndex - currentDates.length), firstIndex) : [];
+                return { period: 'custom', baseDate: currentDates.at(-1) || null, currentDates, previousDates, comparisonComplete: currentDates.length > 0 && previousDates.length === currentDates.length, minimumParticipationDays: currentDates.length <= 1 ? 1 : Math.max(2, Math.ceil(currentDates.length * .5)), provisional: false };
+            });
             const currentPeriodRanking = computed(() => core.buildPeriodRanking(
                 dashboardMetrics.value,
                 periodScope.value.currentDates,
@@ -373,7 +392,7 @@
                 const currentDate = periodScope.value.currentDates[0];
                 const rows = currentPeriodRanking.value.allRows.map((item) => {
                     const key = item.agentId || item.sourceAccount;
-                    const official = dashboardPeriod.value === 'yesterday'
+                    const official = isSingleDayView.value
                         ? rankingLookup.value.get(`${currentDate}:${item.agentId}`)
                         : null;
                     return {
@@ -383,7 +402,7 @@
                         previousRank: periodScope.value.comparisonComplete ? previousRankMap.value.get(key) || null : null
                     };
                 });
-                return dashboardPeriod.value === 'yesterday'
+                return isSingleDayView.value
                     ? rows.sort((a, b) => a.rankPosition - b.rankPosition)
                     : rows;
             });
@@ -406,15 +425,14 @@
                 const [year, month, day] = date.split('-').map(Number);
                 return `${year} 年 ${month} 月 ${day} 日`;
             };
-            const periodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月' }[dashboardPeriod.value]));
-            const trendTitle = computed(() => dashboardPeriod.value === 'yesterday'
-                ? '近期指标趋势 · 昨日重点'
-                : `${periodName.value}指标趋势`
-            );
+            const isSingleDayView = computed(() => dashboardPeriod.value === 'yesterday' || (dashboardPeriod.value === 'custom' && customPeriodMode.value === 'single'));
+            const periodName = computed(() => ({ yesterday: '昨日', last7: '近 7 日', month: '本月', custom: customPeriodMode.value === 'single' ? '自定义单日' : '自定义周期' }[dashboardPeriod.value]));
+            const trendTitle = computed(() => isSingleDayView.value ? '单日指标对比' : `${periodName.value}指标趋势`);
             const periodRangeText = computed(() => {
                 const dates = periodScope.value.currentDates;
                 if (!dates.length) return '暂无已确认数据';
                 if (dashboardPeriod.value === 'yesterday') return `昨日数据 · ${dates[0]}`;
+                if (dashboardPeriod.value === 'custom') return dates.length === 1 ? `自定义单日 · ${dates[0]}` : `${dates[0]} 至 ${dates.at(-1)} · ${dates.length} 个有效业务日`;
                 if (dashboardPeriod.value === 'month') {
                     const [year, month] = dates.at(-1).slice(0, 7).split('-').map(Number);
                     return `${year} 年 ${month} 月 · 已录入 ${dates.length} 个业务日`;
@@ -424,15 +442,17 @@
             const dashboardStatusText = computed(() => {
                 if (!periodScope.value.currentDates.length) return '等待首个 confirmed 快照';
                 if (dashboardPeriod.value === 'yesterday') return '正式日快照';
+                if (dashboardPeriod.value === 'custom') return `自定义范围 · ${periodScope.value.currentDates.length} 个 confirmed 快照`;
                 if (periodScope.value.provisional) return '月度样本积累中 · 临时排行';
                 return `由 ${periodScope.value.currentDates.length} 个 confirmed 快照实时聚合`;
             });
             const rankingTitle = computed(() => {
                 const scope = '当前确认人员范围';
                 if (!periodScope.value.currentDates.length) return '暂无排行榜';
-                if (dashboardPeriod.value === 'yesterday') {
-                    return `${periodScope.value.currentDates[0]} · ${scope} · 共 ${rankedByTotal.value.length} 人参与昨日排名`;
+                if (isSingleDayView.value) {
+                    return `${periodScope.value.currentDates[0]} · ${scope} · 共 ${rankedByTotal.value.length} 人参与单日排名`;
                 }
+                if (dashboardPeriod.value === 'custom') return `${periodScope.value.currentDates[0]} 至 ${periodScope.value.currentDates.at(-1)} · ${scope} · 共 ${rankedByTotal.value.length} 人参与自定义周期排名`;
                 if (dashboardPeriod.value === 'month') {
                     const [year, month] = periodScope.value.currentDates.at(-1).slice(0, 7).split('-').map(Number);
                     return `${year} 年 ${month} 月 · ${scope} · 共 ${rankedByTotal.value.length} 人参与月排名`;
@@ -470,6 +490,30 @@
                     ...rows.filter((item) => !item.isQualified)
                 ];
             });
+            const honorTitles = {
+                total: ['综合冠军', '综合亚军', '综合季军'],
+                satisfaction: ['满意之星', '服务口碑亚军', '服务口碑季军'],
+                response: ['极速响应冠军', '响应效率亚军', '响应效率季军'],
+                conversion: ['转化冠军', '成交之星亚军', '成交之星季军']
+            };
+            const currentHonorCategoryName = computed(() => ({ total: '综合荣誉', satisfaction: '满意率荣誉', response: '响应效率荣誉', conversion: '转化率荣誉' }[rankingMetric.value]));
+            const currentMetricHonors = computed(() => rankingRows.value.filter((item) => item.isQualified || periodScope.value.provisional).slice(0, 3).map((person, index) => ({
+                key: `${rankingMetric.value}-${person.agentId || person.sourceAccount}-${index}`, medal: ['🥇','🥈','🥉'][index], title: honorTitles[rankingMetric.value][index], displayName: person.displayName, valueText: rankingValue(person)
+            })));
+            const singleDayComparisons = computed(() => {
+                const defs = [
+                    ['satisfaction','满意率','satisfactionRate',100,'%',false], ['response','工作时间均响','avgResponseSeconds',1,' 秒',true], ['conversion','转化率','conversionRate',100,'%',false], ['score','综合得分','avgTotalScore',1,' 分',false]
+                ];
+                return defs.map(([key,label,field,multiplier,unit,lower]) => {
+                    const current = currentTeam.value[field], previous = previousTeam.value?.[field];
+                    const formatter = key === 'satisfaction' || key === 'conversion' ? formatPercent : key === 'response' ? formatSeconds : formatScore;
+                    if (current == null || previous == null) return { key,label,currentText:formatter(current),previousText:formatter(previous),deltaText:'暂无完整对比',state:'neutral' };
+                    const delta=(Number(current)-Number(previous))*multiplier;
+                    const positive=Math.abs(delta)<.0001 ? null : ((delta<0)===lower);
+                    return { key,label,currentText:formatter(current),previousText:formatter(previous),deltaText:`${delta>0?'↑':delta<0?'↓':'—'} ${Math.abs(delta).toFixed(1)}${unit}`,state:positive==null?'neutral':positive?'positive':'negative' };
+                });
+            });
+
             const honorByAgent = computed(() => {
                 const grouped = new Map();
                 dashboardRankings.value.forEach((item) => {
@@ -537,16 +581,14 @@
             });
 
             const renderTrendChart = () => {
-                if (!trendChartEl.value || !window.echarts || view.value !== 'dashboard') return;
+                if (isSingleDayView.value || !trendChartEl.value || !window.echarts || view.value !== 'dashboard') return;
                 if (!trendChartEl.value.clientWidth || !trendChartEl.value.clientHeight) return;
                 if (trendChart && trendChart.getDom() !== trendChartEl.value) {
                     trendChart.dispose();
                     trendChart = null;
                 }
                 if (!trendChart) trendChart = echarts.getInstanceByDom(trendChartEl.value) || echarts.init(trendChartEl.value);
-                const chartDates = dashboardPeriod.value === 'yesterday'
-                    ? availableDates.value.slice(-7)
-                    : periodScope.value.currentDates;
+                const chartDates = periodScope.value.currentDates;
                 const history = chartDates.map((date) => ({
                     key: date,
                     ...core.aggregateTeamMetrics(dashboardMetrics.value, [date])
@@ -673,23 +715,25 @@
                 const dateSet = new Set(dates);
                 return detailHistory.value.filter((item) => dateSet.has(item.business_date));
             });
-            const detailHonors = computed(() => {
+            const detailHonorGroups = computed(() => {
                 if (!detailAgent.value) return [];
-                const honor = honorByAgent.value.get(detailAgent.value.agentId);
-                if (!honor) return [];
-                const records = honor.firstRows.slice(0, 20).map((row) => ({
-                    key: `first-${row.business_date}`,
-                    name: '当日综合第一名',
-                    date: row.business_date
-                }));
-                if (honor.bestFirstStreak >= 2) {
-                    records.unshift({
-                        key: 'best-first-streak',
-                        name: `最佳连续 ${honor.bestFirstStreak} 个有效业务日第一`,
-                        date: '历史最佳'
-                    });
-                }
-                return records;
+                const agentId = detailAgent.value.agentId;
+                const categories = [
+                    ['total','综合荣誉'], ['satisfaction','满意率荣誉'], ['response','响应效率荣誉'], ['conversion','转化率荣誉']
+                ];
+                return categories.map(([key,name]) => {
+                    const rows = [...currentPeriodRanking.value.allRows];
+                    if (key === 'satisfaction') rows.sort((a,b)=>(b.satisfactionRate??-1)-(a.satisfactionRate??-1));
+                    else if (key === 'response') rows.sort((a,b)=>(a.avgResponseSeconds??Infinity)-(b.avgResponseSeconds??Infinity));
+                    else if (key === 'conversion') rows.sort((a,b)=>(b.conversionRate??-1)-(a.conversionRate??-1));
+                    const index = rows.filter((item)=>item.isQualified || periodScope.value.provisional).findIndex((item)=>item.agentId===agentId);
+                    const items = index >= 0 && index < 3 ? [{ key:`${key}-${agentId}`, name:honorTitles[key][index], date:periodRangeText.value }] : [];
+                    if (key === 'total') {
+                        const historical = honorByAgent.value.get(agentId);
+                        (historical?.firstRows || []).slice(0,10).forEach((row)=>items.push({ key:`daily-${row.business_date}`, name:'当日综合第一名', date:row.business_date }));
+                    }
+                    return { key,name,items };
+                });
             });
             const renderDetailChart = () => {
                 if (!detailChartEl.value || !detailMetric.value || !window.echarts) return;
@@ -900,7 +944,7 @@
                 detailChart?.resize();
             };
 
-            watch(dashboardPeriod, scheduleTrendChart, { flush: 'post' });
+            watch([dashboardPeriod, customPeriodMode, customStartDate, customEndDate], scheduleTrendChart, { flush: 'post' });
             watch(dashboardMetrics, scheduleTrendChart, { flush: 'post' });
             watch(detailPeriod, scheduleDetailChart, { flush: 'post' });
             watch(detailTrendRows, scheduleDetailChart, { flush: 'post' });
@@ -938,13 +982,13 @@
                 today, rules, view, steps, importStep, fileInfo, parseError, isParsing, isDragging,
                 parsedAgents, selectedAccounts, agentSearch, businessDate, isSaving,
                 session, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
-                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows,
+                dashboardLoading, availableDates, dashboardPeriod, customPeriodMode, customStartDate, customEndDate, rankingMetric, importHistoryRows,
                 periodOptions, rankingOptions, trendChartEl, detailChartEl, detailAgent, detailHistory,
                 detailPeriod, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
-                detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors,
+                detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonorGroups,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
-                periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
+                periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle, isSingleDayView, singleDayComparisons, currentMetricHonors, currentHonorCategoryName,
                 currentChampion, eligibleRows, kpiComparison, formatChineseDate,
                 topInsight, riskInsight, movementInsight,
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime,
