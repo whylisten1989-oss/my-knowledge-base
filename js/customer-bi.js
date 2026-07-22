@@ -507,10 +507,16 @@
                 return defs.map(([key,label,field,multiplier,unit,lower]) => {
                     const current = currentTeam.value[field], previous = previousTeam.value?.[field];
                     const formatter = key === 'satisfaction' || key === 'conversion' ? formatPercent : key === 'response' ? formatSeconds : formatScore;
-                    if (current == null || previous == null) return { key,label,currentText:formatter(current),previousText:formatter(previous),deltaText:'暂无完整对比',state:'neutral' };
+                    const currentNumber = current == null ? 0 : Number(current) * multiplier;
+                    const previousNumber = previous == null ? 0 : Number(previous) * multiplier;
+                    const ceiling = key === 'response' ? Math.max(currentNumber, previousNumber, rules.targets.responseSeconds * 1.6) : key === 'score' ? 110 : 100;
+                    const currentWidth = Math.max(4, Math.min(100, currentNumber / ceiling * 100));
+                    const previousWidth = Math.max(4, Math.min(100, previousNumber / ceiling * 100));
+                    const hint = key === 'response' ? '越短越好' : key === 'score' ? '满分口径 110' : '越高越好';
+                    if (current == null || previous == null) return { key,label,hint,currentText:formatter(current),previousText:formatter(previous),currentWidth,previousWidth,deltaText:'暂无完整对比',state:'neutral' };
                     const delta=(Number(current)-Number(previous))*multiplier;
                     const positive=Math.abs(delta)<.0001 ? null : ((delta<0)===lower);
-                    return { key,label,currentText:formatter(current),previousText:formatter(previous),deltaText:`${delta>0?'↑':delta<0?'↓':'—'} ${Math.abs(delta).toFixed(1)}${unit}`,state:positive==null?'neutral':positive?'positive':'negative' };
+                    return { key,label,hint,currentText:formatter(current),previousText:formatter(previous),currentWidth,previousWidth,deltaText:`${delta>0?'↑':delta<0?'↓':'—'} ${Math.abs(delta).toFixed(1)}${unit}`,state:positive==null?'neutral':positive?'positive':'negative' };
                 });
             });
 
@@ -543,6 +549,39 @@
                 if (honor.firstRows.length) return `历史第一 ${honor.firstRows.length} 次`;
                 return '';
             };
+            const metricFirstCountByAgent = computed(() => {
+                const counts = { total: new Map(), satisfaction: new Map(), response: new Map(), conversion: new Map() };
+                availableDates.value.forEach((date) => {
+                    const rows = core.rankAgents(core.aggregateAgentMetrics(dashboardMetrics.value, [date]));
+                    const qualified = rows.filter((item) => item.isQualified);
+                    const sorted = {
+                        total: [...qualified],
+                        satisfaction: [...qualified].sort((a,b)=>(b.satisfactionRate??-1)-(a.satisfactionRate??-1)),
+                        response: [...qualified].sort((a,b)=>(a.avgResponseSeconds??Infinity)-(b.avgResponseSeconds??Infinity)),
+                        conversion: [...qualified].sort((a,b)=>(b.conversionRate??-1)-(a.conversionRate??-1))
+                    };
+                    Object.entries(sorted).forEach(([metric, list]) => {
+                        const winner = list[0];
+                        if (!winner) return;
+                        const key = winner.agentId || winner.sourceAccount;
+                        counts[metric].set(key, (counts[metric].get(key) || 0) + 1);
+                    });
+                });
+                return counts;
+            });
+            const metricHonorLabel = (person) => {
+                const key = person.agentId || person.sourceAccount;
+                const count = metricFirstCountByAgent.value[rankingMetric.value]?.get(key) || 0;
+                return count ? `历史第一 ${count} 次` : '';
+            };
+            const customDetailRows = computed(() => rankedByTotal.value.map((row) => {
+                const satisfactionPassed = row.satisfactionRate >= rules.targets.satisfaction;
+                const responsePassed = row.avgResponseSeconds <= rules.targets.responseSeconds;
+                const conversionPassed = row.conversionRate >= rules.targets.conversion;
+                const passedCount = [satisfactionPassed, responsePassed, conversionPassed].filter(Boolean).length;
+                return { ...row, satisfactionPassed, responsePassed, conversionPassed, passedCount, allPassed: passedCount === 3 };
+            }));
+
             const rankingPositionText = (person, index) => person.isQualified || periodScope.value.provisional ? index + 1 : '—';
             const rankingValue = (person) => {
                 if (rankingMetric.value === 'satisfaction') return formatPercent(person.satisfactionRate);
@@ -728,10 +767,8 @@
                     else if (key === 'conversion') rows.sort((a,b)=>(b.conversionRate??-1)-(a.conversionRate??-1));
                     const index = rows.filter((item)=>item.isQualified || periodScope.value.provisional).findIndex((item)=>item.agentId===agentId);
                     const items = index >= 0 && index < 3 ? [{ key:`${key}-${agentId}`, name:honorTitles[key][index], date:periodRangeText.value }] : [];
-                    if (key === 'total') {
-                        const historical = honorByAgent.value.get(agentId);
-                        (historical?.firstRows || []).slice(0,10).forEach((row)=>items.push({ key:`daily-${row.business_date}`, name:'当日综合第一名', date:row.business_date }));
-                    }
+                    const historyCount = metricFirstCountByAgent.value[key]?.get(agentId) || 0;
+                    if (historyCount) items.push({ key:`history-${key}-${agentId}`, name:`历史${name}第一`, date:`累计 ${historyCount} 次` });
                     return { key,name,items };
                 });
             });
@@ -988,13 +1025,13 @@
                 detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonorGroups,
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
-                periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle, isSingleDayView, singleDayComparisons, currentMetricHonors, currentHonorCategoryName,
+                periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle, isSingleDayView, singleDayComparisons, currentMetricHonors, currentHonorCategoryName, customDetailRows,
                 currentChampion, eligibleRows, kpiComparison, formatChineseDate,
                 topInsight, riskInsight, movementInsight,
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime,
                 previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, openAgent, closeAgent,
+                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, metricHonorLabel, openAgent, closeAgent,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }
