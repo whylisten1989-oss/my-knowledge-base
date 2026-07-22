@@ -23,6 +23,13 @@
 </head>
 <body>
 <div id="app" v-cloak>
+    <div v-if="gloryTracks.length" class="champion-glory-bg" aria-hidden="true">
+        <div v-for="(track, index) in gloryTracks" :key="track.key" :class="['glory-track', `glory-track-${index + 1}`]">
+            <div class="glory-track-flow">
+                <span v-for="copy in 3" :key="copy">{{ track.label }} <b>{{ track.name }}</b><i>✦</i></span>
+            </div>
+        </div>
+    </div>
     <header class="bi-topbar">
         <div class="brand-block">
             <a class="brand-mark" href="customer-bi.html" aria-label="商丘春客数据中心首页">CS</a>
@@ -145,7 +152,7 @@
                         <transition-group name="rank-list" tag="ol" class="ranking-list">
                             <li v-for="(person, index) in rankingRows.slice(0, 10)" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
                                 <span class="rank-index">{{ rankingPositionText(person, index) }}</span>
-                                <span class="rank-name">{{ person.displayName }}<small v-if="metricHonorLabel(person)" class="honor-badge">{{ metricHonorLabel(person) }}</small></span>
+                                <span class="rank-name">{{ person.displayName }}<small v-if="metricHonorLabel(person)" class="honor-badge metric-history-badge">{{ metricHonorLabel(person) }}</small></span>
                                 <span v-if="!person.isQualified" class="sample-badge">样本不足</span>
                                 <span v-if="rankingMetric === 'total'" :class="['rank-change', rankChangeClass(person)]">{{ rankChangeText(person) }}</span>
                                 <span class="rank-value">{{ rankingValue(person) }}</span>
@@ -170,12 +177,11 @@
                     </div>
                     <div class="custom-detail-table-wrap">
                         <table class="custom-detail-table">
-                            <thead><tr><th>排名</th><th>客服</th><th>参与日</th><th>满意率</th><th>工作时间均响</th><th>转化率</th><th>综合得分</th><th>达标情况</th></tr></thead>
+                            <thead><tr><th>排名</th><th>客服</th><th>满意率</th><th>工作时间均响</th><th>转化率</th><th>综合得分</th><th>达标情况</th></tr></thead>
                             <tbody>
                                 <tr v-for="row in customDetailRows" :key="row.agentId || row.sourceAccount" @click="openAgent(row)">
                                     <td><span class="detail-rank-chip">{{ row.rankPosition }}</span></td>
-                                    <td><b>{{ row.displayName }}</b><small>{{ row.sourceAccount }}</small></td>
-                                    <td>{{ row.participationDays }} 日</td>
+                                    <td><b>{{ row.displayName }}</b><small>{{ row.sourceAccount }} · 参与 {{ row.participationDays }} 日</small></td>
                                     <td><span :class="['metric-cell', row.satisfactionPassed ? 'passed' : 'failed']">{{ formatPercent(row.satisfactionRate) }}</span></td>
                                     <td><span :class="['metric-cell', row.responsePassed ? 'passed' : 'failed']">{{ formatSeconds(row.avgResponseSeconds) }}</span></td>
                                     <td><span :class="['metric-cell', row.conversionPassed ? 'passed' : 'failed']">{{ formatPercent(row.conversionRate) }}</span></td>
