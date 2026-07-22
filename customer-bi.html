@@ -122,10 +122,13 @@
                             </div>
                         </div>
                         <div v-if="isSingleDayView" class="single-day-comparison">
-                            <div v-for="item in singleDayComparisons" :key="item.key" class="single-day-card">
-                                <span>{{ item.label }}</span><b>{{ item.currentText }}</b>
-                                <small>上一有效日 {{ item.previousText }}</small>
-                                <em :class="['comparison-pill', item.state]">{{ item.deltaText }}</em>
+                            <div v-for="item in singleDayComparisons" :key="item.key" class="single-day-bar-card">
+                                <div class="single-day-bar-head">
+                                    <div><span>{{ item.label }}</span><small>{{ item.hint }}</small></div>
+                                    <em :class="['comparison-pill', item.state]">{{ item.deltaText }}</em>
+                                </div>
+                                <div class="bar-compare-row current"><span>当前</span><div class="bar-track"><i :style="{ width: item.currentWidth + '%' }"></i></div><b>{{ item.currentText }}</b></div>
+                                <div class="bar-compare-row previous"><span>上一有效日</span><div class="bar-track"><i :style="{ width: item.previousWidth + '%' }"></i></div><b>{{ item.previousText }}</b></div>
                             </div>
                         </div>
                         <div v-else ref="trendChartEl" class="chart chart-main" role="img" aria-label="团队 KPI 趋势图"></div>
@@ -142,7 +145,7 @@
                         <transition-group name="rank-list" tag="ol" class="ranking-list">
                             <li v-for="(person, index) in rankingRows.slice(0, 10)" :key="person.agentId || person.sourceAccount" :class="{ podium: index < 3 }" @click="openAgent(person)">
                                 <span class="rank-index">{{ rankingPositionText(person, index) }}</span>
-                                <span class="rank-name">{{ person.displayName }}<small v-if="honorLabel(person)" class="honor-badge">{{ honorLabel(person) }}</small></span>
+                                <span class="rank-name">{{ person.displayName }}<small v-if="metricHonorLabel(person)" class="honor-badge">{{ metricHonorLabel(person) }}</small></span>
                                 <span v-if="!person.isQualified" class="sample-badge">样本不足</span>
                                 <span v-if="rankingMetric === 'total'" :class="['rank-change', rankChangeClass(person)]">{{ rankChangeText(person) }}</span>
                                 <span class="rank-value">{{ rankingValue(person) }}</span>
@@ -160,16 +163,40 @@
                     </article>
                 </div>
 
+                <article v-if="dashboardPeriod === 'custom'" class="cockpit-panel custom-detail-panel">
+                    <div class="panel-header custom-detail-heading">
+                        <div><h2>自定义范围客服数据明细</h2><p>{{ periodRangeText }} · 按当前选择范围重新聚合</p></div>
+                        <span class="scope-pill">{{ customDetailRows.length }} 人</span>
+                    </div>
+                    <div class="custom-detail-table-wrap">
+                        <table class="custom-detail-table">
+                            <thead><tr><th>排名</th><th>客服</th><th>参与日</th><th>满意率</th><th>工作时间均响</th><th>转化率</th><th>综合得分</th><th>达标情况</th></tr></thead>
+                            <tbody>
+                                <tr v-for="row in customDetailRows" :key="row.agentId || row.sourceAccount" @click="openAgent(row)">
+                                    <td><span class="detail-rank-chip">{{ row.rankPosition }}</span></td>
+                                    <td><b>{{ row.displayName }}</b><small>{{ row.sourceAccount }}</small></td>
+                                    <td>{{ row.participationDays }} 日</td>
+                                    <td><span :class="['metric-cell', row.satisfactionPassed ? 'passed' : 'failed']">{{ formatPercent(row.satisfactionRate) }}</span></td>
+                                    <td><span :class="['metric-cell', row.responsePassed ? 'passed' : 'failed']">{{ formatSeconds(row.avgResponseSeconds) }}</span></td>
+                                    <td><span :class="['metric-cell', row.conversionPassed ? 'passed' : 'failed']">{{ formatPercent(row.conversionRate) }}</span></td>
+                                    <td><strong>{{ formatScore(row.totalScore) }}</strong></td>
+                                    <td><span :class="['target-summary', row.allPassed ? 'all-passed' : 'partial']">{{ row.passedCount }}/3 达标</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+
                 <div class="secondary-grid">
                     <article class="cockpit-panel matrix-panel">
                         <div class="panel-header"><div><h2>KPI 达标矩阵</h2><p>只包含{{ periodName }}实际参与人员</p></div></div>
                         <div class="matrix-scroll">
-                            <div class="matrix-row matrix-header"><span>人员</span><span>满意</span><span>均响</span><span>转化</span></div>
+                            <div class="matrix-row matrix-header"><span>人员</span><span>满意率</span><span>均响</span><span>转化率</span></div>
                             <div v-for="person in rankedByTotal" :key="person.agentId || person.sourceAccount" class="matrix-row" @click="openAgent(person)">
-                                <span>{{ person.displayName }}</span>
-                                <i :class="targetClass(person.satisfactionRate >= rules.targets.satisfaction)">{{ person.satisfactionRate >= rules.targets.satisfaction ? '达标' : '未达标' }}</i>
-                                <i :class="targetClass(person.avgResponseSeconds <= rules.targets.responseSeconds)">{{ person.avgResponseSeconds <= rules.targets.responseSeconds ? '达标' : '未达标' }}</i>
-                                <i :class="targetClass(person.conversionRate >= rules.targets.conversion)">{{ person.conversionRate >= rules.targets.conversion ? '达标' : '未达标' }}</i>
+                                <span class="matrix-person"><b>{{ person.displayName }}</b><small>综合 {{ formatScore(person.totalScore) }}</small></span>
+                                <span :class="['matrix-status', person.satisfactionRate >= rules.targets.satisfaction ? 'passed' : 'failed']"><b>{{ formatPercent(person.satisfactionRate) }}</b><small>{{ person.satisfactionRate >= rules.targets.satisfaction ? '达标' : '未达标' }}</small></span>
+                                <span :class="['matrix-status', person.avgResponseSeconds <= rules.targets.responseSeconds ? 'passed' : 'failed']"><b>{{ formatSeconds(person.avgResponseSeconds) }}</b><small>{{ person.avgResponseSeconds <= rules.targets.responseSeconds ? '达标' : '未达标' }}</small></span>
+                                <span :class="['matrix-status', person.conversionRate >= rules.targets.conversion ? 'passed' : 'failed']"><b>{{ formatPercent(person.conversionRate) }}</b><small>{{ person.conversionRate >= rules.targets.conversion ? '达标' : '未达标' }}</small></span>
                             </div>
                         </div>
                     </article>
