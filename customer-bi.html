@@ -51,15 +51,14 @@
                         <div class="title-line"><h1>苏泊尔商丘团队数据 BI 系统</h1><span class="champion-stream" aria-live="polite">🏆 {{ currentChampion ? `${periodName}综合冠军 × ${currentChampion.displayName}` : '' }}</span></div>
                         <p>{{ periodRangeText }} · {{ dashboardStatusText }}</p>
                     </div>
-                    <div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
+                    <div class="dashboard-period-row"><div class="dashboard-period-switch" aria-label="Dashboard 时间范围">
                         <button v-for="mode in periodOptions" :key="mode.value" :class="{ active: dashboardPeriod === mode.value }" @click="dashboardPeriod = mode.value">
                             {{ mode.label }}
                         </button>
-                    </div>
+                    </div><div class="notice-stream"><span v-for="item in noticeItems" :key="item">{{ item }}</span></div></div>
                     <div v-if="dashboardPeriod === 'custom'" class="custom-range"><input v-model="customStart" type="date"><span>至</span><input v-model="customEnd" type="date"></div>
                 </div>
                 <div class="toolbar-actions">
-                    <div class="notice-stream"><span v-for="item in noticeItems" :key="item">{{ item }}</span></div>
                     <div class="current-scope"><span>当前人员范围</span><b>已确认批次人员</b></div>
                     <button class="button button-ghost" @click="loadDashboard" :disabled="dashboardLoading">刷新</button>
                     <button class="button button-primary" @click="openImport">上传数据</button>
@@ -93,9 +92,9 @@
                         <small>目标 30% · 权重 25%</small><em :class="['kpi-change', kpiComparison('conversion').state]">{{ kpiComparison('conversion').text }}</em>
                     </article>
                     <article class="kpi-card">
-                        <span>综合达成率</span>
-                        <animated-number :value="percentValue(attainment.rate)" suffix="%" :decimals="1"></animated-number>
-                        <small>{{ attainment.passed }} / {{ attainment.valid }} 项达标 · 满意{{ attainment.satisfaction[0] }}/{{ attainment.satisfaction[1] }} 均响{{ attainment.response[0] }}/{{ attainment.response[1] }} 转化{{ attainment.conversion[0] }}/{{ attainment.conversion[1] }}</small><em :class="['kpi-change', attainment.rate >= .8 ? 'positive' : 'negative']">{{ attainment.valid ? '按人员周期聚合' : '暂无有效 KPI' }}</em>
+                        <span>销售额汇总</span>
+                        <animated-number :value="salesSummary.total" prefix="¥" :decimals="0"></animated-number>
+                        <small>{{ salesRows.length ? `${salesRows.length} 人 · ${salesSummary.days} 个人员业务日` : '暂无退款后销售额快照' }}</small><em :class="['kpi-change', salesRows.length ? 'positive' : 'neutral']">{{ salesRows.length ? '按当前周期实际参与日汇总' : '历史快照未保存该字段' }}</em>
                     </article>
                     <article class="kpi-card">
                         <span>{{ periodName }}第一名</span>

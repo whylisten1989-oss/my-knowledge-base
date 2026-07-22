@@ -10,6 +10,7 @@
             value: { type: Number, default: null },
             decimals: { type: Number, default: 1 },
             suffix: { type: String, default: '' }
+            ,prefix: { type: String, default: '' }
         },
         setup(props) {
             const shown = ref(props.value);
@@ -35,7 +36,7 @@
             onBeforeUnmount(() => cancelAnimationFrame(animationFrame));
             const text = computed(() => shown.value == null || !Number.isFinite(Number(shown.value))
                 ? '—'
-                : `${Number(shown.value).toFixed(props.decimals)}${props.suffix}`);
+                : `${props.prefix}${Number(shown.value).toFixed(props.decimals)}${props.suffix}`);
             return { text };
         },
         template: '<strong class="animated-number">{{ text }}</strong>'
@@ -308,7 +309,7 @@
                             .select('*, bi_agents(id, source_account, display_name)')
                             .order('business_date', { ascending: true }),
                         db.from('bi_import_batch_agents')
-                            .select('batch_id, display_name_snapshot, is_included')
+                            .select('batch_id, agent_id, display_name_snapshot, is_included, raw_data')
                             .eq('is_included', true)
                     ]);
                     if (batchResult.error) throw batchResult.error;
@@ -317,7 +318,10 @@
                     if (batchAgentResult.error) throw batchAgentResult.error;
                     const normalizeDate = (value) => String(value || '').slice(0, 10);
                     dashboardBatches.value = (batchResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
-                    dashboardMetrics.value = (metricResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
+                    const salesByBatchAgent = new Map((batchAgentResult.data || []).map((item) => [
+                        `${item.batch_id}:${item.agent_id}`, Number(item.raw_data?.['退款后销售额'])
+                    ]));
+                    dashboardMetrics.value = (metricResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date), refunded_sales: Number.isFinite(salesByBatchAgent.get(`${item.batch_id}:${item.agent_id}`)) ? salesByBatchAgent.get(`${item.batch_id}:${item.agent_id}`) : null }));
                     dashboardRankings.value = (rankingResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
                     dashboardBatchAgents.value = batchAgentResult.data || [];
                 } catch (error) {
@@ -491,6 +495,7 @@
                 return { ...totals, rate: totals.valid ? totals.passed / totals.valid : null };
             });
             const salesRows = computed(() => rankedByTotal.value.filter((item) => item.avgRefundedSales != null).sort((a, b) => b.avgRefundedSales - a.avgRefundedSales));
+            const salesSummary = computed(() => ({ total: salesRows.value.reduce((sum, item) => sum + item.refundedSalesTotal, 0), days: salesRows.value.reduce((sum, item) => sum + item.refundedSalesDays, 0) }));
             const honorByAgent = computed(() => {
                 const grouped = new Map();
                 dashboardRankings.value.forEach((item) => {
@@ -575,7 +580,7 @@
                 }
                 if (!trendChart) trendChart = echarts.getInstanceByDom(trendChartEl.value) || echarts.init(trendChartEl.value);
                 const chartDates = dashboardPeriod.value === 'yesterday'
-                    ? availableDates.value.slice(-7)
+                    ? [...periodScope.value.previousDates.slice(-1), ...periodScope.value.currentDates]
                     : periodScope.value.currentDates;
                 const history = chartDates.map((date) => ({
                     key: date,
@@ -589,19 +594,25 @@
                 const satisfactionData = history.map((item) => item.satisfactionRate == null ? null : +(item.satisfactionRate * 100).toFixed(2));
                 const conversionData = history.map((item) => item.conversionRate == null ? null : +(item.conversionRate * 100).toFixed(2));
                 const responseData = history.map((item) => item.avgResponseSeconds == null ? null : +item.avgResponseSeconds.toFixed(2));
+                const isSingleDay = dashboardPeriod.value === 'yesterday' || periodScope.value.currentDates.length === 1;
+                const current = history.at(-1) || {};
+                const previous = history.length > 1 ? history.at(-2) : null;
                 trendChart.setOption({
                     animationDuration: 250,
                     backgroundColor: 'transparent',
                     color: ['#38bdf8', '#18bd8b', '#f6a918'],
                     tooltip: { trigger: 'axis', backgroundColor: '#13223a', borderColor: '#2d4565', textStyle: { color: '#eaf4ff', fontSize: 11 } },
-                    legend: { top: 2, right: 0, textStyle: { color: '#7e93ad', fontSize: 9 }, data: ['满意率', '转化率', '工作时间均响'] },
+                    legend: { top: 2, right: 0, textStyle: { color: '#7e93ad', fontSize: 9 }, data: isSingleDay ? ['当前日期', '上一有效业务日'] : ['满意率', '转化率', '工作时间均响'] },
                     grid: { left: 34, right: 45, top: 44, bottom: 28 },
-                    xAxis: { type: 'category', data: history.map((item) => item.key.slice(5)), boundaryGap: false, axisLine: { lineStyle: { color: '#2a3c57' } }, axisLabel: { color: '#6d829c', fontSize: 9 } },
+                    xAxis: { type: 'category', data: isSingleDay ? ['满意率', '均响(秒)', '转化率', '综合得分'] : history.map((item) => item.key.slice(5)), boundaryGap: !isSingleDay ? false : true, axisLine: { lineStyle: { color: '#2a3c57' } }, axisLabel: { color: '#6d829c', fontSize: 9 } },
                     yAxis: [
                         { type: 'value', min: 0, max: 100, axisLabel: { color: '#6d829c', fontSize: 9, formatter: '{value}%' }, splitLine: { lineStyle: { color: 'rgba(134,158,187,.12)' } } },
                         { type: 'value', axisLabel: { color: '#6d829c', fontSize: 9, formatter: '{value}s' }, splitLine: { show: false } }
                     ],
-                    series: [
+                    series: isSingleDay ? [
+                        { name: '当前日期', type: 'bar', barMaxWidth: 34, data: [current.satisfactionRate == null ? null : current.satisfactionRate * 100, current.avgResponseSeconds, current.conversionRate == null ? null : current.conversionRate * 100, current.avgTotalScore], label: { show: true, color: '#dcecff', fontSize: 9, position: 'top' } },
+                        { name: '上一有效业务日', type: 'bar', barMaxWidth: 34, data: previous ? [previous.satisfactionRate == null ? null : previous.satisfactionRate * 100, previous.avgResponseSeconds, previous.conversionRate == null ? null : previous.conversionRate * 100, previous.avgTotalScore] : [], itemStyle: { opacity: .38 }, label: { show: !!previous, color: '#8ca3c0', fontSize: 8, position: 'top' } }
+                    ] : [
                         { name: '满意率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: emphasizeLatest(satisfactionData, '#38bdf8'), lineStyle: { width: 3 }, areaStyle: { opacity: .05 }, markLine: dashboardPeriod.value === 'yesterday' && focusDate ? { silent: true, symbol: 'none', label: { formatter: '昨日', color: '#dcecff', fontSize: 9 }, lineStyle: { color: 'rgba(255,255,255,.28)', type: 'dashed' }, data: [{ xAxis: focusDate.slice(5) }] } : undefined },
                         { name: '转化率', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5, data: emphasizeLatest(conversionData, '#18bd8b'), lineStyle: { width: 2 } },
                         { name: '工作时间均响', type: 'line', yAxisIndex: 1, smooth: true, symbol: 'diamond', symbolSize: 6, data: emphasizeLatest(responseData, '#f6a918'), lineStyle: { width: 2, type: 'dashed' } }
@@ -975,7 +986,7 @@
                 filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
-                currentChampion, eligibleRows, kpiComparison, formatChineseDate, attainment, salesRows,
+                currentChampion, eligibleRows, kpiComparison, formatChineseDate, attainment, salesRows, salesSummary,
                 topInsight, riskInsight, movementInsight,
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime,
                 previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
