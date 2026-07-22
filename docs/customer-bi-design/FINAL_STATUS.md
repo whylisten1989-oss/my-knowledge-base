@@ -4,7 +4,9 @@
 
 当前分支：`feature/customer-service-bi`
 
-发布状态：发布候选版本，等待 Pull Request 审核，尚未合并 `main`
+发布状态：发布候选版本，草稿 PR #1 已创建，尚未合并 `main`
+
+Pull Request：`https://github.com/whylisten1989-oss/my-knowledge-base/pull/1`
 
 ## 1. 项目当前总体完成度
 
@@ -90,7 +92,7 @@ Preview 中可以注册或登录、上传 Excel、选择业务日期、搜索和
 - `4b32475`：建立中文开发日志。
 - `bc47c2a`：新增 Customer BI V1。
 
-正式发布前检查会形成新的独立提交，并在 PR 中显示。
+正式发布前检查提交为 `bc51683`，已推送并进入草稿 PR #1。Vercel PR 检查已通过。
 
 ## 17. 所有新增文件
 

@@ -731,3 +731,67 @@ GitHub 授权完成后立即重新推送，读取该提交的 Vercel 状态和 P
 ### 下一步计划
 
 创建正式发布前提交并推送功能分支，创建 `feature/customer-service-bi` 到 `main` 的草稿 Pull Request；保持未合并状态等待用户确认。
+
+## 2026-07-22 09:25（正式发布 PR 已创建）
+
+### 当前分支
+
+`feature/customer-service-bi`，未合并 `main`。
+
+### 当前提交
+
+正式发布前检查提交：`bc51683`（`chore(bi): 完成正式发布前检查`）。
+
+### 本阶段完成内容
+
+- 已推送正式发布前检查提交。
+- 已创建草稿 Pull Request：`https://github.com/whylisten1989-oss/my-knowledge-base/pull/1`。
+- PR 合并方向已核对为 `feature/customer-service-bi` → `main`。
+- PR 状态为 Draft，合并状态为 CLEAN；没有执行合并。
+- GitHub 上的 Vercel 检查为 SUCCESS。
+
+### 为什么这样实现
+
+草稿 PR 让用户可以在不影响生产站点的前提下审阅完整差异；Vercel 检查通过后仍保持 Draft，确保正式发布由用户最终决定。
+
+### 新增文件
+
+- 无。
+
+### 修改文件
+
+- 仅追加本开发日志，并同步最终状态报告中的 PR 信息。
+
+### 数据库变更
+
+- 无。没有修改 Supabase 表、权限或 RLS。
+
+### 功能实现状态
+
+- 正式发布前提交：已完成。
+- 功能分支推送：已完成。
+- 草稿 PR：已完成。
+- Vercel PR 检查：已通过。
+- 合并与正式生产部署：尚未执行，等待用户确认。
+
+### 测试结果
+
+- PR head commit：`bc51683c583719111c7c8470b910074aaf2fedd8`。
+- PR base：`main`。
+- PR draft：`true`。
+- Vercel 状态：`SUCCESS`。
+
+### 已知问题
+
+- Supabase URL Configuration 仍需由用户按最终说明填写。
+- 正式生产页面需 PR 合并且 Vercel Production Deployment Ready 后才能访问。
+
+### 需要用户操作
+
+1. 打开草稿 PR 并审核。
+2. 完成 Supabase URL Configuration。
+3. 确认无误后再合并 PR。
+
+### 下一步计划
+
+等待用户确认 PR；本阶段不继续新增功能，也不自动合并。
