@@ -210,7 +210,7 @@
             ];
             const dashboardPeriodOptions = periodOptions.filter((item) => item.value !== 'custom');
             const detailPeriodOptions = dashboardPeriodOptions;
-            const noticeItems = ['数据仅统计已确认快照', '均响为工作时间平响时长（均值并不精准，仅供参考）', '本系统由事业一部岱旋 × Codex × Github × Supabase × Vercel 设计开发'];
+            const noticeItems = ['数据仅统计已确认快照', '均响为工作时间平响时长（均值并不精准，仅供参考）', '本系统由Chatgpt × Codex × Github × Supabase × Vercel 设计开发'];
             const noticeText = computed(() => noticeItems.join('　·　'));
             const noticeShouldScroll = computed(() => noticeText.value.length > 28);
             const selectPeriod = (mode) => { dashboardPeriod.value = mode; };
