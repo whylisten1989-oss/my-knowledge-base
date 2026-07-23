@@ -1,0 +1,21 @@
+# 内部设计与开发资料
+docs/
+
+# Supabase 建表与权限脚本
+supabase/
+
+# 本地数据文件
+*.xlsx
+*.xls
+*.csv
+
+# 报告和临时文件
+*.docx
+*.pdf
+*.log
+
+# 本地开发文件
+.env
+.env.*
+.vscode/
+.idea/
