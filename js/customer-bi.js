@@ -5,7 +5,7 @@
     const core = window.CustomerBICore;
     const db = window.customerBISupabase;
     const ACCOUNT_NAME_OVERRIDES = {
-        '123456789@qq.com': '岱旋内测账号'
+        '123456789@qq.com': '苏泊尔内测账号'
     };
 
     const AnimatedNumber = {
