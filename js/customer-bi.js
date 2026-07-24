@@ -297,13 +297,21 @@
 
             const agentMetricPreview = (agent) => core.calculateAgent(agent);
             const receptionCountOf = (agent) => {
-                const rawValue = agent?.rawData?.['接待量'];
-                const fallbackValue = agent?.inquiryCount;
-                const candidate = rawValue !== undefined && rawValue !== null && rawValue !== ''
-                    ? rawValue
-                    : fallbackValue;
-                if (candidate === undefined || candidate === null || candidate === '') return null;
-                const parsed = Number(String(candidate).replace(/,/g, '').trim());
+                const rawData = agent?.rawData || {};
+                const receptionEntry = Object.entries(rawData).find(([header]) =>
+                    String(header || '').replace(/\s+/g, '') === '接待会话量'
+                );
+                const candidate = receptionEntry?.[1];
+                if (candidate === undefined || candidate === null || String(candidate).trim() === '') return null;
+
+                const text = String(candidate)
+                    .replace(/[,\uFF0C\s]/g, '')
+                    .trim();
+                const match = text.match(/-?\d+(?:\.\d+)?/);
+                if (!match) return null;
+
+                let parsed = Number(match[0]);
+                if (/万/.test(text)) parsed *= 10000;
                 return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
             };
             const receptionCountText = (agent) => {
@@ -313,8 +321,8 @@
             const receptionUnavailableReason = (agent) => {
                 const count = receptionCountOf(agent);
                 return count == null
-                    ? '接待量无法识别'
-                    : `接待量 ${count} · 低于 ${MIN_RECEPTION_COUNT}`;
+                    ? '接待会话量无法识别'
+                    : `接待会话量 ${count} · 低于 ${MIN_RECEPTION_COUNT}`;
             };
             const isAgentSelectable = (agent) => {
                 const count = receptionCountOf(agent);
@@ -400,7 +408,7 @@
                     selectedAccounts.value = result.agents
                         .filter(isAgentSelectable)
                         .map((agent) => agent.key);
-                    addToast(`已识别 ${result.agents.length} 名人员，并自动选择 ${selectedAccounts.value.length} 名接待量达标人员`, 'success');
+                    addToast(`已识别 ${result.agents.length} 名人员，并自动选择 ${selectedAccounts.value.length} 名接待会话量达标人员`, 'success');
                 } catch (error) {
                     parseError.value = `解析失败：${error.message || error}`;
                     fileInfo.value = null;
@@ -583,7 +591,7 @@
             };
 
             const applyAgentVisibility = async (agent, isVisible) => {
-                if (!db || !session.value || !agent?.id || !visibilityTableReady.value) return;
+                if (!db || !session.value || !agent?.id) return;
                 visibilitySavingId.value = agent.id;
                 try {
                     const { error } = await db.from('bi_user_agent_visibility').upsert({
@@ -607,9 +615,16 @@
                 }
             };
 
-            const requestAgentVisibility = (agent) => {
+            const requestAgentVisibility = async (agent) => {
+                if (!visibilityTableReady.value) {
+                    await loadVisibilitySettings();
+                    if (!visibilityTableReady.value) {
+                        addToast('人员显示设置暂未连接成功，请刷新页面后重试', 'error');
+                        return;
+                    }
+                }
                 if (!agent.isVisible) {
-                    applyAgentVisibility(agent, true);
+                    await applyAgentVisibility(agent, true);
                     return;
                 }
                 pendingVisibilityAgent.value = agent;
