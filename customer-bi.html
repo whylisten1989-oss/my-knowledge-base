@@ -195,8 +195,8 @@
                 <button class="button button-primary" @click="openImport">开始导入</button>
             </div>
         </section>
-        <performance-matrix
-    v-if="view === 'matrix'"
+       <performance-matrix
+    v-else-if="view === 'matrix'"
     :metrics="dashboardMetrics"
     :available-dates="availableDates"
     :rules="rules"
