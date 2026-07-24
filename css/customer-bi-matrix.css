@@ -884,10 +884,21 @@
     .matrix-page-orbit i {
         animation: none;
     }
-   /* 首页“详细数据”按钮修复 */
-.matrix-open-button {
+
+    .matrix-summary-card,
+    .matrix-back-button,
+    .matrix-person-row,
+    .matrix-value-cell::before {
+        transition: none;
+    }
+}
+
+/* 首页“详细数据”按钮 */
+.toolbar-actions .matrix-open-button {
+    width: auto;
     height: 42px;
     min-width: 108px;
+    min-height: 42px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -896,21 +907,23 @@
     white-space: nowrap;
 }
 
-.matrix-open-button svg {
-    width: 16px;
-    height: 16px;
+.toolbar-actions .matrix-open-button svg {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px;
     flex: 0 0 16px;
-    fill: none;
+    display: block;
+    fill: none !important;
     stroke: currentColor;
     stroke-width: 1.7;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
 
-/* 桌面端给右侧按钮留出稳定空间 */
+/* 桌面端顶部空间调整 */
 @media (min-width: 1100px) {
     .dashboard-heading {
-        flex: 1;
+        flex: 1 1 auto;
         min-width: 0;
     }
 
@@ -922,25 +935,18 @@
 
     .dashboard-period-row {
         width: 100%;
-        max-width: 900px;
+        max-width: 820px;
         gap: 12px;
     }
 
     .dashboard-period-row .notice-stream {
+        flex: 1 1 260px;
         min-width: 0;
-        max-width: 430px;
+        max-width: 380px;
         margin-left: 0;
     }
 
     .current-scope {
         max-width: 110px;
-    }
-}
-
-    .matrix-summary-card,
-    .matrix-back-button,
-    .matrix-person-row,
-    .matrix-value-cell::before {
-        transition: none;
     }
 }
