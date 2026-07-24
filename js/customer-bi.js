@@ -173,6 +173,7 @@
             const isSaving = ref(false);
 
             const visibilityAgents = ref([]);
+            const visibilityPreferenceMap = ref(new Map());
             const hiddenAgentIds = ref(new Set());
             const hiddenAgentSourceAccounts = ref(new Set());
             const showVisibility = ref(false);
@@ -462,7 +463,7 @@
 
             const describeError = (error) => {
                 const message = error?.message || String(error || '未知错误');
-                if (/bi_user_agent_visibility/i.test(message)) return '人员显示设置表尚未初始化，请先运行 supabase/customer-bi-agent-visibility.sql';
+                if (/relation .*bi_user_agent_visibility.* does not exist|schema cache/i.test(message)) return '人员显示设置表尚未初始化，请先运行 supabase/customer-bi-agent-visibility.sql';
                 if (/relation .* does not exist|schema cache/i.test(message)) return '数据库尚未初始化，请先运行 supabase/customer-bi-v1.sql';
                 if (/row-level security|permission denied/i.test(message)) return '数据库拒绝写入，请确认已登录并已运行完整 SQL';
                 return message;
@@ -511,6 +512,7 @@
                 dashboardBatches.value = [];
                 dashboardBatchAgents.value = [];
                 visibilityAgents.value = [];
+                visibilityPreferenceMap.value = new Map();
                 hiddenAgentIds.value = new Set();
                 hiddenAgentSourceAccounts.value = new Set();
                 showVisibility.value = false;
@@ -518,11 +520,57 @@
                 addToast('已退出 Customer BI', 'info');
             };
 
+            const syncVisibilitySets = () => {
+                const hiddenAgents = visibilityAgents.value.filter((agent) => !agent.isVisible);
+                hiddenAgentIds.value = new Set(hiddenAgents.map((agent) => agent.id));
+                hiddenAgentSourceAccounts.value = new Set(hiddenAgents.map((agent) =>
+                    String(agent.source_account || '').toLocaleLowerCase('zh-CN')
+                ));
+            };
+
             const resetVisibilityState = () => {
                 visibilityAgents.value = [];
+                visibilityPreferenceMap.value = new Map();
                 hiddenAgentIds.value = new Set();
                 hiddenAgentSourceAccounts.value = new Set();
                 visibilityTableReady.value = true;
+            };
+
+            const buildVisibilityAgentsFromMetrics = (metricRows) => {
+                const grouped = new Map();
+                (metricRows || []).forEach((item) => {
+                    const storedAgent = item.bi_agents || {};
+                    const agentId = item.agent_id || storedAgent.id;
+                    if (!agentId) return;
+                    if (!grouped.has(agentId)) {
+                        grouped.set(agentId, {
+                            id: agentId,
+                            source_account: storedAgent.source_account || item.source_account || '',
+                            display_name: storedAgent.display_name || item.display_name || storedAgent.source_account || '未命名人员',
+                            team: storedAgent.team || item.team || '',
+                            dates: new Set()
+                        });
+                    }
+                    const date = String(item.business_date || '').slice(0, 10);
+                    if (date) grouped.get(agentId).dates.add(date);
+                });
+
+                visibilityAgents.value = [...grouped.values()]
+                    .map((agent) => {
+                        const dates = [...agent.dates].sort();
+                        return {
+                            id: agent.id,
+                            source_account: agent.source_account,
+                            display_name: agent.display_name,
+                            team: agent.team,
+                            participationDays: dates.length,
+                            firstBusinessDate: dates[0] || '—',
+                            lastBusinessDate: dates.at(-1) || '—',
+                            isVisible: visibilityPreferenceMap.value.get(agent.id) !== false
+                        };
+                    })
+                    .sort((a, b) => a.display_name.localeCompare(b.display_name, 'zh-CN'));
+                syncVisibilitySets();
             };
 
             const loadVisibilitySettings = async ({ silent = false } = {}) => {
@@ -532,42 +580,29 @@
                 }
                 visibilityLoading.value = true;
                 try {
-                    const [agentsResult, preferencesResult] = await Promise.all([
-                        db.from('bi_agents')
-                            .select('id, source_account, display_name, team, is_active')
-                            .order('display_name', { ascending: true }),
-                        db.from('bi_user_agent_visibility')
-                            .select('agent_id, is_visible')
-                            .eq('user_id', session.value.user.id)
-                    ]);
-                    if (agentsResult.error) throw agentsResult.error;
-
-                    let preferences = [];
-                    if (preferencesResult.error) {
-                        if (/bi_user_agent_visibility|relation .* does not exist|schema cache/i.test(preferencesResult.error.message || '')) {
-                            visibilityTableReady.value = false;
-                            if (!silent) addToast('请先运行人员显示设置 SQL', 'error');
-                        } else {
-                            throw preferencesResult.error;
-                        }
-                    } else {
-                        visibilityTableReady.value = true;
-                        preferences = preferencesResult.data || [];
-                    }
-
-                    const preferenceMap = new Map(preferences.map((item) => [item.agent_id, item.is_visible !== false]));
-                    visibilityAgents.value = (agentsResult.data || []).map((agent) => ({
+                    const { data, error } = await db.from('bi_user_agent_visibility')
+                        .select('agent_id, is_visible')
+                        .eq('user_id', session.value.user.id);
+                    if (error) throw error;
+                    visibilityTableReady.value = true;
+                    visibilityPreferenceMap.value = new Map((data || []).map((item) => [
+                        item.agent_id,
+                        item.is_visible !== false
+                    ]));
+                    visibilityAgents.value = visibilityAgents.value.map((agent) => ({
                         ...agent,
-                        isVisible: preferenceMap.get(agent.id) !== false
+                        isVisible: visibilityPreferenceMap.value.get(agent.id) !== false
                     }));
-                    const hiddenAgents = visibilityAgents.value.filter((agent) => !agent.isVisible);
-                    hiddenAgentIds.value = new Set(hiddenAgents.map((agent) => agent.id));
-                    hiddenAgentSourceAccounts.value = new Set(hiddenAgents.map((agent) =>
-                        String(agent.source_account || '').toLocaleLowerCase('zh-CN')
-                    ));
+                    syncVisibilitySets();
                 } catch (error) {
-                    resetVisibilityState();
-                    if (!silent) addToast(describeError(error), 'error');
+                    visibilityTableReady.value = false;
+                    visibilityPreferenceMap.value = new Map();
+                    visibilityAgents.value = visibilityAgents.value.map((agent) => ({
+                        ...agent,
+                        isVisible: true
+                    }));
+                    syncVisibilitySets();
+                    if (!silent) addToast(`人员显示设置读取失败：${error?.message || error}`, 'error');
                 } finally {
                     visibilityLoading.value = false;
                 }
@@ -582,7 +617,7 @@
                 showVisibility.value = true;
                 visibilitySearch.value = '';
                 visibilityFilter.value = 'all';
-                await loadVisibilitySettings();
+                await loadDashboard();
             };
 
             const closeVisibilityPanel = () => {
@@ -591,7 +626,10 @@
             };
 
             const applyAgentVisibility = async (agent, isVisible) => {
-                if (!db || !session.value || !agent?.id) return;
+                if (!db || !session.value || !agent?.id || visibilitySavingId.value) return;
+                const previousVisible = agent.isVisible;
+                agent.isVisible = isVisible;
+                syncVisibilitySets();
                 visibilitySavingId.value = agent.id;
                 try {
                     const { error } = await db.from('bi_user_agent_visibility').upsert({
@@ -609,20 +647,16 @@
                     )) closeAgent();
                     addToast(isVisible ? `已恢复显示 ${agent.display_name}` : `已隐藏 ${agent.display_name}，相关统计已重新计算`, 'success');
                 } catch (error) {
-                    addToast(describeError(error), 'error');
+                    agent.isVisible = previousVisible;
+                    syncVisibilitySets();
+                    addToast(`人员显示设置保存失败：${error?.message || error}`, 'error');
                 } finally {
                     visibilitySavingId.value = '';
                 }
             };
 
             const requestAgentVisibility = async (agent) => {
-                if (!visibilityTableReady.value) {
-                    await loadVisibilitySettings();
-                    if (!visibilityTableReady.value) {
-                        addToast('人员显示设置暂未连接成功，请刷新页面后重试', 'error');
-                        return;
-                    }
-                }
+                if (visibilitySavingId.value) return;
                 if (!agent.isVisible) {
                     await applyAgentVisibility(agent, true);
                     return;
@@ -687,9 +721,11 @@
                     const salesByBatchAgent = new Map((batchAgentResult.data || []).map((item) => [
                         `${item.batch_id}:${item.agent_id}`, Number(item.raw_data?.['退款后销售额'])
                     ]));
-                    dashboardMetrics.value = (metricResult.data || [])
-                        .filter((item) => !hiddenAgentIds.value.has(item.agent_id))
+                    const allMetricRows = (metricResult.data || [])
                         .map((item) => ({ ...item, business_date: normalizeDate(item.business_date), refunded_sales: Number.isFinite(salesByBatchAgent.get(`${item.batch_id}:${item.agent_id}`)) ? salesByBatchAgent.get(`${item.batch_id}:${item.agent_id}`) : null }));
+                    buildVisibilityAgentsFromMetrics(allMetricRows);
+                    dashboardMetrics.value = allMetricRows
+                        .filter((item) => !hiddenAgentIds.value.has(item.agent_id));
                     dashboardRankings.value = (rankingResult.data || [])
                         .filter((item) => !hiddenAgentIds.value.has(item.agent_id))
                         .map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
