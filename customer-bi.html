@@ -397,7 +397,7 @@
                                 <small>{{ agent.source_account }}{{ agent.team ? ` · ${agent.team}` : '' }}</small>
                                 <em v-if="!agent.isVisible">已隐藏 · 不参与计算</em>
                             </span>
-                            <button :class="['visibility-switch',{on:agent.isVisible}]" :disabled="visibilitySavingId===agent.id || !visibilityTableReady" :aria-label="agent.isVisible ? `隐藏${agent.display_name}` : `显示${agent.display_name}`" @click="requestAgentVisibility(agent)"></button>
+                            <button :class="['visibility-switch',{on:agent.isVisible}]" :disabled="visibilitySavingId===agent.id || visibilitySavingId==='all'" :aria-label="agent.isVisible ? `隐藏${agent.display_name}` : `显示${agent.display_name}`" @click="requestAgentVisibility(agent)"></button>
                         </article>
                     </div>
                     <div v-else class="visibility-empty">没有匹配人员</div>
