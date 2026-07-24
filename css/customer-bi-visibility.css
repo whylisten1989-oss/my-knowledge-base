@@ -447,3 +447,41 @@
 .drawer-leave-to .visibility-drawer {
     transform: translateX(100%);
 }
+.visibility-data-meta {
+    display: block;
+    margin-top: 5px;
+    color: #668099;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.visibility-switch-control {
+    display: grid;
+    justify-items: end;
+    gap: 5px;
+}
+
+.visibility-state-label {
+    color: #218c72;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.visibility-state-label.hidden {
+    color: #8393a3;
+}
+
+.visibility-switch.saving {
+    opacity: .62;
+    cursor: wait;
+    box-shadow: 0 0 0 4px rgba(47, 125, 246, .08);
+}
+
+.visibility-switch.saving::after {
+    animation: visibility-saving-pulse .7s ease-in-out infinite alternate;
+}
+
+@keyframes visibility-saving-pulse {
+    from { transform: translateX(9px) scale(.82); opacity: .6; }
+    to { transform: translateX(9px) scale(1); opacity: 1; }
+}
