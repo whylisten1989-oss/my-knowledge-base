@@ -11,8 +11,22 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="css/customer-bi.css">
-    <link rel="stylesheet" href="css/customer-bi-visibility.css">
-    <link rel="stylesheet" href="css/customer-bi-matrix.css">
+<link rel="stylesheet" href="css/customer-bi-visibility.css">
+<link rel="stylesheet" href="css/customer-bi-matrix.css">
+<link rel="stylesheet" href="css/customer-bi-theme.css?v=1">
+    <script>
+    (() => {
+        let savedTheme = 'dark';
+        try {
+            savedTheme = localStorage.getItem('customer-bi-theme') === 'light'
+                ? 'light'
+                : 'dark';
+        } catch (error) {
+            savedTheme = 'dark';
+        }
+        document.documentElement.dataset.theme = savedTheme;
+    })();
+</script>
     <script>
         tailwind.config = {
             theme: {
@@ -39,10 +53,34 @@
             <button :class="{ active: view === 'import' }" @click="openImport">导入数据</button>
             <a href="index.html">返回 MindForge</a>
         </nav>
-        <button class="account-button" :title="session ? `${currentAccountName} · ${session.user.email || ''}` : '登录后保存'" @click="showAuth = true">
-            <span :class="['status-dot', session ? 'online' : 'offline']"></span>
-            <span class="account-name">{{ session ? currentAccountName : '登录后保存' }}</span>
-        </button>
+        <div class="topbar-actions">
+    <button
+        class="theme-toggle"
+        type="button"
+        data-theme-toggle
+        aria-label="切换显示模式"
+    >
+        <svg class="theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.5"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.41M17.66 6.34l1.41-1.41"></path>
+        </svg>
+
+        <svg class="theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.7 8.7 0 1 0 20.2 15.2Z"></path>
+        </svg>
+    </button>
+
+    <button
+        class="account-button"
+        :title="session ? `${currentAccountName} · ${session.user.email || ''}` : '登录后保存'"
+        @click="showAuth = true"
+    >
+        <span :class="['status-dot', session ? 'online' : 'offline']"></span>
+        <span class="account-name">
+            {{ session ? currentAccountName : '登录后保存' }}
+        </span>
+    </button>
+</div>
     </header>
 
     <main>
@@ -487,7 +525,8 @@
 
 <script src="js/customer-bi-core.js"></script>
 <script src="js/customer-bi-config.js"></script>
-<script src="js/customer-bi-matrix.js"></script>
+<script src="js/customer-bi-theme.js?v=1"></script>
+<script src="js/customer-bi-matrix.js?v=2"></script>
 <script src="js/customer-bi.js"></script>
 </body>
 </html>
