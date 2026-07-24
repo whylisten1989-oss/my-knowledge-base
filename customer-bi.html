@@ -367,7 +367,7 @@
                     <div>
                         <small>PERSON VISIBILITY</small>
                         <h2>人员显示设置</h2>
-                        <p>关闭后保留历史与上传数据，但该人员不会参与当前账号的 Dashboard、排名、图表、荣誉和人员详情计算。</p>
+                        <p>这里只展示当前账号已经写入正式 KPI 历史的人员。过去上传时未选择的日期不会自动补回；关闭后保留历史数据，但不参与当前账号的各项计算。</p>
                     </div>
                     <button class="drawer-close" @click="closeVisibilityPanel">×</button>
                 </header>
@@ -395,9 +395,13 @@
                             <span class="visibility-person-copy">
                                 <b>{{ agent.display_name }}</b>
                                 <small>{{ agent.source_account }}{{ agent.team ? ` · ${agent.team}` : '' }}</small>
+                                <span class="visibility-data-meta">历史参与 {{ agent.participationDays }} 天 · 最近 {{ agent.lastBusinessDate }}</span>
                                 <em v-if="!agent.isVisible">已隐藏 · 不参与计算</em>
                             </span>
-                            <button :class="['visibility-switch',{on:agent.isVisible}]" :disabled="visibilitySavingId===agent.id || visibilitySavingId==='all'" :aria-label="agent.isVisible ? `隐藏${agent.display_name}` : `显示${agent.display_name}`" @click="requestAgentVisibility(agent)"></button>
+                            <span class="visibility-switch-control">
+                                <span :class="['visibility-state-label',{hidden:!agent.isVisible}]">{{ agent.isVisible ? '显示中' : '已隐藏' }}</span>
+                                <button :class="['visibility-switch',{on:agent.isVisible,saving:visibilitySavingId===agent.id}]" :aria-busy="visibilitySavingId===agent.id" :aria-label="agent.isVisible ? `隐藏${agent.display_name}` : `显示${agent.display_name}`" @click.stop="requestAgentVisibility(agent)"></button>
+                            </span>
                         </article>
                     </div>
                     <div v-else class="visibility-empty">没有匹配人员</div>
