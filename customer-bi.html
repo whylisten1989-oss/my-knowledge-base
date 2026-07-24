@@ -419,7 +419,9 @@
                 <div class="visibility-confirm-copy">隐藏后，该人员不会参与当前账号的团队指标、排名、图表、荣誉、人员卡片及详细数据计算。重新打开开关即可恢复。</div>
                 <div>
                     <button class="button button-light" @click="pendingVisibilityAgent=null">取消</button>
-                    <button class="button button-danger" :disabled="visibilitySavingId" @click="confirmHideAgent">确认隐藏</button>
+                    <button class="button button-danger" @click="confirmHideAgent">
+    {{ visibilitySavingId ? '保存中…' : '确认隐藏' }}
+</button>
                 </div>
             </section>
         </div>
