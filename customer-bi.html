@@ -58,7 +58,7 @@
                     </div><div :class="['notice-stream',{scrolling:noticeShouldScroll}]" :style="{'--notice-duration':`${Math.max(9, noticeText.length * .22)}s`}"><div class="notice-track"><span class="notice-group">{{ noticeText }}</span><span v-if="noticeShouldScroll" class="notice-group" aria-hidden="true">{{ noticeText }}</span></div></div></div>
                 </div>
                 <div class="toolbar-actions">
-                    <div class="current-scope"><span>当前人员范围</span><b>当前账号可见人员</b></div>
+                    <div class="current-scope"><span>当前人员范围</span><b>账号可见人员</b></div>
                     <button class="button button-ghost" @click="loadDashboard" :disabled="dashboardLoading">刷新</button>
                     <button class="button button-ghost visibility-open-button" @click="openVisibilityPanel">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.8"></circle></svg>
