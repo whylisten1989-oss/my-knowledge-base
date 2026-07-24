@@ -1,0 +1,606 @@
+/* Customer BI · 人员显示设置与导入资格补充样式 */
+
+.visibility-open-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.visibility-open-button svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.visibility-open-button em {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 7px;
+    border: 1px solid rgba(246, 169, 24, .28);
+    border-radius: 999px;
+    background: rgba(246, 169, 24, .10);
+    color: #ffd47c;
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.import-default-date-note {
+    margin-top: 8px;
+    color: #6f8398;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.import-default-date-note b {
+    color: #2f7df6;
+    font-weight: 700;
+}
+
+.selection-summary-copy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin-top: 7px;
+    color: #75889c;
+    font-size: 12px;
+}
+
+.selection-summary-copy b {
+    color: #294760;
+}
+
+.selection-summary-copy .hidden-copy {
+    color: #9d6b10;
+}
+
+.agent-select-card .agent-reception {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    color: #6f8499;
+    font-size: 11px;
+}
+
+.agent-select-card .agent-reception strong {
+    color: #24455f;
+    font-size: 12px;
+}
+
+.agent-select-card.unavailable .agent-reception strong {
+    color: #a86d14;
+}
+
+.agent-hidden-marker {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    margin-top: 5px;
+    padding: 2px 7px;
+    border: 1px solid rgba(246, 169, 24, .25);
+    border-radius: 999px;
+    background: rgba(246, 169, 24, .10);
+    color: #9a670d;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.visibility-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(5, 13, 25, .58);
+    backdrop-filter: blur(5px);
+}
+
+.visibility-drawer {
+    width: min(440px, 94vw);
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(circle at 92% 3%, rgba(47, 125, 246, .12), transparent 26%),
+        #f7faff;
+    color: var(--ink);
+    box-shadow: -28px 0 70px rgba(3, 12, 25, .28);
+}
+
+.visibility-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px 26px 20px;
+    border-bottom: 1px solid #dde7f1;
+    background: rgba(255, 255, 255, .86);
+}
+
+.visibility-header small {
+    display: block;
+    margin-bottom: 6px;
+    color: #2f7df6;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .16em;
+}
+
+.visibility-header h2 {
+    margin: 0;
+    color: #17324d;
+    font-size: 24px;
+    line-height: 1.2;
+}
+
+.visibility-header p {
+    max-width: 320px;
+    margin: 8px 0 0;
+    color: #768aa0;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.visibility-body {
+    min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 20px 22px;
+}
+
+.visibility-controls {
+    display: grid;
+    gap: 12px;
+}
+
+.visibility-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.visibility-search span {
+    position: absolute;
+    left: 13px;
+    color: #8597aa;
+    pointer-events: none;
+}
+
+.visibility-search input {
+    width: 100%;
+    height: 42px;
+    padding: 0 14px 0 38px;
+    border: 1px solid #d6e1ec;
+    border-radius: 12px;
+    outline: none;
+    background: #fff;
+    color: #17324d;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.visibility-search input:focus {
+    border-color: rgba(47, 125, 246, .72);
+    box-shadow: 0 0 0 4px rgba(47, 125, 246, .10);
+}
+
+.visibility-filter-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.visibility-filters {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid #d9e4ef;
+    border-radius: 11px;
+    background: #edf3f9;
+}
+
+.visibility-filters button {
+    min-height: 30px;
+    padding: 0 11px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #6e8297;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.visibility-filters button.active {
+    background: #fff;
+    color: #215991;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgba(28, 67, 105, .09);
+}
+
+.visibility-restore-all {
+    border: 0;
+    background: transparent;
+    color: #2f7df6;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.visibility-restore-all:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.visibility-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 14px 2px 10px;
+    color: #73879b;
+    font-size: 11px;
+}
+
+.visibility-summary b {
+    color: #17324d;
+}
+
+.visibility-list {
+    min-height: 0;
+    overflow-y: auto;
+    display: grid;
+    align-content: start;
+    gap: 9px;
+    padding: 2px 3px 12px 1px;
+}
+
+.visibility-person {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    min-height: 66px;
+    padding: 10px 12px;
+    border: 1px solid #dce6ef;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .92);
+    box-shadow: 0 8px 22px rgba(25, 63, 96, .045);
+    transition: border-color .18s ease, transform .18s ease, opacity .18s ease;
+}
+
+.visibility-person:hover {
+    transform: translateY(-1px);
+    border-color: rgba(47, 125, 246, .35);
+}
+
+.visibility-person.is-hidden {
+    opacity: .68;
+    background: rgba(241, 245, 249, .94);
+}
+
+.visibility-avatar {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #e7f1ff, #dce9f8);
+    color: #2f6da5;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.visibility-person.is-hidden .visibility-avatar {
+    filter: grayscale(.8);
+}
+
+.visibility-person-copy {
+    min-width: 0;
+}
+
+.visibility-person-copy b {
+    display: block;
+    overflow: hidden;
+    color: #1c3c56;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.visibility-person-copy small {
+    display: block;
+    overflow: hidden;
+    margin-top: 4px;
+    color: #7b8fa3;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.visibility-person-copy em {
+    display: inline-flex;
+    margin-top: 5px;
+    color: #9b6a13;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.visibility-switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: #bac7d3;
+    cursor: pointer;
+    transition: background .18s ease, box-shadow .18s ease;
+}
+
+.visibility-switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 7px rgba(20, 42, 63, .25);
+    transition: transform .18s ease;
+}
+
+.visibility-switch.on {
+    background: linear-gradient(90deg, #2f7df6, #18bd8b);
+    box-shadow: 0 0 0 4px rgba(47, 125, 246, .08);
+}
+
+.visibility-switch.on::after {
+    transform: translateX(18px);
+}
+
+.visibility-switch:disabled {
+    cursor: wait;
+    opacity: .55;
+}
+
+.visibility-empty {
+    padding: 54px 20px;
+    color: #7a8da1;
+    text-align: center;
+    font-size: 12px;
+}
+
+.visibility-table-warning {
+    margin: 0 0 12px;
+    padding: 11px 12px;
+    border: 1px solid rgba(239, 87, 87, .22);
+    border-radius: 11px;
+    background: rgba(239, 87, 87, .07);
+    color: #a74343;
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.visibility-confirm-copy {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f2f6fb;
+    color: #60778d;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+@media (max-width: 760px) {
+    .visibility-open-button span:not(.sr-only) {
+        display: none;
+    }
+
+    .visibility-header {
+        padding: 22px 20px 17px;
+    }
+
+    .visibility-body {
+        padding: 15px 14px 18px;
+    }
+
+    .visibility-filter-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .visibility-person,
+    .visibility-switch,
+    .visibility-switch::after {
+        transition: none;
+    }
+}
+/* 人员显示抽屉：复用人员详情的滑入动效 */
+.drawer-enter-active.visibility-layer,
+.drawer-leave-active.visibility-layer {
+    transition: opacity .25s ease, background .25s ease;
+}
+
+.drawer-enter-from.visibility-layer,
+.drawer-leave-to.visibility-layer {
+    opacity: 0;
+}
+
+.drawer-enter-active .visibility-drawer,
+.drawer-leave-active .visibility-drawer {
+    transition: transform .28s var(--ease);
+}
+
+.drawer-enter-from .visibility-drawer,
+.drawer-leave-to .visibility-drawer {
+    transform: translateX(100%);
+}
+.visibility-data-meta {
+    display: block;
+    margin-top: 5px;
+    color: #668099;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.visibility-switch-control {
+    display: grid;
+    justify-items: end;
+    gap: 5px;
+}
+
+.visibility-state-label {
+    color: #218c72;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.visibility-state-label.hidden {
+    color: #8393a3;
+}
+
+.visibility-switch.saving {
+    opacity: .62;
+    cursor: wait;
+    box-shadow: 0 0 0 4px rgba(47, 125, 246, .08);
+}
+
+.visibility-switch.saving::after {
+    animation: visibility-saving-pulse .7s ease-in-out infinite alternate;
+}
+
+@keyframes visibility-saving-pulse {
+    from { transform: translateX(9px) scale(.82); opacity: .6; }
+    to { transform: translateX(9px) scale(1); opacity: 1; }
+}
+/* 人员历史信息排版修正 */
+.visibility-person {
+    min-height: 84px;
+    padding: 12px 14px;
+}
+
+.visibility-person-copy {
+    min-width: 0;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+}
+
+.visibility-person-copy small {
+    margin-top: 0;
+    line-height: 1.35;
+}
+
+.visibility-data-meta {
+    margin-top: 0;
+    line-height: 1.35;
+    color: #7890a6;
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.visibility-person-copy em {
+    margin-top: 1px;
+    line-height: 1.3;
+}
+
+.visibility-switch-control {
+    align-self: center;
+}
+/* 顶部操作区：所有信息稳定保持一行 */
+.toolbar-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.toolbar-actions > .button {
+    flex: 0 0 auto !important;
+    white-space: nowrap;
+}
+
+/* 当前人员范围固定宽度，不允许被挤压换行 */
+.toolbar-actions .current-scope {
+    flex: 0 0 92px !important;
+    width: 92px;
+    min-width: 92px;
+    padding-right: 0;
+    white-space: nowrap;
+}
+
+.toolbar-actions .current-scope span,
+.toolbar-actions .current-scope b {
+    display: block;
+    overflow: visible;
+    white-space: nowrap;
+}
+
+/* 人员显示按钮宽度固定，隐藏人数不参与撑宽 */
+.visibility-open-button {
+    position: relative;
+    width: 160px;
+    min-width: 160px;
+    justify-content: flex-start;
+    padding-left: 16px;
+    padding-right: 56px;
+    white-space: nowrap;
+}
+
+.visibility-open-button em {
+    position: absolute;
+    top: 50%;
+    right: 9px;
+    margin: 0;
+    transform: translateY(-50%);
+}
+
+/* 上传按钮保持稳定宽度 */
+.toolbar-actions .button-primary {
+    min-width: 106px;
+}
+
+/* 中等屏幕空间不足时，直接隐藏范围说明，不允许它换行 */
+@media (max-width: 1080px) {
+    .toolbar-actions .current-scope {
+        display: none;
+    }
+}
+
+@media (max-width: 760px) {
+    .toolbar-actions {
+        width: 100%;
+        justify-content: flex-end;
+        gap: 7px;
+        flex-wrap: nowrap;
+    }
+
+    .toolbar-actions > * {
+        flex: 0 0 auto !important;
+    }
+
+    .visibility-open-button {
+        width: auto;
+        min-width: 100px;
+        padding-left: 13px;
+        padding-right: 50px;
+    }
+
+    .toolbar-actions .button-primary {
+        min-width: 94px;
+    }
+}
