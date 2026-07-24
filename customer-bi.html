@@ -11,6 +11,7 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="css/customer-bi.css">
+    <link rel="stylesheet" href="css/customer-bi-visibility.css">
     <script>
         tailwind.config = {
             theme: {
@@ -57,8 +58,13 @@
                     </div><div :class="['notice-stream',{scrolling:noticeShouldScroll}]" :style="{'--notice-duration':`${Math.max(9, noticeText.length * .22)}s`}"><div class="notice-track"><span class="notice-group">{{ noticeText }}</span><span v-if="noticeShouldScroll" class="notice-group" aria-hidden="true">{{ noticeText }}</span></div></div></div>
                 </div>
                 <div class="toolbar-actions">
-                    <div class="current-scope"><span>当前人员范围</span><b>已确认批次人员</b></div>
+                    <div class="current-scope"><span>当前人员范围</span><b>当前账号可见人员</b></div>
                     <button class="button button-ghost" @click="loadDashboard" :disabled="dashboardLoading">刷新</button>
+                    <button class="button button-ghost visibility-open-button" @click="openVisibilityPanel">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.8"></circle></svg>
+                        <span>人员显示</span>
+                        <em v-if="visibilityHiddenCount">{{ visibilityHiddenCount }} 隐藏</em>
+                    </button>
                     <button class="button button-primary" @click="openImport">上传数据</button>
                 </div>
             </div>
@@ -232,19 +238,29 @@
                     </template>
 
                     <template v-else-if="importStep === 2">
-                        <div class="wizard-title"><span>02</span><div><h2>选择业务日期</h2><p>文件名中的数字不会自动作为日期。</p></div></div>
+                        <div class="wizard-title"><span>02</span><div><h2>选择业务日期</h2><p>系统默认选择前一自然日，请确认与 Excel 数据日期一致。</p></div></div>
                         <div class="date-stage">
-                            <label><span>业务日期</span><input v-model="businessDate" type="date" :max="today"></label>
+                            <label>
+                                <span>业务日期</span>
+                                <input v-model="businessDate" type="date" :max="today">
+                                <small class="import-default-date-note">已默认选择 <b>{{ defaultBusinessDate }}</b>，可手动修改</small>
+                            </label>
                             <div class="date-note"><b>日期将用于快照和排行榜</b><p>同一登录账号、同一日期只保留一个 V1 快照；重复上传时会再次提示。</p></div>
                         </div>
                     </template>
 
                     <template v-else-if="importStep === 3">
-                        <div class="wizard-title"><span>03</span><div><h2>选择参与统计的人员</h2><p>Excel 共识别 {{ parsedAgents.length }} 人，未勾选人员不参与计算、排名或正式 KPI。</p></div></div>
+                        <div class="wizard-title"><span>03</span><div><h2>选择参与统计的人员</h2><p>接待量达到 {{ minimumReceptionCount }} 才可选择；解析完成后系统已自动选择全部可选人员。</p></div></div>
+                        <div class="selection-summary-copy">
+                            <span>Excel 共识别 <b>{{ parsedAgents.length }}</b> 人</span>
+                            <span>可选 <b>{{ selectableAgentCount }}</b> 人</span>
+                            <span>接待量不足或无法识别 <b>{{ unavailableAgentCount }}</b> 人</span>
+                            <span v-if="hiddenSelectedCount" class="hidden-copy">其中 <b>{{ hiddenSelectedCount }}</b> 人当前隐藏，数据仍会保存</span>
+                        </div>
                         <div class="selection-toolbar">
                             <label class="search-field"><span>⌕</span><input v-model.trim="agentSearch" placeholder="搜索客服账号或昵称"></label>
                             <div class="selection-actions">
-                                <button @click="selectFiltered">全选</button><button @click="clearFiltered">取消全选</button><button @click="invertFiltered">反选</button>
+                                <button @click="selectFiltered">全选可选人员</button><button @click="clearFiltered">取消选择</button><button @click="invertFiltered">反选可选人员</button>
                             </div>
                             <div class="selection-count"><b>{{ selectedAccounts.length }}</b> 已选 <i></i><b>{{ parsedAgents.length - selectedAccounts.length }}</b> 排除</div>
                         </div>
@@ -252,9 +268,14 @@
                             <label v-for="agent in filteredAgents" :key="agent.key" :class="['agent-select-card', { selected: isSelected(agent), warning: agent.warnings.length, selectable: isAgentSelectable(agent), unavailable: !isAgentSelectable(agent) }]">
                                 <input type="checkbox" :checked="isSelected(agent)" :disabled="!isAgentSelectable(agent)" @change="toggleAgent(agent)">
                                 <span class="fake-check">✓</span>
-                                <span class="agent-main"><b>{{ agent.displayName }}</b><small>{{ agent.sourceAccount }}</small></span>
+                                <span class="agent-main">
+                                    <b>{{ agent.displayName }}</b>
+                                    <small>{{ agent.sourceAccount }}</small>
+                                    <span class="agent-reception">接待量 <strong>{{ receptionCountText(agent) }}</strong></span>
+                                    <span v-if="isAgentHidden(agent)" class="agent-hidden-marker">当前隐藏 · 保存后不参与展示计算</span>
+                                </span>
                                 <span class="agent-preview">满意 {{ previewPercent(agent) }}<br>均响 {{ formatSeconds(agent.avgResponseSeconds) }} · 转化 {{ previewConversion(agent) }}</span>
-                                <em v-if="!isAgentSelectable(agent)">无满意率数据</em><em v-else-if="agent.warnings.length">需确认</em>
+                                <em v-if="!isAgentSelectable(agent)">{{ receptionUnavailableReason(agent) }}</em><em v-else-if="agent.warnings.length">需确认</em>
                             </label>
                         </div>
                         <div v-if="!filteredAgents.length" class="no-search-result">没有匹配人员</div>
@@ -336,6 +357,67 @@
                 </template>
                 <div v-else class="detail-empty"><b>该周期没有参与数据</b><span>未参与不视为未达标，也不会生成排名。</span></div>
             </aside>
+        </div>
+    </transition>
+
+    <transition name="drawer">
+        <div v-if="showVisibility" class="visibility-layer" @click.self="closeVisibilityPanel">
+            <aside class="visibility-drawer" aria-label="人员显示设置">
+                <header class="visibility-header">
+                    <div>
+                        <small>PERSON VISIBILITY</small>
+                        <h2>人员显示设置</h2>
+                        <p>关闭后保留历史与上传数据，但该人员不会参与当前账号的 Dashboard、排名、图表、荣誉和人员详情计算。</p>
+                    </div>
+                    <button class="drawer-close" @click="closeVisibilityPanel">×</button>
+                </header>
+                <div class="visibility-body">
+                    <p v-if="!visibilityTableReady" class="visibility-table-warning">人员显示设置表尚未初始化，请先运行压缩包中的 Supabase 增量 SQL。</p>
+                    <div class="visibility-controls">
+                        <label class="visibility-search"><span>⌕</span><input v-model.trim="visibilitySearch" placeholder="搜索客服账号或昵称"></label>
+                        <div class="visibility-filter-row">
+                            <div class="visibility-filters">
+                                <button :class="{active:visibilityFilter==='all'}" @click="visibilityFilter='all'">全部</button>
+                                <button :class="{active:visibilityFilter==='visible'}" @click="visibilityFilter='visible'">显示中</button>
+                                <button :class="{active:visibilityFilter==='hidden'}" @click="visibilityFilter='hidden'">已隐藏</button>
+                            </div>
+                            <button class="visibility-restore-all" :disabled="!visibilityHiddenCount || visibilitySavingId" @click="restoreAllAgents">全部恢复显示</button>
+                        </div>
+                    </div>
+                    <div class="visibility-summary">
+                        <span>共 <b>{{ visibilityAgents.length }}</b> 人</span>
+                        <span>显示 {{ visibilityAgents.length - visibilityHiddenCount }} · 隐藏 {{ visibilityHiddenCount }}</span>
+                    </div>
+                    <div v-if="visibilityLoading" class="visibility-empty">正在读取人员设置…</div>
+                    <div v-else-if="visibilityFilteredAgents.length" class="visibility-list">
+                        <article v-for="agent in visibilityFilteredAgents" :key="agent.id" :class="['visibility-person',{'is-hidden':!agent.isVisible}]">
+                            <span class="visibility-avatar">{{ agent.display_name.slice(0,1) }}</span>
+                            <span class="visibility-person-copy">
+                                <b>{{ agent.display_name }}</b>
+                                <small>{{ agent.source_account }}{{ agent.team ? ` · ${agent.team}` : '' }}</small>
+                                <em v-if="!agent.isVisible">已隐藏 · 不参与计算</em>
+                            </span>
+                            <button :class="['visibility-switch',{on:agent.isVisible}]" :disabled="visibilitySavingId===agent.id || !visibilityTableReady" :aria-label="agent.isVisible ? `隐藏${agent.display_name}` : `显示${agent.display_name}`" @click="requestAgentVisibility(agent)"></button>
+                        </article>
+                    </div>
+                    <div v-else class="visibility-empty">没有匹配人员</div>
+                </div>
+            </aside>
+        </div>
+    </transition>
+
+    <transition name="modal">
+        <div v-if="pendingVisibilityAgent" class="modal-layer" @click.self="pendingVisibilityAgent=null">
+            <section class="confirm-modal">
+                <span class="warning-icon">!</span>
+                <h2>隐藏 {{ pendingVisibilityAgent.display_name }}？</h2>
+                <p>该人员的历史数据不会删除，后续上传仍会正常保存。</p>
+                <div class="visibility-confirm-copy">隐藏后，该人员不会参与当前账号的团队指标、排名、图表、荣誉、人员卡片及详细数据计算。重新打开开关即可恢复。</div>
+                <div>
+                    <button class="button button-light" @click="pendingVisibilityAgent=null">取消</button>
+                    <button class="button button-danger" :disabled="visibilitySavingId" @click="confirmHideAgent">确认隐藏</button>
+                </div>
+            </section>
         </div>
     </transition>
 
