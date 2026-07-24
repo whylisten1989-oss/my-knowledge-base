@@ -427,3 +427,23 @@
         transition: none;
     }
 }
+/* 人员显示抽屉：复用人员详情的滑入动效 */
+.drawer-enter-active.visibility-layer,
+.drawer-leave-active.visibility-layer {
+    transition: opacity .25s ease, background .25s ease;
+}
+
+.drawer-enter-from.visibility-layer,
+.drawer-leave-to.visibility-layer {
+    opacity: 0;
+}
+
+.drawer-enter-active .visibility-drawer,
+.drawer-leave-active .visibility-drawer {
+    transition: transform .28s var(--ease);
+}
+
+.drawer-enter-from .visibility-drawer,
+.drawer-leave-to .visibility-drawer {
+    transform: translateX(100%);
+}
