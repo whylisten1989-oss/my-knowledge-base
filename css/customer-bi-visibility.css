@@ -519,3 +519,58 @@
 .visibility-switch-control {
     align-self: center;
 }
+/* 顶部操作区：隐藏人数变化时不挤压上传按钮 */
+.toolbar-actions {
+    flex-wrap: nowrap;
+}
+
+.toolbar-actions > .button {
+    flex: 0 0 auto !important;
+    white-space: nowrap;
+}
+
+.toolbar-actions .current-scope {
+    flex: 0 1 auto !important;
+    min-width: 0;
+}
+
+.visibility-open-button {
+    position: relative;
+    width: 168px;
+    justify-content: flex-start;
+    padding-right: 60px;
+    white-space: nowrap;
+}
+
+.visibility-open-button em {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    margin: 0;
+    transform: translateY(-50%);
+}
+
+/* 空间不足时优先隐藏说明文字，不允许上传按钮换行 */
+@media (max-width: 1080px) {
+    .toolbar-actions .current-scope {
+        display: none;
+    }
+}
+
+@media (max-width: 760px) {
+    .toolbar-actions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: nowrap;
+    }
+
+    .toolbar-actions > * {
+        flex: 0 0 auto !important;
+    }
+
+    .visibility-open-button {
+        width: auto;
+        min-width: 100px;
+        padding-right: 52px;
+    }
+}
