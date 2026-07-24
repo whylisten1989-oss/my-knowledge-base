@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#07101f" />
+  <meta name="color-scheme" content="dark" />
+  <title>客服人力运营中心｜排班调度</title>
+  <link rel="stylesheet" href="./css/workforce-center.css" />
+</head>
+<body>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="客服人力运营中心排班调度首页">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span><strong>客服人力运营中心</strong><small>WORKFORCE COMMAND CENTER</small></span>
+      </a>
+
+      <nav class="main-nav" aria-label="主导航">
+        <button data-page="overview">人力态势</button>
+        <button class="active" data-page="schedule">排班调度</button>
+        <button data-page="seats">座席地图</button>
+        <button data-page="analysis">人力分析</button>
+        <button data-page="data">数据管理</button>
+      </nav>
+
+      <div class="topbar-meta">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span id="currentDate"></span>
+        <a class="home-link" href="../index.html">返回主站</a>
+      </div>
+    </header>
+
+    <main>
+      <section id="schedulePage" class="page active-page">
+        <div class="page-heading reveal">
+          <div>
+            <p class="eyebrow">SCHEDULING CONSOLE</p>
+            <h1>排班调度</h1>
+            <p>查看班次覆盖、人员状态和关键时段缺口。</p>
+          </div>
+          <div class="heading-actions">
+            <span id="dataSourceBadge" class="data-source-badge">模拟数据</span>
+            <label class="button secondary file-trigger">
+              <input id="excelUpload" type="file" accept=".xlsx,.xls,.csv" hidden />
+              <span>上传排班 Excel</span>
+            </label>
+            <button id="downloadTemplate" class="button secondary">下载模板</button>
+            <button id="exportCsv" class="button primary">导出当前排班</button>
+          </div>
+        </div>
+
+        <section class="filter-panel glass reveal" aria-label="筛选器">
+          <label>
+            <span>日期</span>
+            <input id="dateFilter" type="date" />
+          </label>
+          <div class="segmented" aria-label="视图切换">
+            <button class="active" data-view="day">日视图</button>
+            <button data-view="week">周视图</button>
+          </div>
+          <label><span>小组</span><select id="groupFilter"><option value="all">全部小组</option></select></label>
+          <label><span>人员</span><select id="personFilter"><option value="all">全部人员</option></select></label>
+          <label><span>班次</span><select id="shiftFilter"><option value="all">全部班次</option></select></label>
+          <label><span>状态</span><select id="statusFilter"><option value="all">全部状态</option></select></label>
+          <label>
+            <span>熟练度</span>
+            <select id="skillFilter">
+              <option value="all">全部</option>
+              <option value="熟练">熟练</option>
+              <option value="新人">新人</option>
+            </select>
+          </label>
+          <button id="resetFilters" class="icon-button" title="重置筛选" aria-label="重置筛选">↻</button>
+        </section>
+
+        <section id="summaryStrip" class="summary-strip reveal" aria-label="排班摘要"></section>
+
+        <section class="schedule-card glass reveal">
+          <div class="schedule-head">
+            <div>
+              <h2 id="scheduleTitle">今日排班轨道</h2>
+              <p id="scheduleSubtitle">时间精度：30 分钟</p>
+            </div>
+            <div class="legend" aria-label="图例">
+              <span><i class="legend-peak"></i>高峰时段</span>
+              <span><i class="legend-shortage"></i>全团队人力缺口</span>
+              <span><i class="legend-now"></i>当前时间</span>
+            </div>
+          </div>
+
+          <div id="dayView" class="timeline-wrap">
+            <div class="timeline-scroll" id="timelineScroll">
+              <div class="timeline-grid" id="timelineGrid"></div>
+            </div>
+          </div>
+          <div id="weekView" class="week-wrap" hidden></div>
+        </section>
+      </section>
+
+      <section id="placeholderPage" class="page placeholder-page">
+        <div class="placeholder glass">
+          <span class="placeholder-icon">◇</span>
+          <p class="eyebrow">MODULE PLACEHOLDER</p>
+          <h1 id="placeholderTitle">功能建设中</h1>
+          <p>当前阶段集中开发排班调度。本模块已保留产品入口，后续会复用同一套视觉与数据结构。</p>
+          <button class="button primary" data-back-schedule>返回排班调度</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <aside id="detailDrawer" class="detail-drawer" aria-hidden="true" aria-label="个人排班详情">
+    <button id="closeDrawer" class="drawer-close" aria-label="关闭">×</button>
+    <p class="eyebrow">PERSONNEL DETAIL</p>
+    <h2>个人排班详情</h2>
+    <div id="drawerContent"></div>
+  </aside>
+  <div id="drawerMask" class="drawer-mask"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="tooltip" class="tooltip" role="tooltip"></div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="./js/mock-data.js"></script>
+  <script src="./js/workforce-center.js"></script>
+</body>
+</html>
