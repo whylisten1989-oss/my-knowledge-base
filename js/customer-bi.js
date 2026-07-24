@@ -158,7 +158,12 @@
             const defaultBusinessDate = localDateOffset(-1);
             const minimumReceptionCount = MIN_RECEPTION_COUNT;
             const rules = core.RULES;
-            const view = ref(location.hash === '#import' ? 'import' : 'dashboard');
+            const hashView = location.hash === '#import'
+    ? 'import'
+    : location.hash === '#matrix'
+        ? 'matrix'
+        : 'dashboard';
+const view = ref(hashView);
             const steps = ['上传文件', '选择日期', '选择人员', '校验预览', '确认保存'];
             const importStep = ref(1);
             const fileInfo = ref(null);
@@ -444,11 +449,17 @@
                 businessDate.value = localDateOffset(-1);
                 duplicateBatch.value = null;
             };
-            const setView = (next) => {
-                view.value = next;
-                history.replaceState(null, '', next === 'import' ? '#import' : '#dashboard');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            };
+         const setView = (next) => {
+    view.value = next;
+    const hash = next === 'import'
+        ? '#import'
+        : next === 'matrix'
+            ? '#matrix'
+            : '#dashboard';
+    history.replaceState(null, '', hash);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
             const openImport = () => {
                 if (view.value !== 'import' && importStep.value === 1 && !fileInfo.value) {
                     businessDate.value = localDateOffset(-1);
@@ -460,6 +471,18 @@
                 scheduleTrendChart();
                 scheduleSalesChart();
             };
+            const openMatrix = () => {
+    setView('matrix');
+};
+
+const openAgentFromMatrix = ({ person, start, end }) => {
+    if (start) {
+        detailCustomStart.value = start;
+        detailCustomEnd.value = end || start;
+        detailPeriod.value = 'custom';
+    }
+    openAgent(person);
+};
 
             const describeError = (error) => {
                 const message = error?.message || String(error || '未知错误');
@@ -1482,7 +1505,11 @@
             watch(view, (next) => { if (next === 'dashboard') { scheduleTrendChart(); scheduleSalesChart(); } }, { flush: 'post' });
 
             const handleHashChange = () => {
-                view.value = location.hash === '#import' ? 'import' : 'dashboard';
+                view.value = location.hash === '#import'
+    ? 'import'
+    : location.hash === '#matrix'
+        ? 'matrix'
+        : 'dashboard';
                 if (view.value === 'dashboard') { scheduleTrendChart(); scheduleSalesChart(); }
             };
 
@@ -1518,7 +1545,7 @@
                 visibilityAgents, visibilityFilteredAgents, visibilityHiddenCount, visibilityLoading, visibilitySavingId,
                 visibilitySearch, visibilityFilter, visibilityTableReady, showVisibility, pendingVisibilityAgent,
                 session, currentAccountName, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
-                dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems, noticeText, noticeShouldScroll,
+                dashboardLoading, dashboardMetrics, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems, noticeText, noticeShouldScroll,
                 dashboardPeriodOptions, detailPeriodOptions, rankingOptions, trendChartEl, salesChartEl, detailChartEl, detailAgent, detailHistory,
                 detailPeriod, detailCustomStart, detailCustomEnd, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
                 detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors, detailHonorGroups, openHonorGroup, detailSingleDayMode, detailSingleDayKpis, detailSalesDisplay,
@@ -1532,7 +1559,8 @@
                 previewPercent, previewConversion, receptionCountText, receptionUnavailableReason, isAgentHidden,
                 isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
-                loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, honorStyle, openAgent, closeAgent, selectPeriod, applyDashboardRange, clearDashboardRange, applyDetailRange, clearDetailRange, toggleHonorGroup, selectDetailPeriod,
+openMatrix, openAgentFromMatrix,
+loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, honorStyle, openAgent, closeAgent, selectPeriod, applyDashboardRange, clearDashboardRange, applyDetailRange, clearDetailRange, toggleHonorGroup, selectDetailPeriod,
                 openVisibilityPanel, closeVisibilityPanel, requestAgentVisibility, confirmHideAgent, restoreAllAgents,
                 submitAuth, signOut, requestSave, saveBatch
             };
@@ -1540,6 +1568,7 @@
     });
 
     app.component('animated-number', AnimatedNumber);
-    app.component('date-range-picker', DateRangePicker);
-    app.mount('#app');
+app.component('date-range-picker', DateRangePicker);
+app.component('performance-matrix', window.CustomerBIMatrix.PerformanceMatrix);
+app.mount('#app');
 })();
