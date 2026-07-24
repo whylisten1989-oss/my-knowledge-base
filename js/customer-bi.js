@@ -8,6 +8,20 @@
         '123456789@qq.com': '苏泊尔内测账号'
     };
 
+    const formatLocalDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    const localDateOffset = (offsetDays = 0) => {
+        const date = new Date();
+        date.setHours(12, 0, 0, 0);
+        date.setDate(date.getDate() + offsetDays);
+        return formatLocalDate(date);
+    };
+    const MIN_RECEPTION_COUNT = 50;
+
     const AnimatedNumber = {
         props: {
             value: { type: Number, default: null },
@@ -54,7 +68,7 @@
         },
         emits: ['apply', 'clear'],
         setup(props, { emit }) {
-            const todayValue = new Date().toISOString().slice(0, 10);
+            const todayValue = localDateOffset(0);
             const open = ref(false);
             const visibleMonth = ref(todayValue.slice(0, 7));
             const draftStart = ref('');
@@ -140,7 +154,9 @@
 
     const app = createApp({
         setup() {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = localDateOffset(0);
+            const defaultBusinessDate = localDateOffset(-1);
+            const minimumReceptionCount = MIN_RECEPTION_COUNT;
             const rules = core.RULES;
             const view = ref(location.hash === '#import' ? 'import' : 'dashboard');
             const steps = ['上传文件', '选择日期', '选择人员', '校验预览', '确认保存'];
@@ -153,8 +169,19 @@
             const parsedAgents = ref([]);
             const selectedAccounts = ref([]);
             const agentSearch = ref('');
-            const businessDate = ref(today);
+            const businessDate = ref(defaultBusinessDate);
             const isSaving = ref(false);
+
+            const visibilityAgents = ref([]);
+            const hiddenAgentIds = ref(new Set());
+            const hiddenAgentSourceAccounts = ref(new Set());
+            const showVisibility = ref(false);
+            const visibilityLoading = ref(false);
+            const visibilitySavingId = ref('');
+            const visibilitySearch = ref('');
+            const visibilityFilter = ref('all');
+            const visibilityTableReady = ref(true);
+            const pendingVisibilityAgent = ref(null);
 
             const session = ref(null);
             const showAuth = ref(false);
@@ -202,6 +229,22 @@
                     || email
                     || '已登录';
             });
+
+            const visibilityHiddenCount = computed(() => visibilityAgents.value.filter((agent) => !agent.isVisible).length);
+            const visibilityFilteredAgents = computed(() => {
+                const keyword = visibilitySearch.value.toLocaleLowerCase('zh-CN');
+                return visibilityAgents.value.filter((agent) => {
+                    if (visibilityFilter.value === 'visible' && !agent.isVisible) return false;
+                    if (visibilityFilter.value === 'hidden' && agent.isVisible) return false;
+                    if (!keyword) return true;
+                    return `${agent.display_name} ${agent.source_account} ${agent.team || ''}`
+                        .toLocaleLowerCase('zh-CN')
+                        .includes(keyword);
+                });
+            });
+            const isAgentHidden = (agent) => hiddenAgentSourceAccounts.value.has(
+                String(agent?.sourceAccount || agent?.source_account || '').toLocaleLowerCase('zh-CN')
+            );
 
             const periodOptions = [
                 { label: '昨日', value: 'yesterday' },
@@ -253,7 +296,30 @@
             };
 
             const agentMetricPreview = (agent) => core.calculateAgent(agent);
-            const isAgentSelectable = (agent) => agentMetricPreview(agent).satisfactionRate != null;
+            const receptionCountOf = (agent) => {
+                const rawValue = agent?.rawData?.['接待量'];
+                const fallbackValue = agent?.inquiryCount;
+                const candidate = rawValue !== undefined && rawValue !== null && rawValue !== ''
+                    ? rawValue
+                    : fallbackValue;
+                if (candidate === undefined || candidate === null || candidate === '') return null;
+                const parsed = Number(String(candidate).replace(/,/g, '').trim());
+                return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null;
+            };
+            const receptionCountText = (agent) => {
+                const count = receptionCountOf(agent);
+                return count == null ? '无法识别' : `${count}`;
+            };
+            const receptionUnavailableReason = (agent) => {
+                const count = receptionCountOf(agent);
+                return count == null
+                    ? '接待量无法识别'
+                    : `接待量 ${count} · 低于 ${MIN_RECEPTION_COUNT}`;
+            };
+            const isAgentSelectable = (agent) => {
+                const count = receptionCountOf(agent);
+                return count != null && count >= MIN_RECEPTION_COUNT;
+            };
 
             const filteredAgents = computed(() => {
                 const keyword = agentSearch.value.toLocaleLowerCase('zh-CN');
@@ -263,6 +329,9 @@
                 );
             });
             const selectedSet = computed(() => new Set(selectedAccounts.value));
+            const selectableAgentCount = computed(() => parsedAgents.value.filter(isAgentSelectable).length);
+            const unavailableAgentCount = computed(() => parsedAgents.value.length - selectableAgentCount.value);
+            const hiddenSelectedCount = computed(() => parsedAgents.value.filter((agent) => isAgentHidden(agent) && selectedSet.value.has(agent.key)).length);
             const isSelected = (agent) => selectedSet.value.has(agent.key);
             const toggleAgent = (agent) => {
                 if (!isAgentSelectable(agent)) return;
@@ -328,7 +397,10 @@
                     fileInfo.value = { name: file.name, size: file.size, sheetName: result.sheetName, rawRowCount: result.rawRowCount };
                     fileHash.value = hash;
                     parsedAgents.value = result.agents;
-                    addToast(`已从 ${result.sheetName} 识别 ${result.agents.length} 名人员`, 'success');
+                    selectedAccounts.value = result.agents
+                        .filter(isAgentSelectable)
+                        .map((agent) => agent.key);
+                    addToast(`已识别 ${result.agents.length} 名人员，并自动选择 ${selectedAccounts.value.length} 名接待量达标人员`, 'success');
                 } catch (error) {
                     parseError.value = `解析失败：${error.message || error}`;
                     fileInfo.value = null;
@@ -360,7 +432,7 @@
                 parsedAgents.value = [];
                 selectedAccounts.value = [];
                 agentSearch.value = '';
-                businessDate.value = today;
+                businessDate.value = localDateOffset(-1);
                 duplicateBatch.value = null;
             };
             const setView = (next) => {
@@ -368,7 +440,12 @@
                 history.replaceState(null, '', next === 'import' ? '#import' : '#dashboard');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
-            const openImport = () => setView('import');
+            const openImport = () => {
+                if (view.value !== 'import' && importStep.value === 1 && !fileInfo.value) {
+                    businessDate.value = localDateOffset(-1);
+                }
+                setView('import');
+            };
             const openDashboard = () => {
                 setView('dashboard');
                 scheduleTrendChart();
@@ -377,6 +454,7 @@
 
             const describeError = (error) => {
                 const message = error?.message || String(error || '未知错误');
+                if (/bi_user_agent_visibility/i.test(message)) return '人员显示设置表尚未初始化，请先运行 supabase/customer-bi-agent-visibility.sql';
                 if (/relation .* does not exist|schema cache/i.test(message)) return '数据库尚未初始化，请先运行 supabase/customer-bi-v1.sql';
                 if (/row-level security|permission denied/i.test(message)) return '数据库拒绝写入，请确认已登录并已运行完整 SQL';
                 return message;
@@ -424,7 +502,139 @@
                 dashboardRankings.value = [];
                 dashboardBatches.value = [];
                 dashboardBatchAgents.value = [];
+                visibilityAgents.value = [];
+                hiddenAgentIds.value = new Set();
+                hiddenAgentSourceAccounts.value = new Set();
+                showVisibility.value = false;
+                pendingVisibilityAgent.value = null;
                 addToast('已退出 Customer BI', 'info');
+            };
+
+            const resetVisibilityState = () => {
+                visibilityAgents.value = [];
+                hiddenAgentIds.value = new Set();
+                hiddenAgentSourceAccounts.value = new Set();
+                visibilityTableReady.value = true;
+            };
+
+            const loadVisibilitySettings = async ({ silent = false } = {}) => {
+                if (!db || !session.value) {
+                    resetVisibilityState();
+                    return;
+                }
+                visibilityLoading.value = true;
+                try {
+                    const [agentsResult, preferencesResult] = await Promise.all([
+                        db.from('bi_agents')
+                            .select('id, source_account, display_name, team, is_active')
+                            .order('display_name', { ascending: true }),
+                        db.from('bi_user_agent_visibility')
+                            .select('agent_id, is_visible')
+                            .eq('user_id', session.value.user.id)
+                    ]);
+                    if (agentsResult.error) throw agentsResult.error;
+
+                    let preferences = [];
+                    if (preferencesResult.error) {
+                        if (/bi_user_agent_visibility|relation .* does not exist|schema cache/i.test(preferencesResult.error.message || '')) {
+                            visibilityTableReady.value = false;
+                            if (!silent) addToast('请先运行人员显示设置 SQL', 'error');
+                        } else {
+                            throw preferencesResult.error;
+                        }
+                    } else {
+                        visibilityTableReady.value = true;
+                        preferences = preferencesResult.data || [];
+                    }
+
+                    const preferenceMap = new Map(preferences.map((item) => [item.agent_id, item.is_visible !== false]));
+                    visibilityAgents.value = (agentsResult.data || []).map((agent) => ({
+                        ...agent,
+                        isVisible: preferenceMap.get(agent.id) !== false
+                    }));
+                    const hiddenAgents = visibilityAgents.value.filter((agent) => !agent.isVisible);
+                    hiddenAgentIds.value = new Set(hiddenAgents.map((agent) => agent.id));
+                    hiddenAgentSourceAccounts.value = new Set(hiddenAgents.map((agent) =>
+                        String(agent.source_account || '').toLocaleLowerCase('zh-CN')
+                    ));
+                } catch (error) {
+                    resetVisibilityState();
+                    if (!silent) addToast(describeError(error), 'error');
+                } finally {
+                    visibilityLoading.value = false;
+                }
+            };
+
+            const openVisibilityPanel = async () => {
+                if (!session.value) {
+                    showAuth.value = true;
+                    addToast('登录后才能保存人员显示设置', 'info');
+                    return;
+                }
+                showVisibility.value = true;
+                visibilitySearch.value = '';
+                visibilityFilter.value = 'all';
+                await loadVisibilitySettings();
+            };
+
+            const closeVisibilityPanel = () => {
+                showVisibility.value = false;
+                pendingVisibilityAgent.value = null;
+            };
+
+            const applyAgentVisibility = async (agent, isVisible) => {
+                if (!db || !session.value || !agent?.id || !visibilityTableReady.value) return;
+                visibilitySavingId.value = agent.id;
+                try {
+                    const { error } = await db.from('bi_user_agent_visibility').upsert({
+                        user_id: session.value.user.id,
+                        agent_id: agent.id,
+                        is_visible: isVisible,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_id,agent_id' });
+                    if (error) throw error;
+                    pendingVisibilityAgent.value = null;
+                    await loadDashboard();
+                    if (detailAgent.value && !isVisible && (
+                        detailAgent.value.agentId === agent.id ||
+                        detailAgent.value.sourceAccount === agent.source_account
+                    )) closeAgent();
+                    addToast(isVisible ? `已恢复显示 ${agent.display_name}` : `已隐藏 ${agent.display_name}，相关统计已重新计算`, 'success');
+                } catch (error) {
+                    addToast(describeError(error), 'error');
+                } finally {
+                    visibilitySavingId.value = '';
+                }
+            };
+
+            const requestAgentVisibility = (agent) => {
+                if (!agent.isVisible) {
+                    applyAgentVisibility(agent, true);
+                    return;
+                }
+                pendingVisibilityAgent.value = agent;
+            };
+
+            const confirmHideAgent = () => {
+                if (pendingVisibilityAgent.value) applyAgentVisibility(pendingVisibilityAgent.value, false);
+            };
+
+            const restoreAllAgents = async () => {
+                if (!visibilityHiddenCount.value || !session.value || !db) return;
+                if (!window.confirm(`确定恢复显示全部 ${visibilityHiddenCount.value} 名隐藏人员？`)) return;
+                visibilitySavingId.value = 'all';
+                try {
+                    const { error } = await db.from('bi_user_agent_visibility')
+                        .delete()
+                        .eq('user_id', session.value.user.id);
+                    if (error) throw error;
+                    await loadDashboard();
+                    addToast('已恢复显示全部人员', 'success');
+                } catch (error) {
+                    addToast(describeError(error), 'error');
+                } finally {
+                    visibilitySavingId.value = '';
+                }
             };
 
             const loadDashboard = async () => {
@@ -437,6 +647,7 @@
                 }
                 dashboardLoading.value = true;
                 try {
+                    await loadVisibilitySettings({ silent: true });
                     const [batchResult, metricResult, rankingResult, batchAgentResult] = await Promise.all([
                         db.from('bi_import_batches')
                             .select('id, business_date, status, file_name, selected_count, excluded_count, confirmed_at, created_at')
@@ -461,8 +672,12 @@
                     const salesByBatchAgent = new Map((batchAgentResult.data || []).map((item) => [
                         `${item.batch_id}:${item.agent_id}`, Number(item.raw_data?.['退款后销售额'])
                     ]));
-                    dashboardMetrics.value = (metricResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date), refunded_sales: Number.isFinite(salesByBatchAgent.get(`${item.batch_id}:${item.agent_id}`)) ? salesByBatchAgent.get(`${item.batch_id}:${item.agent_id}`) : null }));
-                    dashboardRankings.value = (rankingResult.data || []).map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
+                    dashboardMetrics.value = (metricResult.data || [])
+                        .filter((item) => !hiddenAgentIds.value.has(item.agent_id))
+                        .map((item) => ({ ...item, business_date: normalizeDate(item.business_date), refunded_sales: Number.isFinite(salesByBatchAgent.get(`${item.batch_id}:${item.agent_id}`)) ? salesByBatchAgent.get(`${item.batch_id}:${item.agent_id}`) : null }));
+                    dashboardRankings.value = (rankingResult.data || [])
+                        .filter((item) => !hiddenAgentIds.value.has(item.agent_id))
+                        .map((item) => ({ ...item, business_date: normalizeDate(item.business_date) }));
                     dashboardBatchAgents.value = batchAgentResult.data || [];
                 } catch (error) {
                     addToast(describeError(error), 'error');
@@ -525,7 +740,7 @@
                 const currentDate = periodScope.value.currentDates[0];
                 const rows = currentPeriodRanking.value.allRows.map((item) => {
                     const key = item.agentId || item.sourceAccount;
-                    const official = dashboardPeriod.value === 'yesterday'
+                    const official = dashboardPeriod.value === 'yesterday' && visibilityHiddenCount.value === 0
                         ? rankingLookup.value.get(`${currentDate}:${item.agentId}`)
                         : null;
                     return {
@@ -699,12 +914,21 @@
             const formatCurrency = (value) => `¥${Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits: 0 })}`;
             const honorByAgent = computed(() => {
                 const grouped = new Map();
-                dashboardRankings.value.forEach((item) => {
-                    if (!grouped.has(item.agent_id)) grouped.set(item.agent_id, []);
-                    grouped.get(item.agent_id).push(item);
+                allDailyRankings.value.forEach((rows, businessDate) => {
+                    rows.forEach((row) => {
+                        if (!row.isQualified) return;
+                        const agentKey = row.agentId || row.sourceAccount;
+                        if (!grouped.has(agentKey)) grouped.set(agentKey, []);
+                        grouped.get(agentKey).push({
+                            agent_id: row.agentId,
+                            source_account: row.sourceAccount,
+                            business_date: businessDate,
+                            rank_position: row.rankPosition
+                        });
+                    });
                 });
                 const result = new Map();
-                grouped.forEach((items, agentId) => {
+                grouped.forEach((items, agentKey) => {
                     const rows = [...items].sort((a, b) => a.business_date.localeCompare(b.business_date));
                     let currentFirstStreak = 0;
                     for (let index = rows.length - 1; index >= 0 && rows[index].rank_position === 1; index -= 1) currentFirstStreak += 1;
@@ -715,7 +939,7 @@
                         bestFirstStreak = Math.max(bestFirstStreak, running);
                     });
                     const firstRows = rows.filter((row) => row.rank_position === 1).reverse();
-                    result.set(agentId, { currentFirstStreak, bestFirstStreak, firstRows });
+                    result.set(agentKey, { currentFirstStreak, bestFirstStreak, firstRows });
                 });
                 return result;
             });
@@ -741,7 +965,7 @@
             const honorLabel = (person) => {
                 const count = historicalFirstCount(person);
                 if (count) return `×${count}`;
-                const honor = honorByAgent.value.get(person.agentId); if (!honor) return '';
+                const honor = honorByAgent.value.get(person.agentId || person.sourceAccount); if (!honor) return '';
                 if (honor.currentFirstStreak >= 2) return `连续 ${honor.currentFirstStreak} 个有效业务日第一`;
                 if (honor.firstRows.length) return `历史第一 ${honor.firstRows.length} 次`;
                 return '';
@@ -974,7 +1198,7 @@
             });
             const detailHonors = computed(() => {
                 if (!detailAgent.value) return [];
-                const honor = honorByAgent.value.get(detailAgent.value.agentId);
+                const honor = honorByAgent.value.get(detailAgent.value.agentId || detailAgent.value.sourceAccount);
                 if (!honor) return [];
                 const records = honor.firstRows.slice(0, 20).map((row) => ({
                     key: `first-${row.business_date}`,
@@ -1238,22 +1462,27 @@
             });
 
             return {
-                today, rules, view, steps, importStep, fileInfo, parseError, isParsing, isDragging,
+                today, defaultBusinessDate, minimumReceptionCount, rules, view, steps, importStep, fileInfo, parseError, isParsing, isDragging,
                 parsedAgents, selectedAccounts, agentSearch, businessDate, isSaving,
+                visibilityAgents, visibilityFilteredAgents, visibilityHiddenCount, visibilityLoading, visibilitySavingId,
+                visibilitySearch, visibilityFilter, visibilityTableReady, showVisibility, pendingVisibilityAgent,
                 session, currentAccountName, showAuth, authMode, authLoading, authForm, duplicateBatch, toasts,
                 dashboardLoading, availableDates, dashboardPeriod, rankingMetric, importHistoryRows, customStart, customEnd, noticeItems, noticeText, noticeShouldScroll,
                 dashboardPeriodOptions, detailPeriodOptions, rankingOptions, trendChartEl, salesChartEl, detailChartEl, detailAgent, detailHistory,
                 detailPeriod, detailCustomStart, detailCustomEnd, detailScope, detailMetric, detailPreviousMetric, detailPeriodName,
                 detailRangeText, detailRankText, detailComparison, detailTrendRows, detailTrendTitle, detailHonors, detailHonorGroups, openHonorGroup, detailSingleDayMode, detailSingleDayKpis, detailSalesDisplay,
-                filteredAgents, previewMetrics, previewRanking, previewTeam, validationRows,
+                filteredAgents, selectableAgentCount, unavailableAgentCount, hiddenSelectedCount,
+                previewMetrics, previewRanking, previewTeam, validationRows,
                 hasBlockingValidation, canContinue, currentMetrics, currentTeam, rankedByTotal, rankingRows,
                 periodScope, periodName, periodRangeText, dashboardStatusText, rankingTitle, trendTitle,
                 currentChampion, eligibleRows, kpiComparison, formatChineseDate, attainment, salesRows, salesSummary, championAnnouncement, championLabel, singleDayMode, singleDayKpis,
                 topInsight, riskInsight, movementInsight,
                 formatBytes, formatPercent, percentValue, formatSeconds, formatScore, formatDateTime, formatCurrency,
-                previewPercent, previewConversion, isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
+                previewPercent, previewConversion, receptionCountText, receptionUnavailableReason, isAgentHidden,
+                isSelected, isAgentSelectable, toggleAgent, selectFiltered, clearFiltered,
                 invertFiltered, handleFileInput, handleDrop, nextStep, previousStep, openImport, openDashboard,
                 loadDashboard, rankingValue, rankingPositionText, rankChangeText, rankChangeClass, targetClass, honorLabel, historicalFirstCount, honorRarity, honorStyle, openAgent, closeAgent, selectPeriod, applyDashboardRange, clearDashboardRange, applyDetailRange, clearDetailRange, toggleHonorGroup, selectDetailPeriod,
+                openVisibilityPanel, closeVisibilityPanel, requestAgentVisibility, confirmHideAgent, restoreAllAgents,
                 submitAuth, signOut, requestSave, saveBatch
             };
         }
