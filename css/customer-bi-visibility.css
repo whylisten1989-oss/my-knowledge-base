@@ -519,8 +519,13 @@
 .visibility-switch-control {
     align-self: center;
 }
-/* 顶部操作区：隐藏人数变化时不挤压上传按钮 */
+/* 顶部操作区：所有信息稳定保持一行 */
 .toolbar-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 8px;
     flex-wrap: nowrap;
 }
 
@@ -529,28 +534,47 @@
     white-space: nowrap;
 }
 
+/* 当前人员范围固定宽度，不允许被挤压换行 */
 .toolbar-actions .current-scope {
-    flex: 0 1 auto !important;
-    min-width: 0;
+    flex: 0 0 92px !important;
+    width: 92px;
+    min-width: 92px;
+    padding-right: 0;
+    white-space: nowrap;
 }
 
+.toolbar-actions .current-scope span,
+.toolbar-actions .current-scope b {
+    display: block;
+    overflow: visible;
+    white-space: nowrap;
+}
+
+/* 人员显示按钮宽度固定，隐藏人数不参与撑宽 */
 .visibility-open-button {
     position: relative;
-    width: 168px;
+    width: 160px;
+    min-width: 160px;
     justify-content: flex-start;
-    padding-right: 60px;
+    padding-left: 16px;
+    padding-right: 56px;
     white-space: nowrap;
 }
 
 .visibility-open-button em {
     position: absolute;
     top: 50%;
-    right: 10px;
+    right: 9px;
     margin: 0;
     transform: translateY(-50%);
 }
 
-/* 空间不足时优先隐藏说明文字，不允许上传按钮换行 */
+/* 上传按钮保持稳定宽度 */
+.toolbar-actions .button-primary {
+    min-width: 106px;
+}
+
+/* 中等屏幕空间不足时，直接隐藏范围说明，不允许它换行 */
 @media (max-width: 1080px) {
     .toolbar-actions .current-scope {
         display: none;
@@ -561,6 +585,7 @@
     .toolbar-actions {
         width: 100%;
         justify-content: flex-end;
+        gap: 7px;
         flex-wrap: nowrap;
     }
 
@@ -571,6 +596,11 @@
     .visibility-open-button {
         width: auto;
         min-width: 100px;
-        padding-right: 52px;
+        padding-left: 13px;
+        padding-right: 50px;
+    }
+
+    .toolbar-actions .button-primary {
+        min-width: 94px;
     }
 }
